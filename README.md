@@ -1,2 +1,1 @@
-# -----
-වචන 77000 කට වඩා අඩංගුය
+Descriptive Pāli–Sinhala Dictionary
