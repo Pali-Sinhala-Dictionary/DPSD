@@ -7,6 +7,7 @@ const CACHE_ASSETS = [
   './dictionary.csv?v=1',
   './sinhala_english.csv?v=1',
   './icon-192x192.png?v=1',
+  '.AbhayaLibre-Regular.ttf?v=1',
   './icon-512x512.png?v=1'
 ];
 
