@@ -3,11 +3,11 @@ const CACHE_NAME = 'pali-sin-dict-v2';
 const CACHE_ASSETS = [
   './',
   './index.html',
-  './manifest.json',
-  './dictionary.csv',
-  './sinhala_english.csv',
-  './icon-192x192.png',
-  './icon-512x512.png'
+  './manifest.json?v=1',
+  './dictionary.csv?v=1',
+  './sinhala_english.csv?v=1',
+  './icon-192x192.png?v=1',
+  './icon-512x512.png?v=1'
 ];
 
 // INSTALL
