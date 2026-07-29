@@ -1,14 +1,14 @@
-const CACHE_NAME = 'pali-sin-dict-v2';
+const CACHE_NAME = 'pali-sin-dict-v3'; // Version එක v3 ලෙස වෙනස් කරන ලදී (පරණ Cache ඉවත් වීමට)
 
 const CACHE_ASSETS = [
   './',
   './index.html',
-  './manifest.json?v=1',
-  './dictionary.csv?v=1',
-  './sinhala_english.csv?v=1',
-  './icon-192x192.png?v=1',
-  '.AbhayaLibre-Regular.ttf?v=1',
-  './icon-512x512.png?v=1'
+  './manifest.json',
+  './dictionary.csv',
+  './sinhala_english.csv',
+  './AbhayaLibre-Regular.ttf', // Font file එක cache කිරීමට එක් කරන ලදී
+  './icon-192x192.png',
+  './icon-512x512.png'
 ];
 
 // INSTALL
@@ -38,7 +38,6 @@ self.addEventListener('activate', (event) => {
 
 // FETCH
 self.addEventListener('fetch', (event) => {
-
   const req = event.request;
 
   // Google Analytics මඟ හරින්න
@@ -54,7 +53,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // HTML page
+  // HTML page navigation
   if (req.mode === 'navigate') {
     event.respondWith(
       caches.match('./index.html')
@@ -65,9 +64,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // අනෙක් සියලුම files
+  // අනෙක් සියලුම files (Query params නොසලකා හරිමින් cache සෙවීම)
   event.respondWith(
-    caches.match(req).then((cachedResponse) => {
+    caches.match(req, { ignoreSearch: true }).then((cachedResponse) => {
 
       if (cachedResponse) {
         return cachedResponse;
@@ -94,5 +93,4 @@ self.addEventListener('fetch', (event) => {
 
     })
   );
-
 });
