@@ -1,6 +1,7 @@
 {
   "name": "පාලි-සිංහල ශබ්දකෝෂය",
-  "short_name": "ශබ්දකෝෂය"description": "Offline Pali-Sinhala Dictionary",
+  "short_name": "ශබ්දකෝෂය",
+  "description": "Offline Pali-Sinhala Dictionary",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
