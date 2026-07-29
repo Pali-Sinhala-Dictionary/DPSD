@@ -1,28 +1,71 @@
 {
+  "id": "pali-sinhala-dictionary-pwa",
   "name": "පාලි-සිංහල ශබ්දකෝෂය",
   "short_name": "ශබ්දකෝෂය",
-  "description": "Offline Pali-Sinhala Dictionary",
+  "description": "Offline පරිශීලනය කළ හැකි පාලි-සිංහල සහ සිංහල-ඉංග්‍රීසි ශබ්දකෝෂය",
+  "lang": "si",
+  "dir": "ltr",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#FFF8F0",
   "theme_color": "#8B0000",
-  "orientation": "portrait",
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "categories": [
+    "education",
+    "books"
+  ],
   "icons": [
     {
       "src": "./icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "./icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": [
-    "education"
+  "shortcuts": [
+    {
+      "name": "ශබ්දකෝෂය සෙවීම",
+      "short_name": "සොයන්න",
+      "description": "වචන සෙවීමට පිවිසෙන්න",
+      "url": "./index.html#home",
+      "icons": [{ "src": "./icon-192x192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "./icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "App Home Screen"
+    },
+    {
+      "src": "./icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "App Desktop Screen"
+    }
   ]
 }
