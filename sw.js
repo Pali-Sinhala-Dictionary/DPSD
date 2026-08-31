@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pali-sin-dict-v3.1'; // Version එක v3 ලෙස වෙනස් කරන ලදී (පරණ Cache ඉවත් වීමට)
+const CACHE_NAME = 'pali-sin-dict-v3.2'; // Version එක v3 ලෙස වෙනස් කරන ලදී (පරණ Cache ඉවත් වීමට)
 
 const CACHE_ASSETS = [
   './',
