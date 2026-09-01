@@ -1,7 +1,7 @@
     // සියලු ශබ්දකෝෂ Configuration (Oxford Dictionary ඉවත් කර ඇත)
     let availableDicts = [
         { id: 'pali', name: 'පාලි - සිංහල ශබ්දකෝෂය', path: 'dictionary.csv?v=2', enabled: true, data: [] },
-        { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.csv?v=1', enabled: true, data: [] }
+        { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.csv?v=2', enabled: true, data: [] }
     ];
 
     const searchInput = document.getElementById('searchInput');
@@ -75,6 +75,39 @@
         xhr.send();
     }
 
+    // Splits one CSV record's line into fields, honoring double-quoted
+    // fields (so a comma inside "..." is kept as part of that field
+    // instead of being treated as a column separator) and the standard
+    // ""-escaped-quote convention. A naive line.split(',') mis-aligns
+    // every column after a quoted field that itself contains a comma
+    // (common in the etymology/meaning columns), which was silently
+    // corrupting those rows' data.
+    function splitCSVLine(line) {
+        const result = [];
+        let cur = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const c = line[i];
+            if (inQuotes) {
+                if (c === '"') {
+                    if (line[i + 1] === '"') { cur += '"'; i++; }
+                    else { inQuotes = false; }
+                } else {
+                    cur += c;
+                }
+            } else if (c === '"') {
+                inQuotes = true;
+            } else if (c === ',') {
+                result.push(cur);
+                cur = '';
+            } else {
+                cur += c;
+            }
+        }
+        result.push(cur);
+        return result;
+    }
+
     // --- Smart CSV Parser ---
     function parseCSV(text) {
         const lines = text.split(/\r?\n/);
@@ -85,14 +118,14 @@
             if (!line) continue;
 
             let parts = line.split('\t');
-            if (parts.length < 2) parts = line.split(',');
+            if (parts.length < 2) parts = splitCSVLine(line);
 
             // Normalize to a single canonical Unicode form (NFC) so that a
             // word typed/stored via a different tool or keyboard, which may
             // produce an equivalent but differently-composed sequence of
             // combining marks (e.g. hal kirima + following consonant),
             // still matches consistently at search time.
-            parts = parts.map(p => p ? p.trim().replace(/^"|"$/g, '').normalize('NFC') : '');
+            parts = parts.map(p => p ? p.trim().normalize('NFC') : '');
 
             // Detect a leading numeric ID column regardless of how many
             // total columns the row has. Previously this was only checked
