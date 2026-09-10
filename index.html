@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="data:,">
-    <link rel="apple-touch-icon" href="icon-192x192.png?v=1">
+    <link rel="apple-touch-icon" href="icon-192x192.png?v=2">
     <link rel="manifest" href="manifest.json?v=1">
     <meta name="google" content="notranslate">
     <meta name="theme-color" content="#8B0000">
@@ -94,16 +94,24 @@
     <path d="M10.3 20.3h3.4" fill="none" stroke="url(#iconGrad)" stroke-width="1.6" stroke-linecap="round"/>
   </symbol>
 
-  <!-- Windows (Lap) -->
+  <!-- Windows (Laptop) -->
   <symbol id="icon-laptop" viewBox="0 0 24 24">
     <rect x="4.7" y="4" width="14.6" height="9.6" rx="1.3" fill="none" stroke="url(#iconGrad)" stroke-width="1.6"/>
     <path d="M2.6 17.6h18.8l-1.5 2.4a1.5 1.5 0 0 1-1.3.7H5.4a1.5 1.5 0 0 1-1.3-.7z" fill="none" stroke="url(#iconGrad)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+  </symbol>
+
+  <!-- විශාලනය (Zoom / Text size) -->
+  <symbol id="icon-zoom" viewBox="0 0 24 24">
+    <path d="M9 3H4.5A1.5 1.5 0 0 0 3 4.5V9" fill="none" stroke="url(#iconGrad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M15 3h4.5A1.5 1.5 0 0 1 21 4.5V9" fill="none" stroke="url(#iconGrad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M9 21H4.5A1.5 1.5 0 0 1 3 19.5V15" fill="none" stroke="url(#iconGrad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M15 21h4.5A1.5 1.5 0 0 0 21 19.5V15" fill="none" stroke="url(#iconGrad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
   </symbol>
 </svg>
 
 <div class="container">
     <div class="top-bar">
-        <h1 id="pageTitle">පාලි-සිංහල ශබ්දකෝෂය</h1>
+        <h1 id="pageTitle">පාලි සිංහල ශබ්දකෝෂය</h1>
     </div>
 
     <!-- 1. HOME / SEARCH TAB -->
@@ -176,7 +184,7 @@
    rel="noopener noreferrer">
     bhamarawali@gmail.com
 </a>
-            <p>තෙරුවන් සරණයි!</p>
+            <p>ඔබට අවශ්‍ය පරිදි ශබ්දකෝෂ තෝරාගැනීමටත්, Dark mode පහසුකම භාවිතා කිරීමටත් මෙහි ඉඩ ලබා දී ඇත.</p>
         </div>
     </div>
 </div>
@@ -197,6 +205,25 @@
     </div>
     <div class="nav-item" id="themeToggleBtn" onclick="toggleTheme()" title="Theme වෙනස් කරන්න">
         <div class="nav-icon-wrapper"><svg class="nav-icon-svg" viewBox="0 0 24 24"><use href="#icon-moon" id="themeIcon"></use></svg></div>
+    </div>
+    <div class="nav-item" id="nav-zoom" onclick="openZoomPanel()" title="විශාලනය">
+        <div class="nav-icon-wrapper"><svg class="nav-icon-svg" viewBox="0 0 24 24"><use href="#icon-zoom"></use></svg></div>
+    </div>
+</div>
+
+<!-- Zoom / Text Panel -->
+<div id="zoomOverlay" class="zoom-overlay" onclick="closeZoomPanel(event)">
+    <div class="zoom-panel" onclick="event.stopPropagation()">
+        <div class="zoom-panel-header">
+            <h3>විශාලන ප්‍රමාණය</h3>
+            <button type="button" class="zoom-close-btn" onclick="closeZoomPanel()" aria-label="close">&times;</button>
+        </div>
+        <div class="zoom-current-value" id="zoomValueLabel">100%</div>
+        <div class="zoom-slider-row">
+            <span class="zoom-edge-label">50%</span>
+            <input type="range" id="zoomSlider" class="zoom-slider" min="50" max="200" step="5" value="100">
+            <span class="zoom-edge-label">200%</span>
+        </div>
     </div>
 </div>
 

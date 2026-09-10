@@ -1,7 +1,7 @@
     // සියලු ශබ්දකෝෂ Configuration (Oxford Dictionary ඉවත් කර ඇත)
     let availableDicts = [
-        { id: 'pali', name: 'පාලි - සිංහල ශබ්දකෝෂය', path: 'dictionary.csv?v=2', enabled: true, data: [] },
-        { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.csv?v=2', enabled: true, data: [] }
+        { id: 'pali', name: 'පාලි - සිංහල ශබ්දකෝෂය', path: 'dictionary.csv', enabled: true, data: [] },
+        { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.csv?v=1', enabled: true, data: [] }
     ];
 
     const searchInput = document.getElementById('searchInput');
@@ -19,11 +19,30 @@
         }
     })();
 
+    // --- Restore saved zoom / text-size preference (runs immediately, before first paint settles) ---
+    (function restoreZoom() {
+        const savedZoom = localStorage.getItem('zoomLevel') || '100';
+        const zoomTarget = document.querySelector('.container');
+        if (zoomTarget) zoomTarget.style.zoom = savedZoom + '%';
+    })();
+
     // --- App Init ---
     window.addEventListener('DOMContentLoaded', () => {
         renderDictSelector();
         loadAllActiveDicts();
         history.replaceState({ tab: 'home', title: 'පාලි සිංහල ශබ්දකෝෂය' }, '');
+
+        // Wire up zoom slider
+        const zoomSlider = document.getElementById('zoomSlider');
+        const zoomValueLabel = document.getElementById('zoomValueLabel');
+        if (zoomSlider) {
+            zoomSlider.addEventListener('input', () => {
+                applyZoomPreview(zoomSlider.value);
+            });
+            zoomSlider.addEventListener('change', () => {
+                saveZoom(zoomSlider.value);
+            });
+        }
     });
 
     // --- CSV Load Logic ---
@@ -75,92 +94,141 @@
         xhr.send();
     }
 
-    // Splits one CSV record's line into fields, honoring double-quoted
-    // fields (so a comma inside "..." is kept as part of that field
-    // instead of being treated as a column separator) and the standard
-    // ""-escaped-quote convention. A naive line.split(',') mis-aligns
-    // every column after a quoted field that itself contains a comma
-    // (common in the etymology/meaning columns), which was silently
-    // corrupting those rows' data.
-    function splitCSVLine(line) {
-        const result = [];
-        let cur = '';
+    // --- Real CSV tokenizer (RFC4180-style) ---
+    // A plain line.split(',') breaks the moment any field's own text
+    // contains a comma (e.g. a meaning listing several synonyms) — those
+    // rows silently get extra columns and everything after shifts out of
+    // place. This walks the text character-by-character so quoted commas,
+    // quoted newlines, and escaped "" quotes are all handled correctly.
+    function tokenizeCSV(text) {
+        const rows = [];
+        let row = [];
+        let field = '';
         let inQuotes = false;
-        for (let i = 0; i < line.length; i++) {
-            const c = line[i];
+        const len = text.length;
+        let i = 0;
+
+        while (i < len) {
+            const ch = text[i];
+
             if (inQuotes) {
-                if (c === '"') {
-                    if (line[i + 1] === '"') { cur += '"'; i++; }
-                    else { inQuotes = false; }
-                } else {
-                    cur += c;
+                if (ch === '"') {
+                    if (text[i + 1] === '"') { field += '"'; i += 2; continue; }
+                    inQuotes = false; i++; continue;
                 }
-            } else if (c === '"') {
-                inQuotes = true;
-            } else if (c === ',') {
-                result.push(cur);
-                cur = '';
-            } else {
-                cur += c;
+                field += ch; i++; continue;
             }
+
+            if (ch === '"') { inQuotes = true; i++; continue; }
+            if (ch === ',') { row.push(field); field = ''; i++; continue; }
+            if (ch === '\r') { i++; continue; }
+            if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; i++; continue; }
+            field += ch; i++;
         }
-        result.push(cur);
-        return result;
+        if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+        return rows;
+    }
+
+    // Recognizes the dictionary.csv header and maps column names to
+    // indices, so word/meaning/etc. are read by NAME, not by guessing at
+    // position/ID-format. Returns null if the row doesn't look like a
+    // known header (caller then falls back to flexible positional parsing).
+    function detectHeaderMap(headerRow) {
+        if (!headerRow || headerRow.length < 2) return null;
+        const map = {};
+        headerRow.forEach((raw, idx) => {
+            const h = (raw || '').trim();
+            const hl = h.toLowerCase();
+            if (hl === 'original_id' || hl === 'id') map.id = idx;
+            else if (h.indexOf('වචනය') !== -1 || hl === 'word') map.word = idx;
+            else if (h.indexOf('කෙටි ව්‍යා') !== -1 || hl === 'type') map.type = idx;
+            else if (h.indexOf('පද බෙදීම') !== -1) map.wordDivision = idx;
+            else if (h.indexOf('තේරුම') !== -1 && h.indexOf('නිරුක්ති') === -1) map.meaning = idx;
+            else if (h.indexOf('සංඥා නාම') !== -1) map.properNoun = idx;
+            else if (h.indexOf('ව්‍යාකරණ විස්තරය') !== -1) map.grammarDesc = idx;
+            else if (h.indexOf('නිරුක්ති') !== -1) map.etymology = idx;
+        });
+        return (map.word !== undefined) ? map : null;
     }
 
     // --- Smart CSV Parser ---
     function parseCSV(text) {
-        const lines = text.split(/\r?\n/);
+        const rows = tokenizeCSV(text);
+        if (!rows.length) return [];
+
         const result = [];
+        const colMap = detectHeaderMap(rows[0]);
+        const startRow = colMap ? 1 : 0;
 
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (!line) continue;
-
-            let parts = line.split('\t');
-            if (parts.length < 2) parts = splitCSVLine(line);
+        for (let i = startRow; i < rows.length; i++) {
+            const raw = rows[i];
+            if (!raw || raw.length < 2) continue;
 
             // Normalize to a single canonical Unicode form (NFC) so that a
             // word typed/stored via a different tool or keyboard, which may
             // produce an equivalent but differently-composed sequence of
             // combining marks (e.g. hal kirima + following consonant),
             // still matches consistently at search time.
-            parts = parts.map(p => p ? p.trim().normalize('NFC') : '');
+            const parts = raw.map(p => (p || '').trim().normalize('NFC'));
 
-            // Detect a leading numeric ID column regardless of how many
-            // total columns the row has. Previously this was only checked
-            // for exactly-3-column rows; any row with 4+ columns (common
-            // for verb entries carrying a grammar description) was assumed
-            // to start with an ID even when it didn't, which silently
-            // shifted "word" onto the wrong field and dropped those
-            // entries from search results.
-            let offset = 0;
-            let id = String(i);
-            if (parts.length > 1 && parts[0] !== '' && !isNaN(parts[0])) {
-                id = parts[0];
-                offset = 1;
+            let item;
+            if (colMap) {
+                // Known schema: read every field by its header name. This
+                // works regardless of the ID column's format (numeric like
+                // "42" or alphanumeric like "GAP4-173") since we never have
+                // to guess which column the ID is in.
+                item = {
+                    id: (colMap.id !== undefined ? parts[colMap.id] : '') || String(i),
+                    word: (parts[colMap.word] || '').replace(/[0-9]/g, '').trim(),
+                    type: (colMap.type !== undefined ? parts[colMap.type] : '') || '',
+                    wordDivision: (colMap.wordDivision !== undefined ? parts[colMap.wordDivision] : '') || '',
+                    meaning: (colMap.meaning !== undefined ? parts[colMap.meaning] : '') || '',
+                    properNoun: (colMap.properNoun !== undefined ? parts[colMap.properNoun] : '') || '',
+                    grammarDesc: (colMap.grammarDesc !== undefined ? parts[colMap.grammarDesc] : '') || '',
+                    etymology: (colMap.etymology !== undefined ? parts[colMap.etymology] : '') || ''
+                };
+            } else {
+                // No recognizable header (e.g. a simpler word,meaning style
+                // dictionary file): fall back to flexible column-count
+                // handling, same idea as before but on properly quote-aware
+                // tokenized fields instead of a naive comma split.
+                let offset = 0;
+                let id = String(i);
+                if (parts.length > 1 && parts[0] !== '' && !isNaN(parts[0])) {
+                    id = parts[0];
+                    offset = 1;
+                }
+                item = {
+                    id: id,
+                    word: (parts[offset] || '').replace(/[0-9]/g, '').trim(),
+                    type: '',
+                    wordDivision: '',
+                    meaning: '',
+                    properNoun: '',
+                    grammarDesc: '',
+                    etymology: ''
+                };
+                const remaining = parts.length - offset;
+                if (remaining === 2) {
+                    item.meaning = parts[offset + 1] || '';
+                } else if (remaining >= 3) {
+                    item.type = parts[offset + 1] || '';
+                    item.meaning = parts[offset + 2] || '';
+                    item.properNoun = parts[offset + 3] || '';
+                    item.grammarDesc = parts[offset + 4] || '';
+                }
             }
 
-            let item = {
-                id: id,
-                word: (parts[offset] || '').replace(/[0-9]/g, '').trim(),
-                type: '',
-                meaning: '',
-                properNoun: '',
-                grammarDesc: ''
-            };
-
-            const remaining = parts.length - offset;
-            if (remaining === 2) {
-                item.meaning = parts[offset + 1] || '';
-            } else if (remaining >= 3) {
-                item.type = parts[offset + 1] || '';
-                item.meaning = parts[offset + 2] || '';
-                item.properNoun = parts[offset + 3] || '';
-                item.grammarDesc = parts[offset + 4] || '';
-            }
-
-            if (item.word && (item.meaning || item.type)) {
+            // Keep the entry as long as it has a word AND at least one
+            // piece of actual content in ANY field — meaning, type,
+            // proper-noun description, grammar note, or etymology. This
+            // fixes rows that were being silently dropped just because
+            // "meaning" and "type" happened to both be empty (common for
+            // DPPN proper-noun rows where the content lives in properNoun /
+            // grammarDesc / etymology instead).
+            const hasContent = item.meaning || item.type || item.properNoun ||
+                                item.grammarDesc || item.etymology || item.wordDivision;
+            if (item.word && hasContent) {
                 result.push(item);
             }
         }
@@ -434,17 +502,21 @@
                     items.forEach(item => {
                         const row = document.createElement('div');
                         row.className = 'meaning-row';
-                        let detailsBtnHtml = (item.properNoun || item.grammarDesc) ? `<button class="details-btn" onclick="toggleDetails('${dict.id}-${item.id}')">විස්තර <svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-info"></use></svg></button>` : '';
+                        let detailsBtnHtml = (item.properNoun || item.grammarDesc || item.etymology) ? `<button class="details-btn" onclick="toggleDetails('${dict.id}-${item.id}')">විස්තර <svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-info"></use></svg></button>` : '';
 
                         row.innerHTML = `
                             <div class="word-header">
-                                ${item.type ? `<span class="word-type">${item.type}</span>` : '<span></span>'}
+                                <div class="word-header-left">
+                                    ${item.type ? `<span class="word-type">${item.type}</span>` : ''}
+                                    ${item.wordDivision ? `<span class="word-division">${item.wordDivision}</span>` : ''}
+                                </div>
                                 ${detailsBtnHtml}
                             </div>
                             <div style="margin-top:5px;">${item.meaning}</div>
                             <div id="details-${dict.id}-${item.id}" class="details-panel">
                                 ${item.properNoun ? `<div class="proper-noun-desc">සංඥානාම: ${item.properNoun}</div>` : ''}
                                 ${item.grammarDesc ? `<div class="grammar-desc">ව්‍යාකරණ: ${item.grammarDesc}</div>` : ''}
+                                ${item.etymology ? `<div class="etymology-desc">නිරුක්තිය: ${item.etymology}</div>` : ''}
                             </div>
                         `;
                         card.appendChild(row);
@@ -505,6 +577,35 @@
         document.getElementById('themeIcon').setAttribute('href', isDark ? '#icon-sun' : '#icon-moon');
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
     }
+
+    // --- Zoom / Text Size Functions ---
+    // Note: zoom is applied only to .container (the page content),
+    // never to <html>/<body>, so the bottom-nav icon row stays a fixed size.
+    function applyZoomPreview(value) {
+        const zoomTarget = document.querySelector('.container');
+        if (zoomTarget) zoomTarget.style.zoom = value + '%';
+        const label = document.getElementById('zoomValueLabel');
+        if (label) label.textContent = value + '%';
+    }
+
+    function saveZoom(value) {
+        localStorage.setItem('zoomLevel', String(value));
+    }
+
+    window.openZoomPanel = function () {
+        const overlay = document.getElementById('zoomOverlay');
+        const zoomSlider = document.getElementById('zoomSlider');
+        if (!overlay) return;
+        const current = localStorage.getItem('zoomLevel') || '100';
+        if (zoomSlider) zoomSlider.value = current;
+        applyZoomPreview(current);
+        overlay.classList.add('active');
+    };
+
+    window.closeZoomPanel = function (e) {
+        const overlay = document.getElementById('zoomOverlay');
+        if (overlay) overlay.classList.remove('active');
+    };
 
     function renderDictSelector() {
         const container = document.getElementById('dictList');
