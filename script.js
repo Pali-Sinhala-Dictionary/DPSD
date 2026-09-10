@@ -4,6 +4,14 @@
         { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.csv?v=1', enabled: true, data: [] }
     ];
 
+    // Path to the (plain, uncompressed) Sinhala-transliterated DPD-inflections
+    // CSV: word,pos,cat,sub,num,headword. Bump ?v= whenever the file changes
+    // so browsers/service-worker caches pick up the new version.
+    // NOTE: kept as a plain .csv on purpose — no zip / client-side
+    // decompression — since this app must run fully offline inside a
+    // WebView whose exact Chromium/API support we can't rely on.
+    const INFLECTION_DATA_PATH = 'inflections.csv?v=1';
+
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
     const suggestionsBox = document.getElementById('suggestionsBox');
@@ -94,6 +102,12 @@
         xhr.send();
     }
 
+    // --- Real CSV tokenizer (RFC4180-style) ---
+    // A plain line.split(',') breaks the moment any field's own text
+    // contains a comma (e.g. a meaning listing several synonyms) — those
+    // rows silently get extra columns and everything after shifts out of
+    // place. This walks the text character-by-character so quoted commas,
+    // quoted newlines, and escaped "" quotes are all handled correctly.
     function tokenizeCSV(text) {
         const rows = [];
         let row = [];
@@ -123,6 +137,10 @@
         return rows;
     }
 
+    // Recognizes the dictionary.csv header and maps column names to
+    // indices, so word/meaning/etc. are read by NAME, not by guessing at
+    // position/ID-format. Returns null if the row doesn't look like a
+    // known header (caller then falls back to flexible positional parsing).
     function detectHeaderMap(headerRow) {
         if (!headerRow || headerRow.length < 2) return null;
         const map = {};
@@ -134,6 +152,7 @@
             else if (h.indexOf('කෙටි ව්‍යා') !== -1 || hl === 'type') map.type = idx;
             else if (h.indexOf('පද බෙදීම') !== -1) map.wordDivision = idx;
             else if (h.indexOf('තේරුම') !== -1 && h.indexOf('නිරුක්ති') === -1) map.meaning = idx;
+            else if (hl === 'meaning') map.meaning = idx;
             else if (h.indexOf('සංඥා නාම') !== -1) map.properNoun = idx;
             else if (h.indexOf('ව්‍යාකරණ විස්තරය') !== -1) map.grammarDesc = idx;
             else if (h.indexOf('නිරුක්ති') !== -1) map.etymology = idx;
@@ -154,12 +173,19 @@
             const raw = rows[i];
             if (!raw || raw.length < 2) continue;
 
-            
+            // Normalize to a single canonical Unicode form (NFC) so that a
+            // word typed/stored via a different tool or keyboard, which may
+            // produce an equivalent but differently-composed sequence of
+            // combining marks (e.g. hal kirima + following consonant),
+            // still matches consistently at search time.
             const parts = raw.map(p => (p || '').trim().normalize('NFC'));
 
             let item;
             if (colMap) {
-                
+                // Known schema: read every field by its header name. This
+                // works regardless of the ID column's format (numeric like
+                // "42" or alphanumeric like "GAP4-173") since we never have
+                // to guess which column the ID is in.
                 item = {
                     id: (colMap.id !== undefined ? parts[colMap.id] : '') || String(i),
                     word: (parts[colMap.word] || '').replace(/[0-9]/g, '').trim(),
@@ -202,6 +228,13 @@
                 }
             }
 
+            // Keep the entry as long as it has a word AND at least one
+            // piece of actual content in ANY field — meaning, type,
+            // proper-noun description, grammar note, or etymology. This
+            // fixes rows that were being silently dropped just because
+            // "meaning" and "type" happened to both be empty (common for
+            // DPPN proper-noun rows where the content lives in properNoun /
+            // grammarDesc / etymology instead).
             const hasContent = item.meaning || item.type || item.properNoun ||
                                 item.grammarDesc || item.etymology || item.wordDivision;
             if (item.word && hasContent) {
@@ -211,6 +244,16 @@
         return result;
     }
 
+    // ================================================================
+    // Singlish -> Sinhala Transliteration Engine
+    // Ported from the reference "Pali-Sinhala Dictionary" app's search
+    // algorithm. Instead of doing one fragile sequential text replace,
+    // it builds a lookup of every consonant+vowel-sign combination and,
+    // for a given Singlish string, returns EVERY valid Sinhala spelling
+    // it could correspond to. This correctly handles inherent vowels,
+    // pili (vowel signs), rakaransaya/yansaya (්‍ර / ්‍ය) and the many
+    // ways people casually romanize the same Sinhala letter.
+    // ================================================================
     const singlish_vowels = [
         ['අ', 'a'], ['ආ', 'aa'], ['ඇ', 'ae'], ['ඈ', 'ae, aee'],
         ['ඉ', 'i'], ['ඊ', 'ii'], ['උ', 'u'], ['ඌ', 'uu'],
@@ -324,6 +367,8 @@
         return /[a-zA-Z]/.test(str);
     }
 
+    // Returns every possible Sinhala spelling for a Singlish string.
+    // Memoized on the remaining suffix so it stays fast even for longer words.
     function getPossibleMatches(input) {
         const cache = {};
         function helper(str) {
@@ -353,6 +398,153 @@
         if (!input || input.length > 24) return [];
         return helper(input).slice(0, 300);
     }
+
+    // ================================================================
+    // DPD Inflection ("වර නැගීම") lookup
+    // inflections.csv is a plain, uncompressed CSV (word,pos,cat,sub,num,
+    // headword — every word already transliterated to Sinhala script).
+    // Fetched + indexed into a Map only the FIRST time someone actually
+    // opens an inflection panel, so it never slows down initial load.
+    // Deliberately plain text (no zip/decompression) — this app runs
+    // fully offline inside a WebView, and we can't assume every device's
+    // WebView supports newer compression-stream APIs.
+    // ================================================================
+    let inflectionIndexPromise = null;
+
+    function getInflectionIndex() {
+        if (inflectionIndexPromise) return inflectionIndexPromise;
+        inflectionIndexPromise = new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', INFLECTION_DATA_PATH, true);
+            xhr.overrideMimeType('text/plain; charset=utf-8');
+            xhr.onload = function () {
+                if (xhr.status !== 200 && xhr.status !== 0) {
+                    reject(new Error('HTTP ' + xhr.status));
+                    return;
+                }
+                const rows = tokenizeCSV(xhr.responseText);
+                const index = new Map();
+                // header: word,pos,cat,sub,num,headword — skip row 0
+                for (let i = 1; i < rows.length; i++) {
+                    const r = rows[i];
+                    if (!r || r.length < 6) continue;
+                    const headword = r[5];
+                    const entry = { inflected: r[0], pos: r[1], category: r[2], subcase: r[3], number: r[4] };
+                    let bucket = index.get(headword);
+                    if (!bucket) { bucket = []; index.set(headword, bucket); }
+                    bucket.push(entry);
+                }
+                resolve(index);
+            };
+            xhr.onerror = () => reject(new Error('network error loading ' + INFLECTION_DATA_PATH));
+            xhr.send();
+        }).catch(err => {
+            console.error('inflections.csv load failed:', err);
+            inflectionIndexPromise = null; // allow retry on next open
+            throw err;
+            });
+        return inflectionIndexPromise;
+    }
+
+    const INFL_CASE_ORDER = ['nom', 'acc', 'instr', 'dat', 'abl', 'gen', 'loc', 'voc'];
+    const INFL_CASE_LABELS = { nom: 'පඨමා', acc: 'දුතියා', instr: 'තතියා', dat: 'චතුත්ථී', abl: 'පඤ්චමී', gen: 'ෂෂ්ඨී', loc: 'සප්තමී', voc: 'ආලපන' };
+    const INFL_GENDER_ORDER = ['masc', 'fem', 'nt'];
+    const INFL_GENDER_LABELS = { masc: 'පුල්ලිංග', fem: 'ඉත්ථීලිංග', nt: 'නපුංසකලිංග' };
+    const INFL_NUMBER_LABELS = { sg: 'ඒක වචන', pl: 'බහු වචන' };
+    const INFL_TENSE_ORDER = ['pr', 'imp', 'opt', 'perf', 'imperf', 'aor', 'fut', 'cond'];
+    const INFL_TENSE_LABELS = { pr: 'වර්තමානා', imp: 'පඤ්චමී', opt: 'සත්තමී', perf: 'පරොක්ඛා', imperf: 'හියත්තනී', aor: 'අජ්ජතනී', fut: 'භවිස්සන්ති', cond: 'කාලාතිපත්ති' };
+    const INFL_PERSON_ORDER = ['1st', '2nd', '3rd'];
+    const INFL_PERSON_LABELS = { '1st': 'උත්තම පුරුෂ', '2nd': 'මධ්‍යම පුරුෂ', '3rd': 'ප්‍රථම පුරුෂ' };
+
+    function uniqueForms(rows) {
+        return Array.from(new Set(rows.map(r => r.inflected))).join('<br>');
+    }
+
+    function buildInflectionTablesHTML(rows) {
+        if (!rows || rows.length === 0) {
+            return '<div class="inflection-empty">මෙම වචනයට වර නැගීම් දත්ත හමු නොවීය.</div>';
+        }
+
+        let html = '';
+
+        // --- Nominal declension: one stacked table per gender present ---
+        INFL_GENDER_ORDER.filter(g => rows.some(r => r.category === g)).forEach(g => {
+            const genderRows = rows.filter(r => r.category === g);
+            const caseRows = INFL_CASE_ORDER
+                .map(c => ({
+                    code: c,
+                    sg: genderRows.filter(r => r.subcase === c && r.number === 'sg'),
+                    pl: genderRows.filter(r => r.subcase === c && r.number === 'pl'),
+                }))
+                .filter(r => r.sg.length || r.pl.length);
+            if (!caseRows.length) return;
+
+            html += `<div class="inflection-group-title">${INFL_GENDER_LABELS[g]}</div>`;
+            html += '<div class="inflection-table-wrapper"><table class="inflection-table">';
+            html += `<tr><th class="inflection-corner"></th><th>${INFL_NUMBER_LABELS.sg}</th><th>${INFL_NUMBER_LABELS.pl}</th></tr>`;
+            caseRows.forEach(r => {
+                html += `<tr><th>${INFL_CASE_LABELS[r.code]}</th><td>${r.sg.length ? uniqueForms(r.sg) : '—'}</td><td>${r.pl.length ? uniqueForms(r.pl) : '—'}</td></tr>`;
+            });
+            html += '</table></div>';
+        });
+
+        // --- Verb conjugation: one stacked table per number (sg / pl) ---
+        const verbRows = rows.filter(r => INFL_PERSON_ORDER.includes(r.subcase));
+        ['sg', 'pl'].forEach(num => {
+            const numRows = verbRows.filter(r => r.number === num);
+            if (!numRows.length) return;
+            const tenseKeys = Array.from(new Set(numRows.map(r => r.category)));
+            const orderedTenseKeys = INFL_TENSE_ORDER
+                .filter(t => tenseKeys.includes(t))
+                .concat(INFL_TENSE_ORDER.map(t => 'reflx ' + t).filter(t => tenseKeys.includes(t)));
+            if (!orderedTenseKeys.length) return;
+
+            html += `<div class="inflection-group-title">ක්‍රියා පදය — ${INFL_NUMBER_LABELS[num]}</div>`;
+            html += '<div class="inflection-table-wrapper"><table class="inflection-table">';
+            html += `<tr><th class="inflection-corner"></th><th>${INFL_PERSON_LABELS['1st']}</th><th>${INFL_PERSON_LABELS['2nd']}</th><th>${INFL_PERSON_LABELS['3rd']}</th></tr>`;
+            orderedTenseKeys.forEach(catKey => {
+                const isReflx = catKey.indexOf('reflx') === 0;
+                const tenseCode = catKey.replace('reflx', '').trim();
+                const label = INFL_TENSE_LABELS[tenseCode] + (isReflx ? ' (ආත්ම.)' : '');
+                html += `<tr><th>${label}</th>`;
+                INFL_PERSON_ORDER.forEach(p => {
+                    const cell = numRows.filter(r => r.category === catKey && r.subcase === p);
+                    html += `<td>${cell.length ? uniqueForms(cell) : '—'}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</table></div>';
+        });
+
+        return html || '<div class="inflection-empty">මෙම වචනයට වර නැගීම් දත්ත හමු නොවීය.</div>';
+    }
+
+    window.toggleInflection = function (id, headword) {
+        const panel = document.getElementById(`inflection-${id}`);
+        if (!panel) return;
+
+        const isOpen = panel.classList.contains('open');
+        if (isOpen) {
+            panel.classList.remove('open');
+            panel.style.display = 'none';
+            return;
+        }
+
+        panel.style.display = 'block';
+        panel.classList.add('open');
+        if (panel.dataset.loaded === '1') return; // already fetched, just re-showing
+
+        panel.innerHTML = '<div class="inflection-loading">වර නැගීම් දත්ත පූරණය වෙමින්...</div>';
+        getInflectionIndex()
+            .then(index => {
+                const rows = index.get(headword) || [];
+                panel.innerHTML = buildInflectionTablesHTML(rows);
+                panel.dataset.loaded = '1';
+            })
+            .catch(() => {
+                panel.innerHTML = '<div class="inflection-empty">වර නැගීම් දත්ත පූරණය කළ නොහැකි විය.</div>';
+            });
+    };
 
     // --- Search Input & Suggestions ---
     let searchTimeout;
@@ -467,6 +659,9 @@
                         const row = document.createElement('div');
                         row.className = 'meaning-row';
                         let detailsBtnHtml = (item.properNoun || item.grammarDesc || item.etymology) ? `<button class="details-btn" onclick="toggleDetails('${dict.id}-${item.id}')">විස්තර <svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-info"></use></svg></button>` : '';
+                        // Inflection ("වර නැගීම") lookup only applies to the Pali dictionary.
+                        const safeHeadword = mainWord.replace(/'/g, "\\'");
+                        let inflectionBtnHtml = (dict.id === 'pali') ? `<button class="inflection-btn" onclick="toggleInflection('${dict.id}-${item.id}', '${safeHeadword}')">වර නැගීම</button>` : '';
 
                         row.innerHTML = `
                             <div class="word-header">
@@ -474,7 +669,10 @@
                                     ${item.type ? `<span class="word-type">${item.type}</span>` : ''}
                                     ${item.wordDivision ? `<span class="word-division">${item.wordDivision}</span>` : ''}
                                 </div>
-                                ${detailsBtnHtml}
+                                <div class="word-header-right">
+                                    ${detailsBtnHtml}
+                                    ${inflectionBtnHtml}
+                                </div>
                             </div>
                             <div style="margin-top:5px;">${item.meaning}</div>
                             <div id="details-${dict.id}-${item.id}" class="details-panel">
@@ -482,6 +680,7 @@
                                 ${item.grammarDesc ? `<div class="grammar-desc">ව්‍යාකරණ: ${item.grammarDesc}</div>` : ''}
                                 ${item.etymology ? `<div class="etymology-desc">නිරුක්තිය: ${item.etymology}</div>` : ''}
                             </div>
+                            ${inflectionBtnHtml ? `<div id="inflection-${dict.id}-${item.id}" class="inflection-panel"></div>` : ''}
                         `;
                         card.appendChild(row);
                     });
