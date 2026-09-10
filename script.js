@@ -94,12 +94,6 @@
         xhr.send();
     }
 
-    // --- Real CSV tokenizer (RFC4180-style) ---
-    // A plain line.split(',') breaks the moment any field's own text
-    // contains a comma (e.g. a meaning listing several synonyms) — those
-    // rows silently get extra columns and everything after shifts out of
-    // place. This walks the text character-by-character so quoted commas,
-    // quoted newlines, and escaped "" quotes are all handled correctly.
     function tokenizeCSV(text) {
         const rows = [];
         let row = [];
@@ -129,10 +123,6 @@
         return rows;
     }
 
-    // Recognizes the dictionary.csv header and maps column names to
-    // indices, so word/meaning/etc. are read by NAME, not by guessing at
-    // position/ID-format. Returns null if the row doesn't look like a
-    // known header (caller then falls back to flexible positional parsing).
     function detectHeaderMap(headerRow) {
         if (!headerRow || headerRow.length < 2) return null;
         const map = {};
@@ -164,19 +154,12 @@
             const raw = rows[i];
             if (!raw || raw.length < 2) continue;
 
-            // Normalize to a single canonical Unicode form (NFC) so that a
-            // word typed/stored via a different tool or keyboard, which may
-            // produce an equivalent but differently-composed sequence of
-            // combining marks (e.g. hal kirima + following consonant),
-            // still matches consistently at search time.
+            
             const parts = raw.map(p => (p || '').trim().normalize('NFC'));
 
             let item;
             if (colMap) {
-                // Known schema: read every field by its header name. This
-                // works regardless of the ID column's format (numeric like
-                // "42" or alphanumeric like "GAP4-173") since we never have
-                // to guess which column the ID is in.
+                
                 item = {
                     id: (colMap.id !== undefined ? parts[colMap.id] : '') || String(i),
                     word: (parts[colMap.word] || '').replace(/[0-9]/g, '').trim(),
@@ -219,13 +202,6 @@
                 }
             }
 
-            // Keep the entry as long as it has a word AND at least one
-            // piece of actual content in ANY field — meaning, type,
-            // proper-noun description, grammar note, or etymology. This
-            // fixes rows that were being silently dropped just because
-            // "meaning" and "type" happened to both be empty (common for
-            // DPPN proper-noun rows where the content lives in properNoun /
-            // grammarDesc / etymology instead).
             const hasContent = item.meaning || item.type || item.properNoun ||
                                 item.grammarDesc || item.etymology || item.wordDivision;
             if (item.word && hasContent) {
@@ -235,16 +211,6 @@
         return result;
     }
 
-    // ================================================================
-    // Singlish -> Sinhala Transliteration Engine
-    // Ported from the reference "Pali-Sinhala Dictionary" app's search
-    // algorithm. Instead of doing one fragile sequential text replace,
-    // it builds a lookup of every consonant+vowel-sign combination and,
-    // for a given Singlish string, returns EVERY valid Sinhala spelling
-    // it could correspond to. This correctly handles inherent vowels,
-    // pili (vowel signs), rakaransaya/yansaya (්‍ර / ්‍ය) and the many
-    // ways people casually romanize the same Sinhala letter.
-    // ================================================================
     const singlish_vowels = [
         ['අ', 'a'], ['ආ', 'aa'], ['ඇ', 'ae'], ['ඈ', 'ae, aee'],
         ['ඉ', 'i'], ['ඊ', 'ii'], ['උ', 'u'], ['ඌ', 'uu'],
@@ -358,8 +324,6 @@
         return /[a-zA-Z]/.test(str);
     }
 
-    // Returns every possible Sinhala spelling for a Singlish string.
-    // Memoized on the remaining suffix so it stays fast even for longer words.
     function getPossibleMatches(input) {
         const cache = {};
         function helper(str) {
