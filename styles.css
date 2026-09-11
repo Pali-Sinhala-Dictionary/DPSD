@@ -1044,16 +1044,16 @@ h1 {
 
 .inflection-table th {
 
-    background: var(--primary-color);
+    background: rgba(139,0,0,0.08);
 
-    color: #fff;
+    color: var(--primary-color);
 
     font-weight: bold;
 }
 
 .inflection-table th.inflection-corner {
 
-    background: var(--primary-dark);
+    background: rgba(139,0,0,0.08);
 }
 
 .inflection-table td {
@@ -1516,6 +1516,15 @@ body.dark-theme .inflection-table td {
 
     border-color:
         rgba(224,90,90,0.3);
+}
+
+body.dark-theme .inflection-table th {
+
+    background:
+        rgba(224,90,90,0.14);
+
+    color:
+        var(--primary-color);
 }
 
 body.dark-theme .inflection-table td {

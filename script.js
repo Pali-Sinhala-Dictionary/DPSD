@@ -517,9 +517,14 @@
     const INFL_GENDER_LABELS = { masc: 'පුල්ලිංග', fem: 'ඉත්ථීලිංග', nt: 'නපුංසකලිංග' };
     const INFL_NUMBER_LABELS = { sg: 'ඒක වචන', pl: 'බහු වචන' };
     const INFL_TENSE_ORDER = ['pr', 'imp', 'opt', 'perf', 'imperf', 'aor', 'fut', 'cond'];
-    const INFL_TENSE_LABELS = { pr: 'වර්තමානා', imp: 'පඤ්චමී', opt: 'සත්තමී', perf: 'පරොක්ඛා', imperf: 'හියත්තනී', aor: 'අජ්ජතනී', fut: 'භවිස්සන්ති', cond: 'කාලාතිපත්ති' };
+    const INFL_TENSE_LABELS = { pr: 'වත්තමානා', imp: 'පඤ්චමී', opt: 'සත්තමී', perf: 'පරොක්ඛා', imperf: 'හියත්තනී', aor: 'අජ්ජතනී', fut: 'භවිස්සන්ති', cond: 'කාලාතිපත්ති' };
     const INFL_PERSON_ORDER = ['1st', '2nd', '3rd'];
     const INFL_PERSON_LABELS = { '1st': 'උත්තම පුරුෂ', '2nd': 'මධ්‍යම පුරුෂ', '3rd': 'ප්‍රථම පුරුෂ' };
+    // Personal / dual pronouns (අහං, ත්වං, උභ ...) decline by PERSON, not
+    // gender — DPD stores these as category=person, subcase=case (the
+    // reverse of the verb table, where subcase is the person).
+    const INFL_PRON_PERSON_ORDER = ['1st', '2nd', 'dual'];
+    const INFL_PRON_PERSON_LABELS = { '1st': 'උත්තම පුරුෂ (මම)', '2nd': 'මධ්‍යම පුරුෂ (ඔබ)', 'dual': 'උභ (දෙදෙනා)' };
 
     function uniqueForms(rows) {
         return Array.from(new Set(rows.map(r => r.inflected))).join('<br>');
@@ -553,33 +558,66 @@
             html += '</table></div>';
         });
 
-        // --- Verb conjugation: one stacked table per number (sg / pl) ---
-        const verbRows = rows.filter(r => INFL_PERSON_ORDER.includes(r.subcase));
-        ['sg', 'pl'].forEach(num => {
-            const numRows = verbRows.filter(r => r.number === num);
-            if (!numRows.length) return;
-            const tenseKeys = Array.from(new Set(numRows.map(r => r.category)));
-            const orderedTenseKeys = INFL_TENSE_ORDER
-                .filter(t => tenseKeys.includes(t))
-                .concat(INFL_TENSE_ORDER.map(t => 'reflx ' + t).filter(t => tenseKeys.includes(t)));
-            if (!orderedTenseKeys.length) return;
+        // --- Personal/dual pronoun declension: one table per person present ---
+        INFL_PRON_PERSON_ORDER.filter(p => rows.some(r => r.category === p && INFL_CASE_ORDER.includes(r.subcase))).forEach(p => {
+            const personRows = rows.filter(r => r.category === p && INFL_CASE_ORDER.includes(r.subcase));
+            const caseRows = INFL_CASE_ORDER
+                .map(c => ({
+                    code: c,
+                    sg: personRows.filter(r => r.subcase === c && r.number === 'sg'),
+                    pl: personRows.filter(r => r.subcase === c && r.number === 'pl'),
+                }))
+                .filter(r => r.sg.length || r.pl.length);
+            if (!caseRows.length) return;
 
-            html += `<div class="inflection-group-title">ක්‍රියා පදය — ${INFL_NUMBER_LABELS[num]}</div>`;
+            html += `<div class="inflection-group-title">${INFL_PRON_PERSON_LABELS[p]}</div>`;
             html += '<div class="inflection-table-wrapper"><table class="inflection-table">';
-            html += `<tr><th class="inflection-corner"></th><th>${INFL_PERSON_LABELS['1st']}</th><th>${INFL_PERSON_LABELS['2nd']}</th><th>${INFL_PERSON_LABELS['3rd']}</th></tr>`;
-            orderedTenseKeys.forEach(catKey => {
-                const isReflx = catKey.indexOf('reflx') === 0;
-                const tenseCode = catKey.replace('reflx', '').trim();
-                const label = INFL_TENSE_LABELS[tenseCode] + (isReflx ? ' (ආත්ම.)' : '');
-                html += `<tr><th>${label}</th>`;
-                INFL_PERSON_ORDER.forEach(p => {
-                    const cell = numRows.filter(r => r.category === catKey && r.subcase === p);
-                    html += `<td>${cell.length ? uniqueForms(cell) : '—'}</td>`;
-                });
-                html += '</tr>';
+            html += `<tr><th class="inflection-corner"></th><th>${INFL_NUMBER_LABELS.sg}</th><th>${INFL_NUMBER_LABELS.pl}</th></tr>`;
+            caseRows.forEach(r => {
+                html += `<tr><th>${INFL_CASE_LABELS[r.code]}</th><td>${r.sg.length ? uniqueForms(r.sg) : '—'}</td><td>${r.pl.length ? uniqueForms(r.pl) : '—'}</td></tr>`;
             });
             html += '</table></div>';
         });
+
+        // --- Verb conjugation: ONE table, columns = sg/pl/reflexive-sg/reflexive-pl,
+        // rows = tense × person (ප්‍රථම → මධ්‍යම → උත්තම within each tense) —
+        // matching the DPD reference layout exactly. ---
+        const verbRows = rows.filter(r => INFL_PERSON_ORDER.includes(r.subcase));
+        if (verbRows.length) {
+            const presentCategories = new Set(verbRows.map(r => r.category));
+            const plainTenses = INFL_TENSE_ORDER.filter(t => presentCategories.has(t));
+            const reflxTenses = INFL_TENSE_ORDER.filter(t => presentCategories.has('reflx ' + t));
+            const hasReflx = reflxTenses.length > 0;
+            // Row order follows tense group order; within a tense, person
+            // is listed ප්‍රථම (3rd) → මධ්‍යම (2nd) → උත්තම (1st) පුරුෂ.
+            const VERB_ROW_PERSON_ORDER = ['3rd', '2nd', '1st'];
+            const tenseUnion = INFL_TENSE_ORDER.filter(t => plainTenses.includes(t) || reflxTenses.includes(t));
+
+            if (tenseUnion.length) {
+                html += '<div class="inflection-group-title">ක්‍රියා පදය</div>';
+                html += '<div class="inflection-table-wrapper"><table class="inflection-table">';
+                html += `<tr><th class="inflection-corner"></th><th>${INFL_NUMBER_LABELS.sg}</th><th>${INFL_NUMBER_LABELS.pl}</th>`;
+                if (hasReflx) html += `<th>ආත්ම. ${INFL_NUMBER_LABELS.sg}</th><th>ආත්ම. ${INFL_NUMBER_LABELS.pl}</th>`;
+                html += '</tr>';
+
+                tenseUnion.forEach(tenseCode => {
+                    VERB_ROW_PERSON_ORDER.forEach(person => {
+                        const sgCell = verbRows.filter(r => r.category === tenseCode && r.subcase === person && r.number === 'sg');
+                        const plCell = verbRows.filter(r => r.category === tenseCode && r.subcase === person && r.number === 'pl');
+                        const rSgCell = hasReflx ? verbRows.filter(r => r.category === 'reflx ' + tenseCode && r.subcase === person && r.number === 'sg') : [];
+                        const rPlCell = hasReflx ? verbRows.filter(r => r.category === 'reflx ' + tenseCode && r.subcase === person && r.number === 'pl') : [];
+                        if (!sgCell.length && !plCell.length && !rSgCell.length && !rPlCell.length) return;
+
+                        const rowLabel = `${INFL_TENSE_LABELS[tenseCode]} (${INFL_PERSON_LABELS[person]})`;
+                        html += `<tr><th>${rowLabel}</th><td>${sgCell.length ? uniqueForms(sgCell) : '—'}</td><td>${plCell.length ? uniqueForms(plCell) : '—'}</td>`;
+                        if (hasReflx) html += `<td>${rSgCell.length ? uniqueForms(rSgCell) : '—'}</td><td>${rPlCell.length ? uniqueForms(rPlCell) : '—'}</td>`;
+                        html += '</tr>';
+                    });
+                });
+
+                html += '</table></div>';
+            }
+        }
 
         return html || '<div class="inflection-empty">මෙම වචනයට වර නැගීම් දත්ත හමු නොවීය.</div>';
     }
