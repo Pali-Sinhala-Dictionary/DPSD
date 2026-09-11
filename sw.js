@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pali-sin-dict-v4'; // v4: dictionary/sinhala_english/inflections zip වලට මාරු වීම නිසා bump කරන ලදී
+const CACHE_NAME = 'pali-sin-dict-v4.1'; // v4: dictionary/sinhala_english/inflections zip වලට මාරු වීම නිසා bump කරන ලදී
 
 const CACHE_ASSETS = [
   './',
