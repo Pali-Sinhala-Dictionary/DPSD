@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pali-sin-dict-v4.1'; // v4: dictionary/sinhala_english/inflections zip වලට මාරු වීම නිසා bump කරන ලදී
+const CACHE_NAME = 'pali-sin-dict-v5'; // v5: inflections-worker.js (background thread loader) එකතු කිරීම නිසා bump කරන ලදී
 
 const CACHE_ASSETS = [
   './',
@@ -7,6 +7,7 @@ const CACHE_ASSETS = [
   './dictionary.zip',
   './sinhala_english.zip',
   './inflections.zip',
+  './inflections-worker.js',
   './AbhayaLibre-Regular.ttf', // Font file එක cache කිරීමට එක් කරන ලදී
   './icon-192x192.png',
   './icon-512x512.png'

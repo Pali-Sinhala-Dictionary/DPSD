@@ -7,12 +7,10 @@
     // Path to the zipped, Sinhala-transliterated DPD-inflections CSV
     // (word,pos,cat,sub,num,headword). Bump ?v= whenever the file changes
     // so browsers/service-worker caches pick up the new version.
-    // NOTE: this build targets GitHub Pages (a real online browser), so
-    // client-side unzip via the built-in DecompressionStream API is safe
-    // to use here — see unzipFirstEntry() below. (A separate offline-APK
-    // build should use plain, uncompressed .csv files instead, since we
-    // can't guarantee every WebView supports DecompressionStream.)
-    const INFLECTION_DATA_PATH = 'inflections.zip?v=1';
+    // NOTE: the actual fetch/unzip/parse/cache for this file now happens
+    // entirely inside inflections-worker.js (a separate thread, so it
+    // never blocks typing) — INFLECTION_DATA_PATH and its ?v= version
+    // live there now; keep the two in sync when the file's content changes.
 
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
@@ -486,113 +484,46 @@
 
     // ================================================================
     // DPD Inflection ("වර නැගීම") lookup
-    // inflections.zip wraps a lean CSV (word,pos,cat,sub,num,headword —
-    // every word already transliterated to Sinhala script). Parsed into a
-    // Map only the FIRST time someone opens an inflection panel in THIS
-    // session — and the parsed result is also cached in IndexedDB so a
-    // page reload / app relaunch doesn't have to re-fetch + re-parse the
-    // whole file again. Bump INFLECTION_CACHE_VERSION whenever
-    // inflections.zip's content changes, so old cached data is ignored.
+    // All the heavy lifting (fetch, unzip, CSV-parse, IndexedDB cache,
+    // Map-building over ~900k rows) now runs in inflections-worker.js —
+    // a separate thread — so it NEVER blocks typing/searching on the main
+    // thread, no matter when it's triggered (page load warm-up, or the
+    // very first button tap). The worker itself handles the IndexedDB
+    // cache (see that file for INFLECTION_CACHE_VERSION).
     // ================================================================
-    const INFLECTION_CACHE_VERSION = 'v1';
-    const IDB_NAME = 'pali-dict-cache';
-    const IDB_STORE = 'inflections';
-
-    function openInflectionIdb() {
-        return new Promise((resolve, reject) => {
-            if (!('indexedDB' in window)) { reject(new Error('indexedDB unavailable')); return; }
-            const req = indexedDB.open(IDB_NAME, 1);
-            req.onupgradeneeded = () => {
-                const db = req.result;
-                if (!db.objectStoreNames.contains(IDB_STORE)) {
-                    db.createObjectStore(IDB_STORE, { keyPath: 'version' });
-                }
-            };
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => reject(req.error);
-        });
-    }
-
-    function idbGetInflections(db, version) {
-        return new Promise((resolve, reject) => {
-            const tx = db.transaction(IDB_STORE, 'readonly');
-            const req = tx.objectStore(IDB_STORE).get(version);
-            req.onsuccess = () => resolve(req.result || null);
-            req.onerror = () => reject(req.error);
-        });
-    }
-
-    function idbPutInflections(db, record) {
-        return new Promise((resolve, reject) => {
-            const tx = db.transaction(IDB_STORE, 'readwrite');
-            // Clear any older cached versions so we don't accumulate stale
-            // copies of this (fairly large) dataset across app updates.
-            tx.objectStore(IDB_STORE).clear();
-            tx.objectStore(IDB_STORE).put(record);
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
-        });
-    }
-
-    function buildInflectionIndex(flatRows) {
-        const index = new Map();
-        flatRows.forEach(r => {
-            let bucket = index.get(r.h);
-            if (!bucket) { bucket = []; index.set(r.h, bucket); }
-            bucket.push({ inflected: r.w, pos: r.p, category: r.c, subcase: r.s, number: r.n });
-        });
-        return index;
-    }
-
     let inflectionIndexPromise = null;
 
     function getInflectionIndex() {
         if (inflectionIndexPromise) return inflectionIndexPromise;
 
-        inflectionIndexPromise = (async () => {
-            // 1. Try the IndexedDB cache first (instant — no fetch/unzip/parse).
+        inflectionIndexPromise = new Promise((resolve, reject) => {
+            let worker;
             try {
-                const db = await openInflectionIdb();
-                const cached = await idbGetInflections(db, INFLECTION_CACHE_VERSION);
-                if (cached && cached.rows && cached.rows.length) {
-                    return buildInflectionIndex(cached.rows);
+                worker = new Worker('inflections-worker.js');
+            } catch (e) {
+                reject(e);
+                return;
+            }
+            worker.onmessage = (evt) => {
+                const data = evt.data || {};
+                if (data.type === 'ready') {
+                    resolve(data.index);
+                } else if (data.type === 'error') {
+                    reject(new Error(data.message || 'inflections worker error'));
                 }
-            } catch (e) {
-                console.warn('IndexedDB unavailable — will parse from network instead.', e);
-            }
-
-            // 2. Cache miss (first run, or version bumped): fetch + unzip + parse.
-            const res = await fetch(INFLECTION_DATA_PATH);
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            const buf = await res.arrayBuffer();
-            const bytes = await unzipFirstEntry(buf);
-            const text = new TextDecoder('utf-8').decode(bytes);
-            const csvRows = tokenizeCSV(text);
-
-            const flatRows = [];
-            // header: word,pos,cat,sub,num,headword — skip row 0
-            for (let i = 1; i < csvRows.length; i++) {
-                const r = csvRows[i];
-                if (!r || r.length < 6) continue;
-                flatRows.push({ h: r[5], w: r[0], p: r[1], c: r[2], s: r[3], n: r[4] });
-            }
-            const index = buildInflectionIndex(flatRows);
-
-            // 3. Best-effort: store for next time. Never let a storage
-            // failure (quota, blocked IndexedDB, etc.) break the feature.
-            try {
-                const db = await openInflectionIdb();
-                await idbPutInflections(db, { version: INFLECTION_CACHE_VERSION, rows: flatRows });
-            } catch (e) {
-                console.warn('Could not cache inflections to IndexedDB (non-fatal).', e);
-            }
-
-            return index;
-        })().catch(err => {
+                worker.terminate();
+            };
+            worker.onerror = (err) => {
+                reject(err);
+                worker.terminate();
+            };
+            worker.postMessage({ type: 'load' });
+        }).catch(err => {
             console.error('inflections load failed:', err);
             inflectionIndexPromise = null; // allow retry on next open
             throw err;
         });
+
         return inflectionIndexPromise;
     }
 
