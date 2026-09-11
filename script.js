@@ -1,16 +1,18 @@
     // සියලු ශබ්දකෝෂ Configuration (Oxford Dictionary ඉවත් කර ඇත)
     let availableDicts = [
-        { id: 'pali', name: 'පාලි - සිංහල ශබ්දකෝෂය', path: 'dictionary.csv', enabled: true, data: [] },
-        { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.csv?v=1', enabled: true, data: [] }
+        { id: 'pali', name: 'පාලි - සිංහල ශබ්දකෝෂය', path: 'dictionary.zip', enabled: true, data: [] },
+        { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.zip', enabled: true, data: [] }
     ];
 
-    // Path to the (plain, uncompressed) Sinhala-transliterated DPD-inflections
-    // CSV: word,pos,cat,sub,num,headword. Bump ?v= whenever the file changes
+    // Path to the zipped, Sinhala-transliterated DPD-inflections CSV
+    // (word,pos,cat,sub,num,headword). Bump ?v= whenever the file changes
     // so browsers/service-worker caches pick up the new version.
-    // NOTE: kept as a plain .csv on purpose — no zip / client-side
-    // decompression — since this app must run fully offline inside a
-    // WebView whose exact Chromium/API support we can't rely on.
-    const INFLECTION_DATA_PATH = 'inflections.csv?v=1';
+    // NOTE: this build targets GitHub Pages (a real online browser), so
+    // client-side unzip via the built-in DecompressionStream API is safe
+    // to use here — see unzipFirstEntry() below. (A separate offline-APK
+    // build should use plain, uncompressed .csv files instead, since we
+    // can't guarantee every WebView supports DecompressionStream.)
+    const INFLECTION_DATA_PATH = 'inflections.zip?v=1';
 
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
@@ -86,6 +88,14 @@
     }
 
     function fetchCSV(path, callback) {
+        // A ".zip" (with or without a trailing ?v=... query string) holds a
+        // single CSV file — unzipped client-side with the browser's native
+        // DecompressionStream API (see unzipFirstEntry below), then parsed
+        // exactly like a plain CSV.
+        if (/\.zip(\?.*)?$/i.test(path)) {
+            fetchZippedCSV(path, callback);
+            return;
+        }
         const xhr = new XMLHttpRequest();
         xhr.open("GET", path, true);
         // Force UTF-8 decoding regardless of what the server reports, so
@@ -100,6 +110,67 @@
         };
         xhr.onerror = () => callback([]);
         xhr.send();
+    }
+
+    // ================================================================
+    // Native ZIP reader (no external libraries). Every .zip we ship wraps
+    // exactly ONE file, compressed either "stored" (method 0) or "deflate"
+    // (method 8 — the default for Python's zipfile / most zip tools).
+    // DEFLATE is decoded with the browser's own built-in
+    // DecompressionStream('deflate-raw') — requires a reasonably modern
+    // browser (Chrome/Edge/Safari from ~2021 onward, or Chromium-based
+    // WebView 95+). Fine for GitHub Pages; an offline-APK build should
+    // ship plain .csv files instead, since WebView support can't be
+    // guaranteed on older Android versions.
+    // ================================================================
+    async function unzipFirstEntry(arrayBuffer) {
+        const view = new DataView(arrayBuffer);
+        const bytes = new Uint8Array(arrayBuffer);
+        const len = bytes.length;
+
+        const EOCD_SIG = 0x06054b50;
+        let eocdOffset = -1;
+        const scanStart = Math.max(0, len - 65557); // 22-byte record + max 65535-byte comment
+        for (let i = len - 22; i >= scanStart; i--) {
+            if (view.getUint32(i, true) === EOCD_SIG) { eocdOffset = i; break; }
+        }
+        if (eocdOffset === -1) throw new Error('not a valid zip file (EOCD not found)');
+
+        const cdOffset = view.getUint32(eocdOffset + 16, true);
+        const CD_SIG = 0x02014b50;
+        if (view.getUint32(cdOffset, true) !== CD_SIG) throw new Error('central directory not found');
+
+        const method = view.getUint16(cdOffset + 10, true);
+        const compSize = view.getUint32(cdOffset + 20, true);
+        const localHeaderOffset = view.getUint32(cdOffset + 42, true);
+
+        const LFH_SIG = 0x04034b50;
+        if (view.getUint32(localHeaderOffset, true) !== LFH_SIG) throw new Error('local file header not found');
+        const lNameLen = view.getUint16(localHeaderOffset + 26, true);
+        const lExtraLen = view.getUint16(localHeaderOffset + 28, true);
+        const dataStart = localHeaderOffset + 30 + lNameLen + lExtraLen;
+        const compData = bytes.slice(dataStart, dataStart + compSize);
+
+        if (method === 0) return compData; // stored, already raw
+        if (method === 8) {
+            const stream = new Blob([compData]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+            return new Uint8Array(await new Response(stream).arrayBuffer());
+        }
+        throw new Error('unsupported zip compression method: ' + method);
+    }
+
+    function fetchZippedCSV(path, callback) {
+        fetch(path)
+            .then(res => {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.arrayBuffer();
+            })
+            .then(buf => unzipFirstEntry(buf))
+            .then(bytes => callback(parseCSV(new TextDecoder('utf-8').decode(bytes))))
+            .catch(err => {
+                console.error('Zipped CSV load failed:', path, err);
+                callback([]);
+            });
     }
 
     // --- Real CSV tokenizer (RFC4180-style) ---
@@ -401,28 +472,24 @@
 
     // ================================================================
     // DPD Inflection ("වර නැගීම") lookup
-    // inflections.csv is a plain, uncompressed CSV (word,pos,cat,sub,num,
-    // headword — every word already transliterated to Sinhala script).
-    // Fetched + indexed into a Map only the FIRST time someone actually
+    // inflections.zip wraps a lean CSV (word,pos,cat,sub,num,headword —
+    // every word already transliterated to Sinhala script). Fetched +
+    // unzipped + indexed into a Map only the FIRST time someone actually
     // opens an inflection panel, so it never slows down initial load.
-    // Deliberately plain text (no zip/decompression) — this app runs
-    // fully offline inside a WebView, and we can't assume every device's
-    // WebView supports newer compression-stream APIs.
     // ================================================================
     let inflectionIndexPromise = null;
 
     function getInflectionIndex() {
         if (inflectionIndexPromise) return inflectionIndexPromise;
-        inflectionIndexPromise = new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open('GET', INFLECTION_DATA_PATH, true);
-            xhr.overrideMimeType('text/plain; charset=utf-8');
-            xhr.onload = function () {
-                if (xhr.status !== 200 && xhr.status !== 0) {
-                    reject(new Error('HTTP ' + xhr.status));
-                    return;
-                }
-                const rows = tokenizeCSV(xhr.responseText);
+        inflectionIndexPromise = fetch(INFLECTION_DATA_PATH)
+            .then(res => {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.arrayBuffer();
+            })
+            .then(buf => unzipFirstEntry(buf))
+            .then(bytes => {
+                const text = new TextDecoder('utf-8').decode(bytes);
+                const rows = tokenizeCSV(text);
                 const index = new Map();
                 // header: word,pos,cat,sub,num,headword — skip row 0
                 for (let i = 1; i < rows.length; i++) {
@@ -434,14 +501,12 @@
                     if (!bucket) { bucket = []; index.set(headword, bucket); }
                     bucket.push(entry);
                 }
-                resolve(index);
-            };
-            xhr.onerror = () => reject(new Error('network error loading ' + INFLECTION_DATA_PATH));
-            xhr.send();
-        }).catch(err => {
-            console.error('inflections.csv load failed:', err);
-            inflectionIndexPromise = null; // allow retry on next open
-            throw err;
+                return index;
+            })
+            .catch(err => {
+                console.error('inflections.zip load failed:', err);
+                inflectionIndexPromise = null; // allow retry on next open
+                throw err;
             });
         return inflectionIndexPromise;
     }

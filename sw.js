@@ -1,11 +1,12 @@
-const CACHE_NAME = 'pali-sin-dict-v3.4'; // Version එක v3 ලෙස වෙනස් කරන ලදී (පරණ Cache ඉවත් වීමට)
+const CACHE_NAME = 'pali-sin-dict-v4'; // v4: dictionary/sinhala_english/inflections zip වලට මාරු වීම නිසා bump කරන ලදී
 
 const CACHE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './dictionary.csv',
-  './sinhala_english.csv',
+  './dictionary.zip',
+  './sinhala_english.zip',
+  './inflections.zip',
   './AbhayaLibre-Regular.ttf', // Font file එක cache කිරීමට එක් කරන ලදී
   './icon-192x192.png',
   './icon-512x512.png'
