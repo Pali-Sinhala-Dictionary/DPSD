@@ -517,7 +517,7 @@
     const INFL_GENDER_LABELS = { masc: 'පුල්ලිංග', fem: 'ඉත්ථීලිංග', nt: 'නපුංසකලිංග' };
     const INFL_NUMBER_LABELS = { sg: 'ඒක වචන', pl: 'බහු වචන' };
     const INFL_TENSE_ORDER = ['pr', 'imp', 'opt', 'perf', 'imperf', 'aor', 'fut', 'cond'];
-    const INFL_TENSE_LABELS = { pr: 'වත්තමානා', imp: 'පඤ්චමී', opt: 'සත්තමී', perf: 'පරොක්ඛා', imperf: 'හියත්තනී', aor: 'අජ්ජතනී', fut: 'භවිස්සන්ති', cond: 'කාලාතිපත්ති' };
+    const INFL_TENSE_LABELS = { pr: 'වර්තමානා', imp: 'පඤ්චමී', opt: 'සත්තමී', perf: 'පරොක්ඛා', imperf: 'හියත්තනී', aor: 'අජ්ජතනී', fut: 'භවිස්සන්ති', cond: 'කාලාතිපත්ති' };
     const INFL_PERSON_ORDER = ['1st', '2nd', '3rd'];
     const INFL_PERSON_LABELS = { '1st': 'උත්තම පුරුෂ', '2nd': 'මධ්‍යම පුරුෂ', '3rd': 'ප්‍රථම පුරුෂ' };
     // Personal / dual pronouns (අහං, ත්වං, උභ ...) decline by PERSON, not
@@ -526,34 +526,193 @@
     const INFL_PRON_PERSON_ORDER = ['1st', '2nd', 'dual'];
     const INFL_PRON_PERSON_LABELS = { '1st': 'උත්තම පුරුෂ (මම)', '2nd': 'මධ්‍යම පුරුෂ (ඔබ)', 'dual': 'උභ (දෙදෙනා)' };
 
+    // ================================================================
+    // Regular-declension fallback generator
+    // DPD's grammar data only records CORPUS-ATTESTED spellings, so rarer
+    // words (e.g. වරාහ) are missing cells that a common word like බුද්ධ
+    // (same a-stem masc pattern) has. When a case×number cell has NO
+    // attested form, we generate the textbook-regular form(s) from the
+    // stem + known endings for a handful of the most common, reliable
+    // noun classes. These are visually marked (see .generated-form CSS)
+    // so they're never confused with real DPD-sourced data. Irregular
+    // words, pronouns, and verbs are NOT covered here — only left blank.
+    // ================================================================
+    const VOWEL_SIGN_AA = '\u0DCF'; // ා
+    const VOWEL_SIGN_I = '\u0DD2';  // ි
+    const VOWEL_SIGN_II = '\u0DD3'; // ී
+    const VOWEL_SIGN_U = '\u0DD4';  // ු
+    const VOWEL_SIGN_UU = '\u0DD6'; // ූ
+
+    const DECLENSION_SUFFIXES = {
+        // a-stem masculine (like දම්ම / බුද්ධ) — bare-consonant stem
+        a_masc: {
+            nom: { sg: ['ො'], pl: ['ා', 'ාසෙ'] },
+            acc: { sg: ['ං'], pl: ['ෙ'] },
+            instr: { sg: ['ා', 'ෙන'], pl: ['ෙභි', 'ෙහි'] },
+            dat: { sg: ['ස්ස', 'ාය'], pl: ['ානං'] },
+            abl: { sg: ['තො', 'ම්හා', 'ස්මා', 'ා'], pl: ['තො', 'ෙභි', 'ෙහි'] },
+            gen: { sg: ['ස්ස'], pl: ['ාන', 'ානං'] },
+            loc: { sg: ['ම්හි', 'ස්මිං', 'ෙ'], pl: ['ෙසු'] },
+            voc: { sg: ['', 'ා'], pl: ['ා'] },
+        },
+        // a-stem neuter (like රූප / චිත්ත) — same as a_masc except nom/acc/voc
+        a_nt: {
+            nom: { sg: ['ං', 'ො'], pl: ['ානි', 'ා'] },
+            acc: { sg: ['ං'], pl: ['ානි', 'ෙ'] },
+            instr: { sg: ['ා', 'ෙන'], pl: ['ෙභි', 'ෙහි'] },
+            dat: { sg: ['ස්ස', 'ාය'], pl: ['ානං'] },
+            abl: { sg: ['තො', 'ම්හා', 'ස්මා', 'ා'], pl: ['තො', 'ෙභි', 'ෙහි'] },
+            gen: { sg: ['ස්ස'], pl: ['ාන', 'ානං'] },
+            loc: { sg: ['ම්හි', 'ස්මිං', 'ෙ'], pl: ['ෙසු'] },
+            voc: { sg: ['', 'ං'], pl: ['ානි', 'ා'] },
+        },
+        // ā-stem feminine (like කථා / සද්ධා) — stem with the final ා removed
+        aa_fem: {
+            nom: { sg: ['ා'], pl: ['ායො', 'ා'] },
+            acc: { sg: ['ං'], pl: ['ායො', 'ා'] },
+            instr: { sg: ['ාය'], pl: ['ාහි', 'ාභි'] },
+            dat: { sg: ['ාය'], pl: ['ානං'] },
+            abl: { sg: ['ාය'], pl: ['ාහි', 'ාභි'] },
+            gen: { sg: ['ාය'], pl: ['ාන', 'ානං'] },
+            loc: { sg: ['ාය', 'ායං'], pl: ['ාසු'] },
+            voc: { sg: ['ෙ', 'ා'], pl: ['ායො', 'ා'] },
+        },
+    };
+
+    // Decide which of the 3 supported classes (if any) a headword belongs
+    // to, purely from its final letter + known gender. Anything that
+    // doesn't clearly fit (i/ī/u/ū-stems, consonant stems, irregulars) is
+    // deliberately left uncovered — better to show nothing than a guess
+    // outside the patterns we're confident about.
+    function detectDeclensionClass(headwordSi, gender) {
+        if (!headwordSi) return null;
+        const last = headwordSi[headwordSi.length - 1];
+        if (last === VOWEL_SIGN_AA) {
+            return gender === 'fem' ? { stem: headwordSi.slice(0, -1), cls: 'aa_fem' } : null;
+        }
+        if (last === VOWEL_SIGN_I || last === VOWEL_SIGN_II || last === VOWEL_SIGN_U || last === VOWEL_SIGN_UU) {
+            return null; // i/ī/u/ū-stem classes not covered yet
+        }
+        // Bare consonant ending => inherent "a"
+        if (gender === 'masc') return { stem: headwordSi, cls: 'a_masc' };
+        if (gender === 'nt') return { stem: headwordSi, cls: 'a_nt' };
+        return null;
+    }
+
+    function generateRegularForms(stem, cls, caseCode, number) {
+        const table = DECLENSION_SUFFIXES[cls];
+        if (!table || !table[caseCode]) return [];
+        const suffixes = table[caseCode][number] || [];
+        return suffixes.map(suf => stem + suf);
+    }
+
+    // ================================================================
+    // Verb conjugation fallback generator — same idea as the noun
+    // declension generator above, but for the "ati" present-stem class
+    // (bhū-class: gacchati, bhavati, cavati ...), by far the most common
+    // and regular Pali verb pattern. Endings below are cross-checked
+    // against gacchati's fully-attested DPD paradigm. Other conjugation
+    // classes (oti, āti, eti/causative, ṇāti, ṇoti ...) are NOT covered —
+    // left blank rather than guessed, since they follow different rules.
+    // ================================================================
+    const VERB_SUFFIXES_ATI_PR = {
+        pr: {
+            '3rd': { sg: ['ති'], pl: ['න්ති'], rsg: ['තෙ'], rpl: ['න්තෙ', 'රෙ'] },
+            '2nd': { sg: ['සි'], pl: ['ථ'], rsg: ['සෙ'], rpl: ['ව්හෙ'] },
+            '1st': { sg: ['ාමි'], pl: ['ාම'], rsg: ['ෙ'], rpl: ['ාම්හෙ'] },
+        },
+        imp: {
+            '3rd': { sg: ['තු'], pl: ['න්තු'], rsg: ['තං'], rpl: ['න්තං', 'රුං'] },
+            '2nd': { sg: ['', 'ාහි'], pl: ['ථ'], rsg: ['ස්සු'], rpl: ['ව්හො'] },
+            '1st': { sg: ['ාමි'], pl: ['ාම'], rsg: ['ෙ'], rpl: ['ාමසෙ'] },
+        },
+        opt: {
+            '3rd': { sg: ['ෙ', 'ෙය්ය'], pl: ['ෙය්යුං'], rsg: ['ෙථ'], rpl: ['ෙරං'] },
+            '2nd': { sg: ['ෙ', 'ෙය්යාසි'], pl: ['ෙථ', 'ෙය්යාථ'], rsg: ['ෙථො', 'ෙය්යාථො'], rpl: ['ෙය්යව්හො', 'ෙය්යාව්හො'] },
+            '1st': { sg: ['ෙ', 'ෙය්යාමි'], pl: ['ෙම', 'ෙමු', 'ෙය්යාම'], rsg: ['ෙය්යං'], rpl: ['ෙය්යාම්හෙ'] },
+        },
+        fut: {
+            '3rd': { sg: ['ිස්සති'], pl: ['ිස්සන්ති'], rsg: ['ිස්සතෙ'], rpl: ['ිස්සන්තෙ', 'ිස්සරෙ'] },
+            '2nd': { sg: ['ිස්සසි'], pl: ['ිස්සථ'], rsg: ['ිස්සසෙ'], rpl: ['ිස්සව්හෙ'] },
+            '1st': { sg: ['ිස්සාමි'], pl: ['ිස්සාම'], rsg: ['ිස්සං'], rpl: ['ිස්සාම්හෙ'] },
+        },
+    };
+
+    // A verb qualifies for the "ati" bhū-class pattern only if its
+    // citation form ends in bare-consonant + ති (e.g. ගච්ඡති), NOT
+    // vowel-sign + ති (e.g. කරොති "oti" class, which conjugates
+    // differently) — checked by looking at the character just before "ති".
+    function detectVerbClass(headwordSi) {
+        if (!headwordSi || headwordSi.length < 3) return null;
+        const n = headwordSi.length;
+        if (headwordSi[n - 2] !== '\u0DAD' || headwordSi[n - 1] !== '\u0DD2') return null; // must end in "ති"
+        const preceding = headwordSi[n - 3];
+        const vowelSigns = new Set(['\u0DCF', '\u0DD0', '\u0DD1', '\u0DD2', '\u0DD3', '\u0DD4', '\u0DD6', '\u0DD9', '\u0DDA', '\u0DDC', '\u0DDD', '\u0DDE', '\u0D82']);
+        if (vowelSigns.has(preceding)) return null; // e.g. "oti", "āti", "ṇāti" classes
+        return { base: headwordSi.slice(0, -2), cls: 'ati_pr' };
+    }
+
+    function generateVerbForms(base, tenseCode, person, number, reflx) {
+        const table = VERB_SUFFIXES_ATI_PR[tenseCode];
+        if (!table || !table[person]) return [];
+        const key = reflx ? (number === 'sg' ? 'rsg' : 'rpl') : number;
+        const suffixes = table[person][key] || [];
+        return suffixes.map(suf => base + suf);
+    }
+
     function uniqueForms(rows) {
         return Array.from(new Set(rows.map(r => r.inflected))).join('<br>');
     }
 
-    function buildInflectionTablesHTML(rows) {
+    // Renders a table cell's form list. `generated` wraps each form in a
+    // muted/italic span so rule-generated (unattested) forms are always
+    // visually distinct from real DPD-sourced ones.
+    function formsCellHtml(forms, generated) {
+        if (!forms.length) return '—';
+        const unique = Array.from(new Set(forms));
+        if (!generated) return unique.join('<br>');
+        return unique.map(f => `<span class="generated-form">${f}</span>`).join('<br>');
+    }
+
+    function buildInflectionTablesHTML(rows, headwordSi) {
         if (!rows || rows.length === 0) {
             return '<div class="inflection-empty">මෙම වචනයට වර නැගීම් දත්ත හමු නොවීය.</div>';
         }
 
         let html = '';
+        let usedGeneratedForms = false;
 
         // --- Nominal declension: one stacked table per gender present ---
         INFL_GENDER_ORDER.filter(g => rows.some(r => r.category === g)).forEach(g => {
             const genderRows = rows.filter(r => r.category === g);
+            const declClass = detectDeclensionClass(headwordSi, g);
+
             const caseRows = INFL_CASE_ORDER
-                .map(c => ({
-                    code: c,
-                    sg: genderRows.filter(r => r.subcase === c && r.number === 'sg'),
-                    pl: genderRows.filter(r => r.subcase === c && r.number === 'pl'),
-                }))
-                .filter(r => r.sg.length || r.pl.length);
+                .map(c => {
+                    const attestedSg = genderRows.filter(r => r.subcase === c && r.number === 'sg');
+                    const attestedPl = genderRows.filter(r => r.subcase === c && r.number === 'pl');
+                    let sgForms = attestedSg.map(r => r.inflected);
+                    let plForms = attestedPl.map(r => r.inflected);
+                    let sgGenerated = false, plGenerated = false;
+
+                    if (!sgForms.length && declClass) {
+                        const gen = generateRegularForms(declClass.stem, declClass.cls, c, 'sg');
+                        if (gen.length) { sgForms = gen; sgGenerated = true; usedGeneratedForms = true; }
+                    }
+                    if (!plForms.length && declClass) {
+                        const gen = generateRegularForms(declClass.stem, declClass.cls, c, 'pl');
+                        if (gen.length) { plForms = gen; plGenerated = true; usedGeneratedForms = true; }
+                    }
+                    return { code: c, sgForms, plForms, sgGenerated, plGenerated };
+                })
+                .filter(r => r.sgForms.length || r.plForms.length);
             if (!caseRows.length) return;
 
             html += `<div class="inflection-group-title">${INFL_GENDER_LABELS[g]}</div>`;
             html += '<div class="inflection-table-wrapper"><table class="inflection-table">';
             html += `<tr><th class="inflection-corner"></th><th>${INFL_NUMBER_LABELS.sg}</th><th>${INFL_NUMBER_LABELS.pl}</th></tr>`;
             caseRows.forEach(r => {
-                html += `<tr><th>${INFL_CASE_LABELS[r.code]}</th><td>${r.sg.length ? uniqueForms(r.sg) : '—'}</td><td>${r.pl.length ? uniqueForms(r.pl) : '—'}</td></tr>`;
+                html += `<tr><th>${INFL_CASE_LABELS[r.code]}</th><td>${formsCellHtml(r.sgForms, r.sgGenerated)}</td><td>${formsCellHtml(r.plForms, r.plGenerated)}</td></tr>`;
             });
             html += '</table></div>';
         });
@@ -581,17 +740,22 @@
 
         // --- Verb conjugation: ONE table, columns = sg/pl/reflexive-sg/reflexive-pl,
         // rows = tense × person (ප්‍රථම → මධ්‍යම → උත්තම within each tense) —
-        // matching the DPD reference layout exactly. ---
+        // matching the DPD reference layout exactly. Gaps are filled by the
+        // "ati" bhū-class generator (see above) when the verb qualifies. ---
         const verbRows = rows.filter(r => INFL_PERSON_ORDER.includes(r.subcase));
         if (verbRows.length) {
+            const verbClass = detectVerbClass(headwordSi);
+            const GENERATABLE_TENSES = ['pr', 'imp', 'opt', 'fut'];
             const presentCategories = new Set(verbRows.map(r => r.category));
             const plainTenses = INFL_TENSE_ORDER.filter(t => presentCategories.has(t));
             const reflxTenses = INFL_TENSE_ORDER.filter(t => presentCategories.has('reflx ' + t));
-            const hasReflx = reflxTenses.length > 0;
+            const hasReflx = reflxTenses.length > 0 || !!verbClass;
             // Row order follows tense group order; within a tense, person
             // is listed ප්‍රථම (3rd) → මධ්‍යම (2nd) → උත්තම (1st) පුරුෂ.
             const VERB_ROW_PERSON_ORDER = ['3rd', '2nd', '1st'];
-            const tenseUnion = INFL_TENSE_ORDER.filter(t => plainTenses.includes(t) || reflxTenses.includes(t));
+            const tenseUnion = INFL_TENSE_ORDER.filter(t =>
+                plainTenses.includes(t) || reflxTenses.includes(t) || (verbClass && GENERATABLE_TENSES.includes(t))
+            );
 
             if (tenseUnion.length) {
                 html += '<div class="inflection-group-title">ක්‍රියා පදය</div>';
@@ -601,22 +765,35 @@
                 html += '</tr>';
 
                 tenseUnion.forEach(tenseCode => {
+                    const canGenerate = verbClass && GENERATABLE_TENSES.includes(tenseCode);
                     VERB_ROW_PERSON_ORDER.forEach(person => {
-                        const sgCell = verbRows.filter(r => r.category === tenseCode && r.subcase === person && r.number === 'sg');
-                        const plCell = verbRows.filter(r => r.category === tenseCode && r.subcase === person && r.number === 'pl');
-                        const rSgCell = hasReflx ? verbRows.filter(r => r.category === 'reflx ' + tenseCode && r.subcase === person && r.number === 'sg') : [];
-                        const rPlCell = hasReflx ? verbRows.filter(r => r.category === 'reflx ' + tenseCode && r.subcase === person && r.number === 'pl') : [];
-                        if (!sgCell.length && !plCell.length && !rSgCell.length && !rPlCell.length) return;
+                        let sgForms = verbRows.filter(r => r.category === tenseCode && r.subcase === person && r.number === 'sg').map(r => r.inflected);
+                        let plForms = verbRows.filter(r => r.category === tenseCode && r.subcase === person && r.number === 'pl').map(r => r.inflected);
+                        let rSgForms = hasReflx ? verbRows.filter(r => r.category === 'reflx ' + tenseCode && r.subcase === person && r.number === 'sg').map(r => r.inflected) : [];
+                        let rPlForms = hasReflx ? verbRows.filter(r => r.category === 'reflx ' + tenseCode && r.subcase === person && r.number === 'pl').map(r => r.inflected) : [];
+                        let sgGen = false, plGen = false, rSgGen = false, rPlGen = false;
+
+                        if (canGenerate) {
+                            if (!sgForms.length) { const g = generateVerbForms(verbClass.base, tenseCode, person, 'sg', false); if (g.length) { sgForms = g; sgGen = true; usedGeneratedForms = true; } }
+                            if (!plForms.length) { const g = generateVerbForms(verbClass.base, tenseCode, person, 'pl', false); if (g.length) { plForms = g; plGen = true; usedGeneratedForms = true; } }
+                            if (!rSgForms.length) { const g = generateVerbForms(verbClass.base, tenseCode, person, 'sg', true); if (g.length) { rSgForms = g; rSgGen = true; usedGeneratedForms = true; } }
+                            if (!rPlForms.length) { const g = generateVerbForms(verbClass.base, tenseCode, person, 'pl', true); if (g.length) { rPlForms = g; rPlGen = true; usedGeneratedForms = true; } }
+                        }
+                        if (!sgForms.length && !plForms.length && !rSgForms.length && !rPlForms.length) return;
 
                         const rowLabel = `${INFL_TENSE_LABELS[tenseCode]} (${INFL_PERSON_LABELS[person]})`;
-                        html += `<tr><th>${rowLabel}</th><td>${sgCell.length ? uniqueForms(sgCell) : '—'}</td><td>${plCell.length ? uniqueForms(plCell) : '—'}</td>`;
-                        if (hasReflx) html += `<td>${rSgCell.length ? uniqueForms(rSgCell) : '—'}</td><td>${rPlCell.length ? uniqueForms(rPlCell) : '—'}</td>`;
+                        html += `<tr><th>${rowLabel}</th><td>${formsCellHtml(sgForms, sgGen)}</td><td>${formsCellHtml(plForms, plGen)}</td>`;
+                        if (hasReflx) html += `<td>${formsCellHtml(rSgForms, rSgGen)}</td><td>${formsCellHtml(rPlForms, rPlGen)}</td>`;
                         html += '</tr>';
                     });
                 });
 
                 html += '</table></div>';
             }
+        }
+
+        if (usedGeneratedForms) {
+            html += '<div class="inflection-generated-note">ලා පාට / italic ලෙස පෙන්වන ස්වරූප — DPD මූලාශ්‍රයේ සෘජුවම හමු නොවූ නමුත් සාමාන්‍ය රීතියට අනුව අපේක්ෂිත ස්වරූප (තහවුරු නොකළ)</div>';
         }
 
         return html || '<div class="inflection-empty">මෙම වචනයට වර නැගීම් දත්ත හමු නොවීය.</div>';
@@ -641,7 +818,7 @@
         getInflectionIndex()
             .then(index => {
                 const rows = index.get(headword) || [];
-                panel.innerHTML = buildInflectionTablesHTML(rows);
+                panel.innerHTML = buildInflectionTablesHTML(rows, headword);
                 panel.dataset.loaded = '1';
             })
             .catch(() => {
