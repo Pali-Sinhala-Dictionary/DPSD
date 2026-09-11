@@ -188,7 +188,7 @@
                 // to guess which column the ID is in.
                 item = {
                     id: (colMap.id !== undefined ? parts[colMap.id] : '') || String(i),
-                    word: (parts[colMap.word] || '').replace(/[0-9]/g, '').trim(),
+                    word: (parts[colMap.word] || '').replace(/\s*\d+(?:\.\d+)*\s*$/, '').trim(),
                     type: (colMap.type !== undefined ? parts[colMap.type] : '') || '',
                     wordDivision: (colMap.wordDivision !== undefined ? parts[colMap.wordDivision] : '') || '',
                     meaning: (colMap.meaning !== undefined ? parts[colMap.meaning] : '') || '',
@@ -209,7 +209,7 @@
                 }
                 item = {
                     id: id,
-                    word: (parts[offset] || '').replace(/[0-9]/g, '').trim(),
+                    word: (parts[offset] || '').replace(/\s*\d+(?:\.\d+)*\s*$/, '').trim(),
                     type: '',
                     wordDivision: '',
                     meaning: '',
