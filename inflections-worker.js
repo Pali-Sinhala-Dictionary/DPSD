@@ -4,8 +4,8 @@
 // parses, and gets cached. See script.js's getInflectionIndex() for the
 // main-thread side that talks to this worker.
 
-const INFLECTION_DATA_PATH = 'inflections.zip?v=1';
-const INFLECTION_CACHE_VERSION = 'v1'; // keep in sync with script.js
+const INFLECTION_DATA_PATH = 'inflections.zip?v=2';
+const INFLECTION_CACHE_VERSION = 'v2'; // keep in sync with script.js's comment above; bumped: r-stem headword fix (pitar->pitu etc.)
 const IDB_NAME = 'pali-dict-cache';
 const IDB_STORE = 'inflections';
 

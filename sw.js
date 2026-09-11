@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pali-sin-dict-v5'; // v5: inflections-worker.js (background thread loader) එකතු කිරීම නිසා bump කරන ලදී
+const CACHE_NAME = 'pali-sin-dict-v4.2'; // v6: inflections.zip data fix (r-stem headwords: pitar/mātar/kattar -> pitu/mātu/kattu) නිසා bump කරන ලදී
 
 const CACHE_ASSETS = [
   './',

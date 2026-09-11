@@ -604,26 +604,138 @@
             loc: { sg: ['ුම්හි', 'ුස්මිං'], pl: ['ුසු', 'ූසු'] },
             voc: { sg: ['ු'], pl: ['වෙ', 'වො', 'ූ'] },
         },
+        // ī-stem feminine (like නදී / දේවී / තරුණී) — stem with the final ී removed.
+        // Also used for the feminine of -ant present participles (see the
+        // attested-form fallback in detectDeclensionClass below), since
+        // that fem stem (e.g. bhañjatī) can't be derived from the
+        // masculine/neuter citation headword directly.
+        ii_fem: {
+            nom: { sg: ['ී'], pl: ['ී', 'ියො'] },
+            acc: { sg: ['ිං'], pl: ['ී', 'ියො'] },
+            instr: { sg: ['ියා'], pl: ['ීහි'] },
+            dat: { sg: ['ියා'], pl: ['ීනං'] },
+            abl: { sg: ['ියා'], pl: ['ීහි'] },
+            gen: { sg: ['ියා'], pl: ['ීනං'] },
+            loc: { sg: ['ියා', 'ියං'], pl: ['ීසු'] },
+            voc: { sg: ['ි'], pl: ['ී', 'ියො'] },
+        },
+        // i-stem masculine (like ඉසි / අග්ගි / මුනි) — stem with the final ි removed
+        i_masc: {
+            nom: { sg: ['ි'], pl: ['යො', 'ී'] },
+            acc: { sg: ['ිං'], pl: ['යො', 'ී'] },
+            instr: { sg: ['ිනා'], pl: ['ිභි', 'ීභි', 'ීහි'] },
+            dat: { sg: ['ිනො', 'ිස්ස'], pl: ['ිනං', 'ීනං'] },
+            abl: { sg: ['ිනා', 'ිස්මා', 'ිම්හා', 'ිතො'], pl: ['ිභි', 'ීභි', 'ීහි'] },
+            gen: { sg: ['ිනො', 'ිස්ස'], pl: ['ිනං', 'ීනං'] },
+            loc: { sg: ['ිම්හි', 'ිස්මිං'], pl: ['ිසු', 'ීසු'] },
+            voc: { sg: ['ි', 'ෙ'], pl: ['යො', 'ී'] },
+        },
+        // i-stem feminine (like රත්ති / ජාති / භූමි) — stem with the final ි removed
+        i_fem: {
+            nom: { sg: ['ි'], pl: ['ියො', 'ී'] },
+            acc: { sg: ['ිං'], pl: ['ියො', 'ී'] },
+            instr: { sg: ['ියා'], pl: ['ිභි', 'ීහි'] },
+            dat: { sg: ['ියා'], pl: ['ීනං'] },
+            abl: { sg: ['ියා', 'ිතො'], pl: ['ිභි', 'ීහි'] },
+            gen: { sg: ['ියා'], pl: ['ීනං'] },
+            loc: { sg: ['ියා', 'ියං'], pl: ['ිසු', 'ීසු'] },
+            voc: { sg: ['ි'], pl: ['ියො', 'ී'] },
+        },
+        // ū-stem masculine agent nouns (like විදූ / සබ්බඤ්ඤූ) — stem with the final ූ removed
+        uu_masc: {
+            nom: { sg: ['ූ'], pl: ['ූ', 'ුනො'] },
+            acc: { sg: ['ුං'], pl: ['ූ', 'ුනො'] },
+            instr: { sg: ['ුනා'], pl: ['ූහි'] },
+            dat: { sg: ['ුනො', 'ුස්ස'], pl: ['ූනං'] },
+            abl: { sg: ['ුනා', 'ුතො'], pl: ['ූහි'] },
+            gen: { sg: ['ුනො', 'ුස්ස'], pl: ['ූනං'] },
+            loc: { sg: ['ුම්හි', 'ුස්මිං'], pl: ['ූසු'] },
+            voc: { sg: ['ූ'], pl: ['ූ', 'ුනො'] },
+        },
+        // u-stem neuter (like චක්ඛු) — stem with the final ු removed
+        u_nt: {
+            nom: { sg: ['ු', 'ුං'], pl: ['ූ', 'ූනි'] },
+            acc: { sg: ['ුං'], pl: ['ූ', 'ූනි'] },
+            instr: { sg: ['ුනා'], pl: ['ූහි'] },
+            dat: { sg: ['ුනො', 'ුස්ස'], pl: ['ූනං'] },
+            abl: { sg: ['ුම්හා', 'ුනා', 'ුස්මා', 'ුතො'], pl: ['ූහි'] },
+            gen: { sg: ['ුනො', 'ුස්ස'], pl: ['ූනං'] },
+            loc: { sg: ['ුම්හි', 'ුස්මිං'], pl: ['ුසු'] },
+            voc: { sg: ['ු'], pl: ['ූ'] },
+        },
+        // ū-stem feminine (like වධූ) — stem with the final ූ removed
+        uu_fem: {
+            nom: { sg: ['ූ'], pl: ['ූ', 'ුයො'] },
+            acc: { sg: ['ුං'], pl: ['ූ', 'ුයො'] },
+            instr: { sg: ['ුයා'], pl: ['ූහි'] },
+            dat: { sg: ['ුයා'], pl: ['ූනං'] },
+            abl: { sg: ['ුයා'], pl: ['ූහි'] },
+            gen: { sg: ['ුයා'], pl: ['ූනං'] },
+            loc: { sg: ['ුයා', 'ුයං'], pl: ['ූසු'] },
+            voc: { sg: ['ු'], pl: ['ූ', 'ුයො'] },
+        },
     };
 
-    // Decide which of the 4 supported classes (if any) a headword belongs
+    // Decide which of the 5 supported classes (if any) a headword belongs
     // to, purely from its final letter + known gender. Anything that
-    // doesn't clearly fit (i/ī/ū-stems, consonant stems, irregulars) is
+    // doesn't clearly fit (i/ū-stems, consonant stems, irregulars) is
     // deliberately left uncovered — better to show nothing than a guess
     // outside the patterns we're confident about.
-    function detectDeclensionClass(headwordSi, gender) {
+    //
+    // `attestedRows` (optional) is that gender's already-attested rows for
+    // THIS headword — used only for the -ant present-participle/-vant/
+    // -mant adjective feminine fallback: that fem stem (e.g. bhañjanta ->
+    // bhañjatī) can't be derived from the masc/nt citation headword
+    // directly (it's a different, often consonant-altered, ī-stem), so if
+    // an attested nom.sg fem form ending in ී exists, we use IT as the
+    // real stem instead of guessing.
+    const ANT_STEM_SUFFIX = '\u0DB1\u0DCA\u0DAD'; // "න්ත" (-ant/-vant/-mant stems)
+
+    function detectDeclensionClass(headwordSi, gender, attestedRows) {
         if (!headwordSi) return null;
         const last = headwordSi[headwordSi.length - 1];
         if (last === VOWEL_SIGN_AA) {
             return gender === 'fem' ? { stem: headwordSi.slice(0, -1), cls: 'aa_fem' } : null;
         }
         if (last === VOWEL_SIGN_U) {
-            return gender === 'masc' ? { stem: headwordSi.slice(0, -1), cls: 'u_masc' } : null;
+            if (gender === 'masc') return { stem: headwordSi.slice(0, -1), cls: 'u_masc' };
+            if (gender === 'nt') return { stem: headwordSi.slice(0, -1), cls: 'u_nt' };
+            return null; // u-stem fem (rare, irregular kinship terms like mātu/pitu) not covered
         }
-        if (last === VOWEL_SIGN_I || last === VOWEL_SIGN_II || last === VOWEL_SIGN_UU) {
-            return null; // i/ī/ū-stem classes not covered yet
+        if (last === VOWEL_SIGN_II) {
+            return gender === 'fem' ? { stem: headwordSi.slice(0, -1), cls: 'ii_fem' } : null;
         }
-        // Bare consonant ending => inherent "a"
+        if (last === VOWEL_SIGN_I) {
+            if (gender === 'masc') return { stem: headwordSi.slice(0, -1), cls: 'i_masc' };
+            if (gender === 'fem') return { stem: headwordSi.slice(0, -1), cls: 'i_fem' };
+            return null; // i-stem neuter not covered yet
+        }
+        if (last === VOWEL_SIGN_UU) {
+            if (gender === 'masc') return { stem: headwordSi.slice(0, -1), cls: 'uu_masc' };
+            if (gender === 'fem') return { stem: headwordSi.slice(0, -1), cls: 'uu_fem' };
+            return null;
+        }
+
+        // Bare consonant ending => inherent "a" (a-stem masc/nt citation form)
+        const isAntStem = headwordSi.endsWith(ANT_STEM_SUFFIX);
+
+        if (gender === 'fem') {
+            if (isAntStem) {
+                // -ant/-vant/-mant feminine uses a DIFFERENT derived
+                // ī-stem (bhañjanta -> bhañjatī), not simple "+ā" — only
+                // proceed if we can anchor on a real attested form.
+                if (attestedRows) {
+                    const nomSg = attestedRows.find(r => r.subcase === 'nom' && r.number === 'sg' && r.inflected.endsWith(VOWEL_SIGN_II));
+                    if (nomSg) return { stem: nomSg.inflected.slice(0, -1), cls: 'ii_fem' };
+                }
+                return null;
+            }
+            // Regular adjective/participle feminine shares the SAME
+            // bare-consonant stem as its masc/nt citation form — e.g.
+            // abala (adj) -> fem abalā, abalaṃ, abale — so no stripping is
+            // needed before appending aa_fem endings.
+            return { stem: headwordSi, cls: 'aa_fem' };
+        }
         if (gender === 'masc') return { stem: headwordSi, cls: 'a_masc' };
         if (gender === 'nt') return { stem: headwordSi, cls: 'a_nt' };
         return null;
@@ -758,7 +870,7 @@
         // --- Nominal declension: one stacked table per gender present ---
         INFL_GENDER_ORDER.filter(g => rows.some(r => r.category === g)).forEach(g => {
             const genderRows = rows.filter(r => r.category === g);
-            const declClass = detectDeclensionClass(headwordSi, g);
+            const declClass = detectDeclensionClass(headwordSi, g, genderRows);
 
             const caseRows = INFL_CASE_ORDER
                 .map(c => {
