@@ -84,6 +84,20 @@
             searchBtn.disabled = false;
             searchInput.placeholder = "වචනයක් ටයිප් කරන්න...";
             initialMessage.innerText = "වචනයක් ඇතුළත් කර සොයන්න.";
+
+            // Warm up the "වර නැගීම" lookup in the background, once the
+            // main dictionaries are ready and the browser is idle — so by
+            // the time someone actually taps the button it's usually
+            // already loaded. requestIdleCallback (with a setTimeout
+            // fallback) keeps this from competing with initial page
+            // interactivity. Errors here are silent; the button's own
+            // click handler still retries normally if this warm-up fails.
+            const warmUpInflections = () => { getInflectionIndex().catch(() => {}); };
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(warmUpInflections, { timeout: 4000 });
+            } else {
+                setTimeout(warmUpInflections, 1500);
+            }
         }
     }
 
@@ -473,41 +487,112 @@
     // ================================================================
     // DPD Inflection ("වර නැගීම") lookup
     // inflections.zip wraps a lean CSV (word,pos,cat,sub,num,headword —
-    // every word already transliterated to Sinhala script). Fetched +
-    // unzipped + indexed into a Map only the FIRST time someone actually
-    // opens an inflection panel, so it never slows down initial load.
+    // every word already transliterated to Sinhala script). Parsed into a
+    // Map only the FIRST time someone opens an inflection panel in THIS
+    // session — and the parsed result is also cached in IndexedDB so a
+    // page reload / app relaunch doesn't have to re-fetch + re-parse the
+    // whole file again. Bump INFLECTION_CACHE_VERSION whenever
+    // inflections.zip's content changes, so old cached data is ignored.
     // ================================================================
+    const INFLECTION_CACHE_VERSION = 'v1';
+    const IDB_NAME = 'pali-dict-cache';
+    const IDB_STORE = 'inflections';
+
+    function openInflectionIdb() {
+        return new Promise((resolve, reject) => {
+            if (!('indexedDB' in window)) { reject(new Error('indexedDB unavailable')); return; }
+            const req = indexedDB.open(IDB_NAME, 1);
+            req.onupgradeneeded = () => {
+                const db = req.result;
+                if (!db.objectStoreNames.contains(IDB_STORE)) {
+                    db.createObjectStore(IDB_STORE, { keyPath: 'version' });
+                }
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    function idbGetInflections(db, version) {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, 'readonly');
+            const req = tx.objectStore(IDB_STORE).get(version);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    function idbPutInflections(db, record) {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, 'readwrite');
+            // Clear any older cached versions so we don't accumulate stale
+            // copies of this (fairly large) dataset across app updates.
+            tx.objectStore(IDB_STORE).clear();
+            tx.objectStore(IDB_STORE).put(record);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    }
+
+    function buildInflectionIndex(flatRows) {
+        const index = new Map();
+        flatRows.forEach(r => {
+            let bucket = index.get(r.h);
+            if (!bucket) { bucket = []; index.set(r.h, bucket); }
+            bucket.push({ inflected: r.w, pos: r.p, category: r.c, subcase: r.s, number: r.n });
+        });
+        return index;
+    }
+
     let inflectionIndexPromise = null;
 
     function getInflectionIndex() {
         if (inflectionIndexPromise) return inflectionIndexPromise;
-        inflectionIndexPromise = fetch(INFLECTION_DATA_PATH)
-            .then(res => {
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                return res.arrayBuffer();
-            })
-            .then(buf => unzipFirstEntry(buf))
-            .then(bytes => {
-                const text = new TextDecoder('utf-8').decode(bytes);
-                const rows = tokenizeCSV(text);
-                const index = new Map();
-                // header: word,pos,cat,sub,num,headword — skip row 0
-                for (let i = 1; i < rows.length; i++) {
-                    const r = rows[i];
-                    if (!r || r.length < 6) continue;
-                    const headword = r[5];
-                    const entry = { inflected: r[0], pos: r[1], category: r[2], subcase: r[3], number: r[4] };
-                    let bucket = index.get(headword);
-                    if (!bucket) { bucket = []; index.set(headword, bucket); }
-                    bucket.push(entry);
+
+        inflectionIndexPromise = (async () => {
+            // 1. Try the IndexedDB cache first (instant — no fetch/unzip/parse).
+            try {
+                const db = await openInflectionIdb();
+                const cached = await idbGetInflections(db, INFLECTION_CACHE_VERSION);
+                if (cached && cached.rows && cached.rows.length) {
+                    return buildInflectionIndex(cached.rows);
                 }
-                return index;
-            })
-            .catch(err => {
-                console.error('inflections.zip load failed:', err);
-                inflectionIndexPromise = null; // allow retry on next open
-                throw err;
-            });
+            } catch (e) {
+                console.warn('IndexedDB unavailable — will parse from network instead.', e);
+            }
+
+            // 2. Cache miss (first run, or version bumped): fetch + unzip + parse.
+            const res = await fetch(INFLECTION_DATA_PATH);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const buf = await res.arrayBuffer();
+            const bytes = await unzipFirstEntry(buf);
+            const text = new TextDecoder('utf-8').decode(bytes);
+            const csvRows = tokenizeCSV(text);
+
+            const flatRows = [];
+            // header: word,pos,cat,sub,num,headword — skip row 0
+            for (let i = 1; i < csvRows.length; i++) {
+                const r = csvRows[i];
+                if (!r || r.length < 6) continue;
+                flatRows.push({ h: r[5], w: r[0], p: r[1], c: r[2], s: r[3], n: r[4] });
+            }
+            const index = buildInflectionIndex(flatRows);
+
+            // 3. Best-effort: store for next time. Never let a storage
+            // failure (quota, blocked IndexedDB, etc.) break the feature.
+            try {
+                const db = await openInflectionIdb();
+                await idbPutInflections(db, { version: INFLECTION_CACHE_VERSION, rows: flatRows });
+            } catch (e) {
+                console.warn('Could not cache inflections to IndexedDB (non-fatal).', e);
+            }
+
+            return index;
+        })().catch(err => {
+            console.error('inflections load failed:', err);
+            inflectionIndexPromise = null; // allow retry on next open
+            throw err;
+        });
         return inflectionIndexPromise;
     }
 
@@ -577,11 +662,22 @@
             loc: { sg: ['ාය', 'ායං'], pl: ['ාසු'] },
             voc: { sg: ['ෙ', 'ා'], pl: ['ායො', 'ා'] },
         },
+        // u-stem masculine (like භික්ඛු / බබ්බු) — stem with the final ු removed
+        u_masc: {
+            nom: { sg: ['ු'], pl: ['වො', 'ූ'] },
+            acc: { sg: ['ුනං', 'ුං'], pl: ['වො', 'ූ'] },
+            instr: { sg: ['ුනා'], pl: ['ුභි', 'ුහි', 'ූහි'] },
+            dat: { sg: ['ුනො', 'ුස්ස'], pl: ['ුනං', 'ූනං'] },
+            abl: { sg: ['ුතො', 'ුනා', 'ුම්හා', 'ුස්මා'], pl: ['ුභි', 'ුහි'] },
+            gen: { sg: ['ුනො', 'ුස්ස'], pl: ['ුනං', 'ූනං'] },
+            loc: { sg: ['ුම්හි', 'ුස්මිං'], pl: ['ුසු', 'ූසු'] },
+            voc: { sg: ['ු'], pl: ['වෙ', 'වො', 'ූ'] },
+        },
     };
 
-    // Decide which of the 3 supported classes (if any) a headword belongs
+    // Decide which of the 4 supported classes (if any) a headword belongs
     // to, purely from its final letter + known gender. Anything that
-    // doesn't clearly fit (i/ī/u/ū-stems, consonant stems, irregulars) is
+    // doesn't clearly fit (i/ī/ū-stems, consonant stems, irregulars) is
     // deliberately left uncovered — better to show nothing than a guess
     // outside the patterns we're confident about.
     function detectDeclensionClass(headwordSi, gender) {
@@ -590,8 +686,11 @@
         if (last === VOWEL_SIGN_AA) {
             return gender === 'fem' ? { stem: headwordSi.slice(0, -1), cls: 'aa_fem' } : null;
         }
-        if (last === VOWEL_SIGN_I || last === VOWEL_SIGN_II || last === VOWEL_SIGN_U || last === VOWEL_SIGN_UU) {
-            return null; // i/ī/u/ū-stem classes not covered yet
+        if (last === VOWEL_SIGN_U) {
+            return gender === 'masc' ? { stem: headwordSi.slice(0, -1), cls: 'u_masc' } : null;
+        }
+        if (last === VOWEL_SIGN_I || last === VOWEL_SIGN_II || last === VOWEL_SIGN_UU) {
+            return null; // i/ī/ū-stem classes not covered yet
         }
         // Bare consonant ending => inherent "a"
         if (gender === 'masc') return { stem: headwordSi, cls: 'a_masc' };
@@ -638,24 +737,67 @@
         },
     };
 
+    // ================================================================
+    // "karoti" — DPD documents this as its own fixed irregular pattern
+    // (root kar-/kur- suppletion, optative uses a wholly different stem
+    // "kayirā-"). Since it's a closed, fully-specified table rather than a
+    // rule, it's hardcoded verbatim here (verified against the DPD
+    // reference table) with a variable PREFIX so compounds like
+    // අභිකරොති still conjugate correctly. Cells DPD itself leaves
+    // genuinely blank (opt 3rd/2nd reflexive) are left blank here too.
+    // ================================================================
+    const KAROTI_IRREGULAR = {
+        pr: {
+            '3rd': { sg: ['කරොති'], pl: ['කරොන්ති'], rsg: ['කුරුතෙ'], rpl: ['කුරුන්තෙ'] },
+            '2nd': { sg: ['කරොසි'], pl: ['කරොථ'], rsg: ['කුරුසෙ'], rpl: ['කුරුව්හෙ'] },
+            '1st': { sg: ['කරොමි'], pl: ['කරොම'], rsg: ['කරෙ'], rpl: ['කුරුම්හෙ'] },
+        },
+        imp: {
+            '3rd': { sg: ['කරොතු'], pl: ['කරොන්තු'], rsg: ['කුරුතං'], rpl: ['කුරුන්තං'] },
+            '2nd': { sg: ['කරොහි'], pl: ['කරොථ'], rsg: ['කරස්සු', 'කුරුස්සු'], rpl: ['කුරුව්හො'] },
+            '1st': { sg: ['කරොමි'], pl: ['කරොම'], rsg: ['කරෙ'], rpl: ['කරොමසි', 'කරොමසෙ'] },
+        },
+        opt: {
+            '3rd': { sg: ['කරෙ', 'කරෙය්ය'], pl: ['කරෙය්යුං'], rsg: ['කයිරාථ'], rpl: [] },
+            '2nd': { sg: ['කරෙය්යාසි'], pl: ['කරෙය්යාථ'], rsg: [], rpl: [] },
+            '1st': { sg: ['කරෙය්යාමි'], pl: ['කරෙය්යාම'], rsg: ['කරෙ', 'කරෙය්යං'], rpl: ['කරෙය්යාම්හෙ'] },
+        },
+        fut: {
+            '3rd': { sg: ['කරිස්සති'], pl: ['කරිස්සන්ති'], rsg: ['කරිස්සතෙ'], rpl: ['කරිස්සන්තෙ'] },
+            '2nd': { sg: ['කරිස්සසි'], pl: ['කරිස්සථ'], rsg: ['කරිස්සසෙ'], rpl: ['කරිස්සව්හෙ'] },
+            '1st': { sg: ['කරිස්සාමි'], pl: ['කරිස්සාම'], rsg: ['කරිස්සං'], rpl: ['කරිස්සාම්හෙ'] },
+        },
+    };
+    const KAROTI_SUFFIX = 'කරොති'; // ක,ර,ො,ත,ි
+
     // A verb qualifies for the "ati" bhū-class pattern only if its
     // citation form ends in bare-consonant + ති (e.g. ගච්ඡති), NOT
     // vowel-sign + ති (e.g. කරොති "oti" class, which conjugates
     // differently) — checked by looking at the character just before "ති".
     function detectVerbClass(headwordSi) {
-        if (!headwordSi || headwordSi.length < 3) return null;
+        if (!headwordSi) return null;
+        if (headwordSi.endsWith(KAROTI_SUFFIX)) {
+            return { base: headwordSi.slice(0, -KAROTI_SUFFIX.length), cls: 'karoti_irr' };
+        }
+        if (headwordSi.length < 3) return null;
         const n = headwordSi.length;
         if (headwordSi[n - 2] !== '\u0DAD' || headwordSi[n - 1] !== '\u0DD2') return null; // must end in "ති"
         const preceding = headwordSi[n - 3];
         const vowelSigns = new Set(['\u0DCF', '\u0DD0', '\u0DD1', '\u0DD2', '\u0DD3', '\u0DD4', '\u0DD6', '\u0DD9', '\u0DDA', '\u0DDC', '\u0DDD', '\u0DDE', '\u0D82']);
-        if (vowelSigns.has(preceding)) return null; // e.g. "oti", "āti", "ṇāti" classes
+        if (vowelSigns.has(preceding)) return null; // e.g. "āti", "ṇāti" classes
         return { base: headwordSi.slice(0, -2), cls: 'ati_pr' };
     }
 
-    function generateVerbForms(base, tenseCode, person, number, reflx) {
+    function generateVerbForms(base, cls, tenseCode, person, number, reflx) {
+        const key = reflx ? (number === 'sg' ? 'rsg' : 'rpl') : number;
+        if (cls === 'karoti_irr') {
+            const table = KAROTI_IRREGULAR[tenseCode];
+            if (!table || !table[person]) return [];
+            const forms = table[person][key] || [];
+            return forms.map(f => base + f);
+        }
         const table = VERB_SUFFIXES_ATI_PR[tenseCode];
         if (!table || !table[person]) return [];
-        const key = reflx ? (number === 'sg' ? 'rsg' : 'rpl') : number;
         const suffixes = table[person][key] || [];
         return suffixes.map(suf => base + suf);
     }
@@ -774,10 +916,10 @@
                         let sgGen = false, plGen = false, rSgGen = false, rPlGen = false;
 
                         if (canGenerate) {
-                            if (!sgForms.length) { const g = generateVerbForms(verbClass.base, tenseCode, person, 'sg', false); if (g.length) { sgForms = g; sgGen = true; usedGeneratedForms = true; } }
-                            if (!plForms.length) { const g = generateVerbForms(verbClass.base, tenseCode, person, 'pl', false); if (g.length) { plForms = g; plGen = true; usedGeneratedForms = true; } }
-                            if (!rSgForms.length) { const g = generateVerbForms(verbClass.base, tenseCode, person, 'sg', true); if (g.length) { rSgForms = g; rSgGen = true; usedGeneratedForms = true; } }
-                            if (!rPlForms.length) { const g = generateVerbForms(verbClass.base, tenseCode, person, 'pl', true); if (g.length) { rPlForms = g; rPlGen = true; usedGeneratedForms = true; } }
+                            if (!sgForms.length) { const g = generateVerbForms(verbClass.base, verbClass.cls, tenseCode, person, 'sg', false); if (g.length) { sgForms = g; sgGen = true; usedGeneratedForms = true; } }
+                            if (!plForms.length) { const g = generateVerbForms(verbClass.base, verbClass.cls, tenseCode, person, 'pl', false); if (g.length) { plForms = g; plGen = true; usedGeneratedForms = true; } }
+                            if (!rSgForms.length) { const g = generateVerbForms(verbClass.base, verbClass.cls, tenseCode, person, 'sg', true); if (g.length) { rSgForms = g; rSgGen = true; usedGeneratedForms = true; } }
+                            if (!rPlForms.length) { const g = generateVerbForms(verbClass.base, verbClass.cls, tenseCode, person, 'pl', true); if (g.length) { rPlForms = g; rPlGen = true; usedGeneratedForms = true; } }
                         }
                         if (!sgForms.length && !plForms.length && !rSgForms.length && !rPlForms.length) return;
 
@@ -790,10 +932,6 @@
 
                 html += '</table></div>';
             }
-        }
-
-        if (usedGeneratedForms) {
-            html += '<div class="inflection-generated-note">ලා පාට / italic ලෙස පෙන්වන ස්වරූප — DPD මූලාශ්‍රයේ සෘජුවම හමු නොවූ නමුත් සාමාන්‍ය රීතියට අනුව අපේක්ෂිත ස්වරූප (තහවුරු නොකළ)</div>';
         }
 
         return html || '<div class="inflection-empty">මෙම වචනයට වර නැගීම් දත්ත හමු නොවීය.</div>';
