@@ -864,7 +864,11 @@
         noun: 'නාම පදය', adj: 'විශේෂණය', pp: 'අතීත කෘදන්තය', prp: 'වර්තමාන කෘදන්තය',
         ptp: 'කෘත්‍ය කෘදන්තය', card: 'මූලික සංඛ්‍යාව', ordin: 'පූරණ සංඛ්‍යාව', interr: 'ප්‍රශ්නාර්ථ',
     };
-    const NOMINAL_POS_ORDER = ['noun', 'adj', 'pp', 'prp', 'ptp', 'card', 'ordin', 'interr'];
+    // NOTE: 'adj' is deliberately excluded — DPD's adjective-tagged forms
+    // for many common nouns (e.g. පුරිස, ධම්ම, කස්සක) don't hold up against
+    // the actual corpus examples (checked directly), so we only show the
+    // pos types whose gender-tagging has proven reliable.
+    const NOMINAL_POS_ORDER = ['noun', 'pp', 'prp', 'ptp', 'card', 'ordin', 'interr'];
 
     // Rule: drop an oblique-case (instr/dat/abl/gen/loc — never nom/acc/voc,
     // where a bare/nom-identical spelling can be a genuine separate form)
@@ -873,15 +877,19 @@
     // when something else remains in the cell — that's unambiguous noise
     // (e.g. වනිතා wrongly tagged instr.sg alongside the correct වනිතාය).
     // Cross-number collisions (oblique.sg spelled like nom.PL, or vice
-    // versa) are only treated as an error when it's the form's ONLY
-    // attestation for that cell — otherwise it may be a genuine archaic
-    // alternate (e.g. බුද්ධා as an instr.sg alternate to බුද්ධෙන, which
-    // happens to equal nom.pl; that word also has the regular form
-    // attested alongside it, so it's left alone). When a lone cross-number
-    // duplicate IS dropped, the cell is returned empty on purpose so the
-    // declension generator fills it with the textbook-regular form.
+    // versa) are handled differently by gender: the archaic bare "-ā"
+    // instr./abl. singular is a recognized alternate ONLY for MASCULINE
+    // a-stem nouns (e.g. බුද්ධා alongside බුද්ධෙන) — so for masculine we
+    // only drop it when it's the form's sole attestation (keeping it
+    // whenever a regular alternate is attested alongside it). For
+    // feminine/neuter, that same bare "-ā" pattern is never a genuine
+    // alternate — it's cross-tagged nom.pl noise (e.g. චිත්තා, වනිතා) — so
+    // it's always dropped there, even alongside another attested form.
+    // When a duplicate IS dropped and nothing remains, the cell is
+    // returned empty on purpose so the declension generator fills it with
+    // the textbook-regular form.
     const OBLIQUE_CASES = new Set(['instr', 'dat', 'abl', 'gen', 'loc']);
-    function dropNomDuplicates(forms, number, nomSgForms, nomPlForms) {
+    function dropNomDuplicates(forms, number, nomSgForms, nomPlForms, gender) {
         if (!forms.length) return forms;
         const sameNumberNom = number === 'sg' ? nomSgForms : nomPlForms;
         const otherNumberNom = number === 'sg' ? nomPlForms : nomSgForms;
@@ -892,8 +900,17 @@
             const filtered = out.filter(f => !set.has(f));
             if (filtered.length) out = filtered; // keep only if something survives
         }
-        if (out.length === 1 && otherNumberNom && otherNumberNom.includes(out[0])) {
-            return []; // sole attestation duplicates the other number's nominative — let generator take over
+        if (otherNumberNom && otherNumberNom.length) {
+            if (gender === 'masc') {
+                if (out.length === 1 && otherNumberNom.includes(out[0])) {
+                    return []; // sole attestation duplicates the other number's nominative — let generator take over
+                }
+            } else {
+                const set = new Set(otherNumberNom);
+                const filtered = out.filter(f => !set.has(f));
+                if (filtered.length) out = filtered; // fem/nt: always strip, keep whatever else survives
+                else if (out.every(f => set.has(f))) out = []; // nothing legitimate left — let generator take over
+            }
         }
         return out;
     }
@@ -978,8 +995,8 @@
                             plForms = dropTruncatedNiggahita(plForms);
                         }
                         if (OBLIQUE_CASES.has(c)) {
-                            sgForms = dropNomDuplicates(sgForms, 'sg', nomSgForms, nomPlForms);
-                            plForms = dropNomDuplicates(plForms, 'pl', nomSgForms, nomPlForms);
+                            sgForms = dropNomDuplicates(sgForms, 'sg', nomSgForms, nomPlForms, g);
+                            plForms = dropNomDuplicates(plForms, 'pl', nomSgForms, nomPlForms, g);
                         }
                         if (c === 'voc') {
                             sgForms = dropVocativeNiggahita(sgForms);
