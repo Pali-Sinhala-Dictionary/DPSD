@@ -564,10 +564,10 @@
         a_masc: {
             nom: { sg: ['ො'], pl: ['ා', 'ාසෙ'] },
             acc: { sg: ['ං'], pl: ['ෙ'] },
-            instr: { sg: ['ා', 'ෙන'], pl: ['ෙභි', 'ෙහි'] },
+            instr: { sg: ['ෙන'], pl: ['ෙභි', 'ෙහි'] },
             dat: { sg: ['ස්ස', 'ාය'], pl: ['ානං'] },
-            abl: { sg: ['තො', 'ම්හා', 'ස්මා', 'ා'], pl: ['තො', 'ෙභි', 'ෙහි'] },
-            gen: { sg: ['ස්ස'], pl: ['ාන', 'ානං'] },
+            abl: { sg: ['තො', 'ම්හා', 'ස්මා'], pl: ['තො', 'ෙභි', 'ෙහි'] },
+            gen: { sg: ['ස්ස'], pl: ['ානං'] },
             loc: { sg: ['ම්හි', 'ස්මිං', 'ෙ'], pl: ['ෙසු'] },
             voc: { sg: ['', 'ා'], pl: ['ා'] },
         },
@@ -575,12 +575,13 @@
         a_nt: {
             nom: { sg: ['ං', 'ො'], pl: ['ානි', 'ා'] },
             acc: { sg: ['ං'], pl: ['ානි', 'ෙ'] },
-            instr: { sg: ['ා', 'ෙන'], pl: ['ෙභි', 'ෙහි'] },
+            instr: { sg: ['ෙන'], pl: ['ෙභි', 'ෙහි'] },
             dat: { sg: ['ස්ස', 'ාය'], pl: ['ානං'] },
-            abl: { sg: ['තො', 'ම්හා', 'ස්මා', 'ා'], pl: ['තො', 'ෙභි', 'ෙහි'] },
-            gen: { sg: ['ස්ස'], pl: ['ාන', 'ානං'] },
+            abl: { sg: ['තො', 'ම්හා', 'ස්මා'], pl: ['තො', 'ෙභි', 'ෙහි'] },
+            gen: { sg: ['ස්ස'], pl: ['ානං'] },
             loc: { sg: ['ම්හි', 'ස්මිං', 'ෙ'], pl: ['ෙසු'] },
-            voc: { sg: ['', 'ං'], pl: ['ානි', 'ා'] },
+            // Vocative NEVER ends in niggahita (ං) — bare stem only.
+            voc: { sg: [''], pl: ['ානි', 'ා'] },
         },
         // ā-stem feminine (like කථා / සද්ධා) — stem with the final ා removed
         aa_fem: {
@@ -859,6 +860,82 @@
         return unique.map(f => `<span class="generated-form">${f}</span>`).join('<br>');
     }
 
+    const POS_LABEL_MAP = {
+        noun: 'නාම පදය', adj: 'විශේෂණය', pp: 'අතීත කෘදන්තය', prp: 'වර්තමාන කෘදන්තය',
+        ptp: 'කෘත්‍ය කෘදන්තය', card: 'මූලික සංඛ්‍යාව', ordin: 'පූරණ සංඛ්‍යාව', interr: 'ප්‍රශ්නාර්ථ',
+    };
+    const NOMINAL_POS_ORDER = ['noun', 'adj', 'pp', 'prp', 'ptp', 'card', 'ordin', 'interr'];
+
+    // Rule: drop an oblique-case (instr/dat/abl/gen/loc — never nom/acc/voc,
+    // where a bare/nom-identical spelling can be a genuine separate form)
+    // attested form that duplicates this gender's nominative spelling.
+    // Same-number collisions (oblique.sg vs nom.sg) are always cleaned up
+    // when something else remains in the cell — that's unambiguous noise
+    // (e.g. වනිතා wrongly tagged instr.sg alongside the correct වනිතාය).
+    // Cross-number collisions (oblique.sg spelled like nom.PL, or vice
+    // versa) are only treated as an error when it's the form's ONLY
+    // attestation for that cell — otherwise it may be a genuine archaic
+    // alternate (e.g. බුද්ධා as an instr.sg alternate to බුද්ධෙන, which
+    // happens to equal nom.pl; that word also has the regular form
+    // attested alongside it, so it's left alone). When a lone cross-number
+    // duplicate IS dropped, the cell is returned empty on purpose so the
+    // declension generator fills it with the textbook-regular form.
+    const OBLIQUE_CASES = new Set(['instr', 'dat', 'abl', 'gen', 'loc']);
+    function dropNomDuplicates(forms, number, nomSgForms, nomPlForms) {
+        if (!forms.length) return forms;
+        const sameNumberNom = number === 'sg' ? nomSgForms : nomPlForms;
+        const otherNumberNom = number === 'sg' ? nomPlForms : nomSgForms;
+
+        let out = forms;
+        if (sameNumberNom && sameNumberNom.length) {
+            const set = new Set(sameNumberNom);
+            const filtered = out.filter(f => !set.has(f));
+            if (filtered.length) out = filtered; // keep only if something survives
+        }
+        if (out.length === 1 && otherNumberNom && otherNumberNom.includes(out[0])) {
+            return []; // sole attestation duplicates the other number's nominative — let generator take over
+        }
+        return out;
+    }
+
+    // Rule: dat.pl/gen.pl sometimes carries both a complete "-ānaṃ" form and
+    // a truncated "-āna" (no niggahita) duplicate of the SAME cell. Drop the
+    // truncated one when the complete one is also present.
+    function dropTruncatedNiggahita(forms) {
+        if (forms.length <= 1) return forms;
+        const set = new Set(forms);
+        return forms.filter(f => !set.has(f + '\u0D82'));
+    }
+
+    // Rule: the vocative NEVER ends in niggahita (ං) in real Pali, regardless
+    // of what the corpus data (or an over-eager generator) might suggest.
+    function dropVocativeNiggahita(forms) {
+        if (!forms.length) return forms;
+        const filtered = forms.filter(f => !f.endsWith('\u0D82'));
+        return filtered.length ? filtered : forms;
+    }
+
+    // Rule: instr.pl / abl.pl regularly accept BOTH a "-hi" and a "-bhi"
+    // (or equivalent long/short-vowel pair) ending for any word in a given
+    // class — if the corpus only attests one, add the other as a generated
+    // supplement rather than leaving it looking incomplete.
+    function completeHiBhiPair(forms, declClass, caseCode, number) {
+        if (!declClass || !(caseCode === 'instr' || caseCode === 'abl') || number !== 'pl') {
+            return { forms, addedGenerated: false };
+        }
+        const table = DECLENSION_SUFFIXES[declClass.cls];
+        const suffixes = table && table[caseCode] && table[caseCode].pl;
+        if (!suffixes || !suffixes.length) return { forms, addedGenerated: false };
+        const have = new Set(forms);
+        let addedGenerated = false;
+        const out = forms.slice();
+        suffixes.forEach(suf => {
+            const candidate = declClass.stem + suf;
+            if (!have.has(candidate)) { out.push(candidate); have.add(candidate); addedGenerated = true; }
+        });
+        return { forms: out, addedGenerated };
+    }
+
     function buildInflectionTablesHTML(rows, headwordSi) {
         if (!rows || rows.length === 0) {
             return '<div class="inflection-empty">මෙම වචනයට වර නැගීම් දත්ත හමු නොවීය.</div>';
@@ -867,39 +944,75 @@
         let html = '';
         let usedGeneratedForms = false;
 
-        // --- Nominal declension: one stacked table per gender present ---
-        INFL_GENDER_ORDER.filter(g => rows.some(r => r.category === g)).forEach(g => {
-            const genderRows = rows.filter(r => r.category === g);
-            const declClass = detectDeclensionClass(headwordSi, g, genderRows);
+        // --- Nominal declension, grouped by POS FIRST (a noun and an
+        // adjective that happen to share the same spelling — e.g. ධම්ම,
+        // පුරිස, චිත්ත — are different lexemes; pooling their attested
+        // forms together would show irrelevant genders, like feminine
+        // forms under what should be a masculine-only noun). Each POS
+        // group then gets its own gender tables, exactly as before. ---
+        const nominalRows = rows.filter(r => NOMINAL_POS_ORDER.includes(r.pos));
+        const posPresent = NOMINAL_POS_ORDER.filter(p => nominalRows.some(r => r.pos === p));
+        const showPosHeader = posPresent.length > 1;
 
-            const caseRows = INFL_CASE_ORDER
-                .map(c => {
-                    const attestedSg = genderRows.filter(r => r.subcase === c && r.number === 'sg');
-                    const attestedPl = genderRows.filter(r => r.subcase === c && r.number === 'pl');
-                    let sgForms = attestedSg.map(r => r.inflected);
-                    let plForms = attestedPl.map(r => r.inflected);
-                    let sgGenerated = false, plGenerated = false;
+        posPresent.forEach(pos => {
+            const posRows = nominalRows.filter(r => r.pos === pos);
+            if (showPosHeader) {
+                html += `<div class="inflection-pos-title">${POS_LABEL_MAP[pos] || pos}</div>`;
+            }
 
-                    if (!sgForms.length && declClass) {
-                        const gen = generateRegularForms(declClass.stem, declClass.cls, c, 'sg');
-                        if (gen.length) { sgForms = gen; sgGenerated = true; usedGeneratedForms = true; }
-                    }
-                    if (!plForms.length && declClass) {
-                        const gen = generateRegularForms(declClass.stem, declClass.cls, c, 'pl');
-                        if (gen.length) { plForms = gen; plGenerated = true; usedGeneratedForms = true; }
-                    }
-                    return { code: c, sgForms, plForms, sgGenerated, plGenerated };
-                })
-                .filter(r => r.sgForms.length || r.plForms.length);
-            if (!caseRows.length) return;
+            INFL_GENDER_ORDER.filter(g => posRows.some(r => r.category === g)).forEach(g => {
+                const genderRows = posRows.filter(r => r.category === g);
+                const declClass = detectDeclensionClass(headwordSi, g, genderRows);
+                const nomSgForms = genderRows.filter(r => r.subcase === 'nom' && r.number === 'sg').map(r => r.inflected);
+                const nomPlForms = genderRows.filter(r => r.subcase === 'nom' && r.number === 'pl').map(r => r.inflected);
 
-            html += `<div class="inflection-group-title">${INFL_GENDER_LABELS[g]}</div>`;
-            html += '<div class="inflection-table-wrapper"><table class="inflection-table">';
-            html += `<tr><th class="inflection-corner"></th><th>${INFL_NUMBER_LABELS.sg}</th><th>${INFL_NUMBER_LABELS.pl}</th></tr>`;
-            caseRows.forEach(r => {
-                html += `<tr><th>${INFL_CASE_LABELS[r.code]}</th><td>${formsCellHtml(r.sgForms, r.sgGenerated)}</td><td>${formsCellHtml(r.plForms, r.plGenerated)}</td></tr>`;
+                const caseRows = INFL_CASE_ORDER
+                    .map(c => {
+                        let sgForms = genderRows.filter(r => r.subcase === c && r.number === 'sg').map(r => r.inflected);
+                        let plForms = genderRows.filter(r => r.subcase === c && r.number === 'pl').map(r => r.inflected);
+                        let sgGenerated = false, plGenerated = false;
+
+                        // Clean up attested data before deciding whether generation is even needed.
+                        if (c === 'dat' || c === 'gen') {
+                            sgForms = dropTruncatedNiggahita(sgForms);
+                            plForms = dropTruncatedNiggahita(plForms);
+                        }
+                        if (OBLIQUE_CASES.has(c)) {
+                            sgForms = dropNomDuplicates(sgForms, 'sg', nomSgForms, nomPlForms);
+                            plForms = dropNomDuplicates(plForms, 'pl', nomSgForms, nomPlForms);
+                        }
+                        if (c === 'voc') {
+                            sgForms = dropVocativeNiggahita(sgForms);
+                            plForms = dropVocativeNiggahita(plForms);
+                        }
+
+                        if (!sgForms.length && declClass) {
+                            const gen = generateRegularForms(declClass.stem, declClass.cls, c, 'sg');
+                            if (gen.length) { sgForms = gen; sgGenerated = true; usedGeneratedForms = true; }
+                        }
+                        if (!plForms.length && declClass) {
+                            const gen = generateRegularForms(declClass.stem, declClass.cls, c, 'pl');
+                            if (gen.length) { plForms = gen; plGenerated = true; usedGeneratedForms = true; }
+                        } else if (plForms.length && declClass) {
+                            // instr.pl / abl.pl: make sure both the -hi and
+                            // -bhi (etc.) alternates are shown even if the
+                            // corpus only attests one of them.
+                            const completed = completeHiBhiPair(plForms, declClass, c, 'pl');
+                            if (completed.addedGenerated) { plForms = completed.forms; plGenerated = true; usedGeneratedForms = true; }
+                        }
+                        return { code: c, sgForms, plForms, sgGenerated, plGenerated };
+                    })
+                    .filter(r => r.sgForms.length || r.plForms.length);
+                if (!caseRows.length) return;
+
+                html += `<div class="inflection-group-title">${INFL_GENDER_LABELS[g]}</div>`;
+                html += '<div class="inflection-table-wrapper"><table class="inflection-table">';
+                html += `<tr><th class="inflection-corner"></th><th>${INFL_NUMBER_LABELS.sg}</th><th>${INFL_NUMBER_LABELS.pl}</th></tr>`;
+                caseRows.forEach(r => {
+                    html += `<tr><th>${INFL_CASE_LABELS[r.code]}</th><td>${formsCellHtml(r.sgForms, r.sgGenerated)}</td><td>${formsCellHtml(r.plForms, r.plGenerated)}</td></tr>`;
+                });
+                html += '</table></div>';
             });
-            html += '</table></div>';
         });
 
         // --- Personal/dual pronoun declension: one table per person present ---
