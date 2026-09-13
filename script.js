@@ -4,14 +4,6 @@
         { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.zip', enabled: true, data: [] }
     ];
 
-    // Path to the zipped, Sinhala-transliterated DPD-inflections CSV
-    // (word,pos,cat,sub,num,headword). Bump ?v= whenever the file changes
-    // so browsers/service-worker caches pick up the new version.
-    // NOTE: the actual fetch/unzip/parse/cache for this file now happens
-    // entirely inside inflections-worker.js (a separate thread, so it
-    // never blocks typing) — INFLECTION_DATA_PATH and its ?v= version
-    // live there now; keep the two in sync when the file's content changes.
-
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
     const suggestionsBox = document.getElementById('suggestionsBox');
@@ -65,19 +57,35 @@
         activeDicts.forEach(dict => {
             if (dict.data && dict.data.length > 0) {
                 loadedCount++;
-                checkReady(loadedCount, activeDicts.length);
+                checkReady(loadedCount, activeDicts.length, activeDicts);
             } else {
                 fetchCSV(dict.path, (data) => {
                     dict.data = data || [];
                     loadedCount++;
-                    checkReady(loadedCount, activeDicts.length);
+                    checkReady(loadedCount, activeDicts.length, activeDicts);
                 });
             }
         });
     }
 
-    function checkReady(count, total) {
+    function checkReady(count, total, activeDicts) {
         if (count === total) {
+            // A dict "finishing" doesn't mean it actually loaded anything —
+            // fetchCSV/fetchZippedCSV swallow errors and call back with an
+            // empty array so one broken file doesn't wedge the whole app.
+            // But silently presenting a normal, ready-looking search box
+            // when the data is actually empty is worse: it looks like
+            // everything works while every search silently returns
+            // nothing. Surface that clearly instead.
+            const failed = (activeDicts || []).filter(d => !d.data || d.data.length === 0);
+            if (failed.length > 0) {
+                searchInput.disabled = true;
+                searchInput.placeholder = "දත්ත පූරණය අසාර්ථකයි";
+                initialMessage.innerText = "පූරණය කළ නොහැකි විය: " + failed.map(d => d.path).join(', ') +
+                    " — file එක නිවැරදි ස්ථානයේ තියෙනවද බලන්න.";
+                return;
+            }
+
             searchInput.disabled = false;
             searchBtn.disabled = false;
             searchInput.placeholder = "වචනයක් ටයිප් කරන්න...";
@@ -101,9 +109,9 @@
 
     function fetchCSV(path, callback) {
         // A ".zip" (with or without a trailing ?v=... query string) holds a
-        // single CSV file — unzipped client-side with the browser's native
-        // DecompressionStream API (see unzipFirstEntry below), then parsed
-        // exactly like a plain CSV.
+        // single CSV file — unzipped client-side with the bundled fflate
+        // library (see unzipFirstEntry below), then parsed exactly like a
+        // plain CSV.
         if (/\.zip(\?.*)?$/i.test(path)) {
             fetchZippedCSV(path, callback);
             return;
@@ -125,17 +133,16 @@
     }
 
     // ================================================================
-    // Native ZIP reader (no external libraries). Every .zip we ship wraps
-    // exactly ONE file, compressed either "stored" (method 0) or "deflate"
-    // (method 8 — the default for Python's zipfile / most zip tools).
-    // DEFLATE is decoded with the browser's own built-in
-    // DecompressionStream('deflate-raw') — requires a reasonably modern
-    // browser (Chrome/Edge/Safari from ~2021 onward, or Chromium-based
-    // WebView 95+). Fine for GitHub Pages; an offline-APK build should
-    // ship plain .csv files instead, since WebView support can't be
-    // guaranteed on older Android versions.
+    // Native ZIP reader — the container-format parsing (EOCD / central
+    // directory / local file header) is hand-rolled; actual DEFLATE
+    // decompression is delegated to the bundled fflate.min.js (a small,
+    // pure-JS library loaded locally — see index.html/inflections-worker.js
+    // — NOT a CDN). This avoids depending on the browser's own
+    // DecompressionStream API, whose availability can't be guaranteed on
+    // older Android WebView versions used by the native app build; fflate
+    // works identically everywhere since it's plain JavaScript.
     // ================================================================
-    async function unzipFirstEntry(arrayBuffer) {
+    function unzipFirstEntry(arrayBuffer) {
         const view = new DataView(arrayBuffer);
         const bytes = new Uint8Array(arrayBuffer);
         const len = bytes.length;
@@ -164,25 +171,33 @@
         const compData = bytes.slice(dataStart, dataStart + compSize);
 
         if (method === 0) return compData; // stored, already raw
-        if (method === 8) {
-            const stream = new Blob([compData]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-            return new Uint8Array(await new Response(stream).arrayBuffer());
-        }
+        if (method === 8) return fflate.inflateSync(compData); // deflate (raw, no zlib/gzip header)
         throw new Error('unsupported zip compression method: ' + method);
     }
 
     function fetchZippedCSV(path, callback) {
-        fetch(path)
-            .then(res => {
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                return res.arrayBuffer();
-            })
-            .then(buf => unzipFirstEntry(buf))
-            .then(bytes => callback(parseCSV(new TextDecoder('utf-8').decode(bytes))))
-            .catch(err => {
-                console.error('Zipped CSV load failed:', path, err);
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', path, true);
+        xhr.responseType = 'arraybuffer';
+        xhr.onload = function () {
+            if (xhr.status !== 200 && xhr.status !== 0) {
+                console.error('Zipped CSV load failed:', path, 'HTTP ' + xhr.status);
                 callback([]);
-            });
+                return;
+            }
+            try {
+                const bytes = unzipFirstEntry(xhr.response);
+                callback(parseCSV(new TextDecoder('utf-8').decode(bytes)));
+            } catch (err) {
+                console.error('Zipped CSV unzip failed:', path, err);
+                callback([]);
+            }
+        };
+        xhr.onerror = function () {
+            console.error('Zipped CSV network error:', path);
+            callback([]);
+        };
+        xhr.send();
     }
 
     // --- Real CSV tokenizer (RFC4180-style) ---
@@ -483,41 +498,83 @@
     }
 
     // ================================================================
-    // DPD Inflection ("වර නැගීම") lookup
-    // All the heavy lifting (fetch, unzip, CSV-parse, IndexedDB cache,
-    // Map-building over ~900k rows) now runs in inflections-worker.js —
-    // a separate thread — so it NEVER blocks typing/searching on the main
-    // thread, no matter when it's triggered (page load warm-up, or the
-    // very first button tap). The worker itself handles the IndexedDB
-    // cache (see that file for INFLECTION_CACHE_VERSION).
+    // DPD Inflection ("වර නැගීම") lookup — LAZY, plain-text index.
+    // No zip, no Worker, no IndexedDB caching needed: instead of parsing
+    // all ~900k rows into a big in-memory Map (which caused the earlier
+    // lag), we do a single lightweight pass over the raw CSV text that
+    // only records each headword's LINE BYTE-RANGES (a cheap operation —
+    // no per-row object allocation). Looking up a word then slices out
+    // just its own few lines and parses ONLY those on demand. This keeps
+    // startup fast (~0.5s for the full dataset) and lookups near-instant
+    // (sub-millisecond), with no compression/decompression at all — the
+    // plain inflections.csv file is fetched via XHR exactly like the main
+    // dictionary already is.
     // ================================================================
+    const INFLECTION_DATA_PATH = 'inflections.zip?v=1'; // Zipped for a small download (~4.4MB vs ~64MB plain). Uses XHR + the bundled fflate library (not fetch()/DecompressionStream/Worker) — the same combination already proven to work for dictionary.zip/sinhala_english.zip in the native WebView app, as well as in normal PWA browsers.
+
+    function buildLazyInflectionIndex(text) {
+        const index = new Map(); // headword -> array of [lineStart, lineEnd) ranges (end excludes the \n)
+        const len = text.length;
+        let lineStart = 0;
+        let firstLine = true; // skip the CSV header row
+        for (let i = 0; i <= len; i++) {
+            if (i === len || text[i] === '\n') {
+                if (!firstLine && i > lineStart) {
+                    let lineEnd = i;
+                    if (text[lineEnd - 1] === '\r') lineEnd--;
+                    const lastComma = text.lastIndexOf(',', lineEnd - 1);
+                    if (lastComma >= lineStart) {
+                        const headword = text.slice(lastComma + 1, lineEnd);
+                        let bucket = index.get(headword);
+                        if (!bucket) { bucket = []; index.set(headword, bucket); }
+                        bucket.push([lineStart, lineEnd]);
+                    }
+                }
+                firstLine = false;
+                lineStart = i + 1;
+            }
+        }
+        return index;
+    }
+
+    function lazyInflectionLookup(state, headword) {
+        const ranges = state.index.get(headword);
+        if (!ranges) return [];
+        return ranges.map(([s, e]) => {
+            const cols = state.text.slice(s, e).split(',');
+            return { inflected: cols[0], pos: cols[1], category: cols[2], subcase: cols[3], number: cols[4] };
+        });
+    }
+
     let inflectionIndexPromise = null;
 
     function getInflectionIndex() {
         if (inflectionIndexPromise) return inflectionIndexPromise;
 
+        // Download the small zipped file (XHR, not fetch()), unzip once with
+        // the bundled fflate library (fast, no Worker needed), then build
+        // the SAME lightweight byte-range index over the resulting text —
+        // no big per-row object Map, so parsing stays fast too.
         inflectionIndexPromise = new Promise((resolve, reject) => {
-            let worker;
-            try {
-                worker = new Worker('inflections-worker.js');
-            } catch (e) {
-                reject(e);
-                return;
-            }
-            worker.onmessage = (evt) => {
-                const data = evt.data || {};
-                if (data.type === 'ready') {
-                    resolve(data.index);
-                } else if (data.type === 'error') {
-                    reject(new Error(data.message || 'inflections worker error'));
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', INFLECTION_DATA_PATH, true);
+            xhr.responseType = 'arraybuffer';
+            xhr.onload = () => {
+                if (xhr.status !== 200 && xhr.status !== 0) {
+                    reject(new Error('HTTP ' + xhr.status));
+                    return;
                 }
-                worker.terminate();
+                try {
+                    const bytes = unzipFirstEntry(xhr.response);
+                    const text = new TextDecoder('utf-8').decode(bytes);
+                    const index = buildLazyInflectionIndex(text);
+                    resolve({ text, index });
+                } catch (err) {
+                    reject(err);
+                }
             };
-            worker.onerror = (err) => {
-                reject(err);
-                worker.terminate();
-            };
-            worker.postMessage({ type: 'load' });
+            xhr.onerror = () => reject(new Error('network error loading ' + INFLECTION_DATA_PATH));
+            xhr.send();
         }).catch(err => {
             console.error('inflections load failed:', err);
             inflectionIndexPromise = null; // allow retry on next open
@@ -1127,13 +1184,14 @@
 
         panel.innerHTML = '<div class="inflection-loading">වර නැගීම් දත්ත පූරණය වෙමින්...</div>';
         getInflectionIndex()
-            .then(index => {
-                const rows = index.get(headword) || [];
+            .then(state => {
+                const rows = lazyInflectionLookup(state, headword);
                 panel.innerHTML = buildInflectionTablesHTML(rows, headword);
                 panel.dataset.loaded = '1';
             })
-            .catch(() => {
-                panel.innerHTML = '<div class="inflection-empty">වර නැගීම් දත්ත පූරණය කළ නොහැකි විය.</div>';
+            .catch(err => {
+                const detail = (err && err.message) ? err.message : String(err);
+                panel.innerHTML = '<div class="inflection-empty">වර නැගීම් දත්ත පූරණය කළ නොහැකි විය.<br><small style="opacity:0.7;word-break:break-all;">' + detail + '</small></div>';
             });
     };
 
