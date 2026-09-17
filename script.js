@@ -98,12 +98,14 @@
             // fallback) keeps this from competing with initial page
             // interactivity. Errors here are silent; the button's own
             // click handler still retries normally if this warm-up fails.
-            const warmUpInflections = () => { getInflectionIndex().catch(() => {}); };
-            if ('requestIdleCallback' in window) {
-                requestIdleCallback(warmUpInflections, { timeout: 4000 });
-            } else {
-                setTimeout(warmUpInflections, 1500);
-            }
+            // Warm up the "වර නැගීම" lookup — දැන් async yield සහිත නිසා UI එක block නොවේ.
+// එසේම, browser නිශ්චල වූ පසු පමණක් ක්‍රියාත්මක වේ (forced timeout නැත).
+const warmUpInflections = () => { getInflectionIndex().catch(() => {}); };
+if ('requestIdleCallback' in window) {
+    requestIdleCallback(warmUpInflections);
+} else {
+    setTimeout(warmUpInflections, 3000);
+}
         }
     }
 
@@ -512,30 +514,40 @@
     // ================================================================
     const INFLECTION_DATA_PATH = 'inflections.zip?v=1'; // Zipped for a small download (~4.4MB vs ~64MB plain). Uses XHR + the bundled fflate library (not fetch()/DecompressionStream/Worker) — the same combination already proven to work for dictionary.zip/sinhala_english.zip in the native WebView app, as well as in normal PWA browsers.
 
-    function buildLazyInflectionIndex(text) {
-        const index = new Map(); // headword -> array of [lineStart, lineEnd) ranges (end excludes the \n)
-        const len = text.length;
-        let lineStart = 0;
-        let firstLine = true; // skip the CSV header row
-        for (let i = 0; i <= len; i++) {
-            if (i === len || text[i] === '\n') {
-                if (!firstLine && i > lineStart) {
-                    let lineEnd = i;
-                    if (text[lineEnd - 1] === '\r') lineEnd--;
-                    const lastComma = text.lastIndexOf(',', lineEnd - 1);
-                    if (lastComma >= lineStart) {
-                        const headword = text.slice(lastComma + 1, lineEnd);
-                        let bucket = index.get(headword);
-                        if (!bucket) { bucket = []; index.set(headword, bucket); }
-                        bucket.push([lineStart, lineEnd]);
-                    }
+    // Async: කුඩා කොටස් වශයෙන් ක්‍රියාත්මක වන අතර සෑම ~12ms කට වරක් main thread එකට
+// නිදහස් වේ. එමගින් දත්ත පූරණය වන අතරතුරත් ටයිප් කිරීම ක්ෂණිකව සිදු වේ.
+async function buildLazyInflectionIndex(text) {
+    const index = new Map();
+    const len = text.length;
+    let lineStart = 0;
+    let firstLine = true;
+    let lastYield = performance.now();
+
+    for (let i = 0; i <= len; i++) {
+        if (i === len || text[i] === '\n') {
+            if (!firstLine && i > lineStart) {
+                let lineEnd = i;
+                if (text[lineEnd - 1] === '\r') lineEnd--;
+                const lastComma = text.lastIndexOf(',', lineEnd - 1);
+                if (lastComma >= lineStart) {
+                    const headword = text.slice(lastComma + 1, lineEnd);
+                    let bucket = index.get(headword);
+                    if (!bucket) { bucket = []; index.set(headword, bucket); }
+                    bucket.push([lineStart, lineEnd]);
                 }
-                firstLine = false;
-                lineStart = i + 1;
             }
+            firstLine = false;
+            lineStart = i + 1;
         }
-        return index;
+
+        // සෑම ~65k අක්ෂරයකට වරක්, ගත වූ කාලය > 12ms නම් browser එකට yield කරයි
+        if ((i & 0xFFFF) === 0 && performance.now() - lastYield > 12) {
+            await new Promise(r => setTimeout(r, 0));
+            lastYield = performance.now();
+        }
     }
+    return index;
+}
 
     function lazyInflectionLookup(state, headword) {
         const ranges = state.index.get(headword);
@@ -559,20 +571,21 @@
             const xhr = new XMLHttpRequest();
             xhr.open('GET', INFLECTION_DATA_PATH, true);
             xhr.responseType = 'arraybuffer';
-            xhr.onload = () => {
-                if (xhr.status !== 200 && xhr.status !== 0) {
-                    reject(new Error('HTTP ' + xhr.status));
-                    return;
-                }
-                try {
-                    const bytes = unzipFirstEntry(xhr.response);
-                    const text = new TextDecoder('utf-8').decode(bytes);
-                    const index = buildLazyInflectionIndex(text);
-                    resolve({ text, index });
-                } catch (err) {
-                    reject(err);
-                }
-            };
+            xhr.onload = async () => {
+    if (xhr.status !== 200 && xhr.status !== 0) {
+        reject(new Error('HTTP ' + xhr.status));
+        return;
+    }
+    try {
+        const bytes = unzipFirstEntry(xhr.response);
+        const text = new TextDecoder('utf-8').decode(bytes);
+        // async yield version එක await කරයි — UI එක block වන්නේ නැත
+        const index = await buildLazyInflectionIndex(text);
+        resolve({ text, index });
+    } catch (err) {
+        reject(err);
+    }
+};
             xhr.onerror = () => reject(new Error('network error loading ' + INFLECTION_DATA_PATH));
             xhr.send();
         }).catch(err => {
@@ -619,11 +632,11 @@
     const DECLENSION_SUFFIXES = {
         // a-stem masculine (like දම්ම / බුද්ධ) — bare-consonant stem
         a_masc: {
-            nom: { sg: ['ො'], pl: ['ා', 'ාසෙ'] },
+            nom: { sg: ['ො'], pl: ['ා'] },
             acc: { sg: ['ං'], pl: ['ෙ'] },
             instr: { sg: ['ෙන'], pl: ['ෙභි', 'ෙහි'] },
             dat: { sg: ['ස්ස', 'ාය'], pl: ['ානං'] },
-            abl: { sg: ['තො', 'ම්හා', 'ස්මා'], pl: ['තො', 'ෙභි', 'ෙහි'] },
+            abl: { sg: ['තො', 'ම්හා', 'ස්මා'], pl: ['ෙභි', 'ෙහි'] },
             gen: { sg: ['ස්ස'], pl: ['ානං'] },
             loc: { sg: ['ම්හි', 'ස්මිං', 'ෙ'], pl: ['ෙසු'] },
             voc: { sg: ['', 'ා'], pl: ['ා'] },
@@ -634,7 +647,7 @@
             acc: { sg: ['ං'], pl: ['ානි', 'ෙ'] },
             instr: { sg: ['ෙන'], pl: ['ෙභි', 'ෙහි'] },
             dat: { sg: ['ස්ස', 'ාය'], pl: ['ානං'] },
-            abl: { sg: ['තො', 'ම්හා', 'ස්මා'], pl: ['තො', 'ෙභි', 'ෙහි'] },
+            abl: { sg: ['තො', 'ම්හා', 'ස්මා'], pl: ['ෙභි', 'ෙහි'] },
             gen: { sg: ['ස්ස'], pl: ['ානං'] },
             loc: { sg: ['ම්හි', 'ස්මිං', 'ෙ'], pl: ['ෙසු'] },
             // Vocative NEVER ends in niggahita (ං) — bare stem only.
@@ -927,24 +940,6 @@
     // pos types whose gender-tagging has proven reliable.
     const NOMINAL_POS_ORDER = ['noun', 'pp', 'prp', 'ptp', 'card', 'ordin', 'interr'];
 
-    // Rule: drop an oblique-case (instr/dat/abl/gen/loc — never nom/acc/voc,
-    // where a bare/nom-identical spelling can be a genuine separate form)
-    // attested form that duplicates this gender's nominative spelling.
-    // Same-number collisions (oblique.sg vs nom.sg) are always cleaned up
-    // when something else remains in the cell — that's unambiguous noise
-    // (e.g. වනිතා wrongly tagged instr.sg alongside the correct වනිතාය).
-    // Cross-number collisions (oblique.sg spelled like nom.PL, or vice
-    // versa) are handled differently by gender: the archaic bare "-ā"
-    // instr./abl. singular is a recognized alternate ONLY for MASCULINE
-    // a-stem nouns (e.g. බුද්ධා alongside බුද්ධෙන) — so for masculine we
-    // only drop it when it's the form's sole attestation (keeping it
-    // whenever a regular alternate is attested alongside it). For
-    // feminine/neuter, that same bare "-ā" pattern is never a genuine
-    // alternate — it's cross-tagged nom.pl noise (e.g. චිත්තා, වනිතා) — so
-    // it's always dropped there, even alongside another attested form.
-    // When a duplicate IS dropped and nothing remains, the cell is
-    // returned empty on purpose so the declension generator fills it with
-    // the textbook-regular form.
     const OBLIQUE_CASES = new Set(['instr', 'dat', 'abl', 'gen', 'loc']);
     function dropNomDuplicates(forms, number, nomSgForms, nomPlForms, gender) {
         if (!forms.length) return forms;
@@ -989,10 +984,19 @@
         return filtered.length ? filtered : forms;
     }
 
-    // Rule: instr.pl / abl.pl regularly accept BOTH a "-hi" and a "-bhi"
-    // (or equivalent long/short-vowel pair) ending for any word in a given
-    // class — if the corpus only attests one, add the other as a generated
-    // supplement rather than leaving it looking incomplete.
+    
+    function dropAblPluralTo(forms) {
+        if (!forms.length) return forms;
+        const filtered = forms.filter(f => !f.endsWith('\u0DAD\u0DDC')); // ...තො
+        return filtered.length ? filtered : forms;
+    }
+
+    function dropAaseNomPl(forms) {
+        if (!forms.length) return forms;
+        const filtered = forms.filter(f => !f.endsWith('\u0DCF\u0DC3\u0DD9')); // ...ාසෙ
+        return filtered.length ? filtered : forms;
+    }
+
     function completeHiBhiPair(forms, declClass, caseCode, number) {
         if (!declClass || !(caseCode === 'instr' || caseCode === 'abl') || number !== 'pl') {
             return { forms, addedGenerated: false };
@@ -1018,12 +1022,6 @@
         let html = '';
         let usedGeneratedForms = false;
 
-        // --- Nominal declension, grouped by POS FIRST (a noun and an
-        // adjective that happen to share the same spelling — e.g. ධම්ම,
-        // පුරිස, චිත්ත — are different lexemes; pooling their attested
-        // forms together would show irrelevant genders, like feminine
-        // forms under what should be a masculine-only noun). Each POS
-        // group then gets its own gender tables, exactly as before. ---
         const nominalRows = rows.filter(r => NOMINAL_POS_ORDER.includes(r.pos));
         const posPresent = NOMINAL_POS_ORDER.filter(p => nominalRows.some(r => r.pos === p));
         const showPosHeader = posPresent.length > 1;
@@ -1058,6 +1056,12 @@
                         if (c === 'voc') {
                             sgForms = dropVocativeNiggahita(sgForms);
                             plForms = dropVocativeNiggahita(plForms);
+                        }
+                        if (c === 'abl') {
+                            plForms = dropAblPluralTo(plForms);
+                        }
+                        if (c === 'nom') {
+                            plForms = dropAaseNomPl(plForms);
                         }
 
                         if (!sgForms.length && declClass) {
@@ -1110,10 +1114,7 @@
             html += '</table></div>';
         });
 
-        // --- Verb conjugation: ONE table, columns = sg/pl/reflexive-sg/reflexive-pl,
-        // rows = tense × person (ප්‍රථම → මධ්‍යම → උත්තම within each tense) —
-        // matching the DPD reference layout exactly. Gaps are filled by the
-        // "ati" bhū-class generator (see above) when the verb qualifies. ---
+
         const verbRows = rows.filter(r => INFL_PERSON_ORDER.includes(r.subcase));
         if (verbRows.length) {
             const verbClass = detectVerbClass(headwordSi);
