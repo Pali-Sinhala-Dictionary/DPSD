@@ -1,7 +1,7 @@
-    // සියලු ශබ්දකෝෂ Configuration (Oxford Dictionary ඉවත් කර ඇත)
+// සියලු ශබ්දකෝෂ Configuration (Oxford Dictionary ඉවත් කර ඇත)
     let availableDicts = [
-        { id: 'pali', name: 'පාලි - සිංහල ශබ්දකෝෂය', path: 'dictionary.zip', enabled: true, data: [] },
-        { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.zip', enabled: true, data: [] }
+        { id: 'pali', name: 'පාලි - සිංහල ශබ්දකෝෂය', path: 'dictionary.zip', enabled: true, data: [], _loaded: false },
+        { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.zip', enabled: true, data: [], _loaded: false }
     ];
 
     const searchInput = document.getElementById('searchInput');
@@ -25,7 +25,113 @@
         const zoomTarget = document.querySelector('.container');
         if (zoomTarget) zoomTarget.style.zoom = savedZoom + '%';
     })();
+// ============================================================
+// Splash Screen — falling letters animation
+// ============================================================
+(function initSplash() {
+    const splash = document.getElementById('splashScreen');
+    const container = document.getElementById('splashLetters');
+    if (!splash || !container) return;
 
+    // Sinhala letters + a few common Pali combos
+    const sinhalaLetters = [
+        'අ','ආ','ඇ','ඉ','ඊ','උ','එ','ඒ','ඔ','ඕ',
+        'ක','ඛ','ග','ඝ','ච','ජ','ඤ','ට','ඩ','ණ',
+        'ත','ථ','ද','ධ','න','ප','ඵ','බ','භ','ම',
+        'ය','ර','ල','ව','ශ','ෂ','ස','හ','ළ','ෆ',
+        'ං','ඃ','බු','ද්','ධ','ස','ං'
+    ];
+
+    // English letters (mixed upper + lower)
+    const englishLetters = [
+        'A','B','C','D','E','F','G','H','I','J','K','L','M',
+        'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+        'a','b','c','d','e','f','g','h','i','k','m','n','o',
+        'p','r','s','t','u','v','w','y'
+    ];
+
+    const allLetters = sinhalaLetters.concat(englishLetters);
+
+    const palettes = {
+    light: [
+        'rgba(139, 0, 0, 0.75)',       // dark red
+        'rgba(184, 134, 11, 0.85)',    // dark goldenrod
+        'rgba(62, 39, 35, 0.65)',      // dark brown
+        'rgba(0, 51, 153, 0.55)',      // dark blue
+        'rgba(106, 27, 154, 0.55)',    // purple
+        'rgba(46, 125, 50, 0.55)'      // dark green
+    ],
+    dark: [
+        'rgba(179, 136, 255, 0.85)',
+        'rgba(0, 229, 255, 0.75)',
+        'rgba(255, 255, 255, 0.65)',
+        'rgba(0, 230, 118, 0.60)'
+    ]
+};
+
+    const isDark = document.body.classList.contains('dark-theme');
+    const palette = isDark ? palettes.dark : palettes.light;
+    const isSinhalaRe = /[\u0D80-\u0DFF]/;
+    const rand = (min, max) => min + Math.random() * (max - min);
+
+    const LETTER_COUNT = 60;
+
+    for (let i = 0; i < LETTER_COUNT; i++) {
+        const span = document.createElement('span');
+        span.className = 'splash-letter';
+
+        const letter = allLetters[Math.floor(Math.random() * allLetters.length)];
+        span.textContent = letter;
+
+        const isSin = isSinhalaRe.test(letter);
+        const size = isSin ? rand(20, 62) : rand(16, 50);
+        const left = rand(0, 98);
+        const duration = rand(2.6, 5.2);
+        const delay = rand(0, 2.4);
+        const rot = rand(-360, 360);
+        const opacity = rand(0.20, 0.75);
+
+        span.style.left = left + '%';
+        span.style.fontSize = size.toFixed(1) + 'px';
+        span.style.animationDuration = duration.toFixed(2) + 's';
+        span.style.animationDelay = delay.toFixed(2) + 's';
+        span.style.color = palette[Math.floor(Math.random() * palette.length)];
+        span.style.fontWeight = isSin
+            ? 'bold'
+            : (Math.random() > 0.5 ? '300' : '700');
+        span.style.setProperty('--splash-rot', rot.toFixed(0) + 'deg');
+        span.style.setProperty('--splash-opacity', opacity.toFixed(2));
+
+        container.appendChild(span);
+    }
+
+    // ---- Auto-hide logic ----
+    const MIN_SHOW_MS = 5000; // අවම දර්ශන කාලය
+    const MAX_SHOW_MS = 6200; // උපරිම (හදිසි fallback)
+    const startTime = Date.now();
+    let hidden = false;
+    let hideRequested = false;
+
+    function hideSplash() {
+        if (hidden) return;
+        hidden = true;
+        splash.classList.add('hide');
+        setTimeout(() => { splash.style.display = 'none'; }, 800);
+    }
+
+    // Dictionary loader එකට splash එක කලින් ඉවත් කිරීමට ඉඩ දේ.
+    // MIN_SHOW_MS ගත වන තෙක් රැඳී සිටී.
+    window.__hideSplash = function () {
+        if (hideRequested) return;
+        hideRequested = true;
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, MIN_SHOW_MS - elapsed);
+        setTimeout(hideSplash, remaining);
+    };
+
+    // හදිසි fallback — කොහොමටත් MAX_SHOW_MS වලට පසු hide වේ
+    setTimeout(hideSplash, MAX_SHOW_MS);
+})();
     // --- App Init ---
     window.addEventListener('DOMContentLoaded', () => {
         renderDictSelector();
@@ -45,83 +151,158 @@
         }
     });
 
-    // --- CSV Load Logic ---
+    // ================================================================
+    // Streaming-aware dictionary loader
+    // ================================================================
+    let dictLoadState = null;
+
     function loadAllActiveDicts() {
-        let activeDicts = availableDicts.filter(d => d.enabled);
+        const activeDicts = availableDicts.filter(d => d.enabled);
         if (activeDicts.length === 0) {
+            searchInput.disabled = true;
+            searchBtn.disabled = true;
             initialMessage.innerText = "කරුණාකර අවම වශයෙන් එක් ශබ්දකෝෂයක්වත් තෝරන්න.";
             return;
         }
 
-        let loadedCount = 0;
+        dictLoadState = {
+            total: activeDicts.length,
+            done: 0,
+            anyDataYet: false,
+            bytesLoaded: 0,
+            bytesTotal: 0,
+            activeDicts: activeDicts.slice(),
+            failedPaths: []
+        };
+
         activeDicts.forEach(dict => {
-            if (dict.data && dict.data.length > 0) {
-                loadedCount++;
-                checkReady(loadedCount, activeDicts.length, activeDicts);
-            } else {
-                fetchCSV(dict.path, (data) => {
-                    dict.data = data || [];
-                    loadedCount++;
-                    checkReady(loadedCount, activeDicts.length, activeDicts);
-                });
+            if (dict.data && dict.data.length > 0 && dict._loaded) {
+                dictLoadState.done++;
+                dictLoadState.anyDataYet = true;
+                if (dictLoadState.done === dictLoadState.total) onAllDictsLoaded();
+                return;
             }
+            dict.data = [];
+            dict._loaded = false;
+            startDictLoad(dict);
         });
     }
 
-    function checkReady(count, total, activeDicts) {
-        if (count === total) {
-            // A dict "finishing" doesn't mean it actually loaded anything —
-            // fetchCSV/fetchZippedCSV swallow errors and call back with an
-            // empty array so one broken file doesn't wedge the whole app.
-            // But silently presenting a normal, ready-looking search box
-            // when the data is actually empty is worse: it looks like
-            // everything works while every search silently returns
-            // nothing. Surface that clearly instead.
-            const failed = (activeDicts || []).filter(d => !d.data || d.data.length === 0);
-            if (failed.length > 0) {
-                searchInput.disabled = true;
-                searchInput.placeholder = "දත්ත පූරණය අසාර්ථකයි";
-                initialMessage.innerText = "පූරණය කළ නොහැකි විය: " + failed.map(d => d.path).join(', ') +
-                    " — file එක නිවැරදි ස්ථානයේ තියෙනවද බලන්න.";
-                return;
-            }
+    function startDictLoad(dict) {
+        const finishOne = () => {
+            dict._loaded = true;
+            dictLoadState.done++;
+            updateDictLoadUI();
+            if (dictLoadState.done === dictLoadState.total) onAllDictsLoaded();
+        };
 
+        const usePlainFetch = () => {
+            fetchCSV(dict.path, (data) => {
+                dict.data = data || [];
+                if (dict.data.length > 0) dictLoadState.anyDataYet = true;
+                finishOne();
+            });
+        };
+
+        if (!/\.zip(\?.*)?$/i.test(dict.path)) {
+            usePlainFetch();
+            return;
+        }
+
+        let fellBack = false;
+        const fallback = () => {
+            if (fellBack) return;
+            fellBack = true;
+            dict.data = [];
+            usePlainFetch();
+        };
+
+        const handle = fetchZippedCSVStreaming(dict.path, {
+            onBatch: (items) => {
+                for (let i = 0; i < items.length; i++) dict.data.push(items[i]);
+                if (!dictLoadState.anyDataYet && dict.data.length > 0) {
+                    dictLoadState.anyDataYet = true;
+                }
+                updateDictLoadUI();
+            },
+            onProgress: (loaded, total) => {
+                const prevLoaded = dict._progressLoaded || 0;
+                const prevTotal = dict._progressTotal || 0;
+                dictLoadState.bytesLoaded += loaded - prevLoaded;
+                dictLoadState.bytesTotal  += total  - prevTotal;
+                dict._progressLoaded = loaded;
+                dict._progressTotal = total;
+                updateDictLoadUI();
+            },
+            onDone: finishOne,
+            onUnsupported: fallback,
+            onError: (err) => {
+                console.warn('Streaming failed for ' + dict.path + ':', err);
+                dictLoadState.failedPaths.push(dict.path);
+                fallback();
+            }
+        });
+
+        if (handle === null) fallback();
+    }
+
+    function updateDictLoadUI() {
+    // Splash screen එක පළමු batch එක ලැබුණු වහාම hide කිරීමට උත්සාහ කරයි
+    if (dictLoadState && dictLoadState.anyDataYet && typeof window.__hideSplash === 'function') {
+        window.__hideSplash();
+    }
+
+    if (!dictLoadState) return;
+
+        // Search කොටුව ක්ෂණිකව සක්‍රීය කරන්න — මුල් batch එක ලැබුණු වහාම
+        if (dictLoadState.anyDataYet && searchInput.disabled) {
             searchInput.disabled = false;
             searchBtn.disabled = false;
             searchInput.placeholder = "වචනයක් ටයිප් කරන්න...";
-            initialMessage.innerText = "වචනයක් ඇතුළත් කර සොයන්න.";
+        }
 
-            // Warm up the "වර නැගීම" lookup in the background, once the
-            // main dictionaries are ready and the browser is idle — so by
-            // the time someone actually taps the button it's usually
-            // already loaded. requestIdleCallback (with a setTimeout
-            // fallback) keeps this from competing with initial page
-            // interactivity. Errors here are silent; the button's own
-            // click handler still retries normally if this warm-up fails.
-            // Warm up the "වර නැගීම" lookup — දැන් async yield සහිත නිසා UI එක block නොවේ.
-// එසේම, browser නිශ්චල වූ පසු පමණක් ක්‍රියාත්මක වේ (forced timeout නැත).
-const warmUpInflections = () => { getInflectionIndex().catch(() => {}); };
-if ('requestIdleCallback' in window) {
-    requestIdleCallback(warmUpInflections);
-} else {
-    setTimeout(warmUpInflections, 3000);
-}
+        const allDone = dictLoadState.done === dictLoadState.total;
+        const pct = dictLoadState.bytesTotal > 0
+            ? Math.floor((dictLoadState.bytesLoaded / dictLoadState.bytesTotal) * 100)
+            : null;
+
+        if (allDone) {
+            if (dictLoadState.failedPaths.length > 0 && !dictLoadState.anyDataYet) {
+                searchInput.disabled = true;
+                searchInput.placeholder = "දත්ත පූරණය අසාර්ථකයි";
+                initialMessage.innerText = "පූරණය කළ නොහැකි විය: " +
+                    dictLoadState.failedPaths.join(', ') +
+                    " — file එක නිවැරදි ස්ථානයේ තියෙනවද බලන්න.";
+            } else {
+                initialMessage.innerText = "වචනයක් ඇතුළත් කර සොයන්න.";
+            }
+        } else if (dictLoadState.anyDataYet) {
+            initialMessage.innerText = pct !== null
+                ? `දත්ත පූරණය වෙමින්... ${pct}% — දැන් සෙවිය හැක.`
+                : "දත්ත පූරණය වෙමින්... — දැන් සෙවිය හැක.";
         }
     }
 
+    function onAllDictsLoaded() {
+        updateDictLoadUI();
+
+        // Inflections index එක පසුබිමින් warm up කරන්න
+        const warmUpInflections = () => { getInflectionIndex().catch(() => {}); };
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(warmUpInflections);
+        } else {
+            setTimeout(warmUpInflections, 1500);
+        }
+    }
+
+    // --- Legacy non-streaming loader (used as fallback + for non-zip paths) ---
     function fetchCSV(path, callback) {
-        // A ".zip" (with or without a trailing ?v=... query string) holds a
-        // single CSV file — unzipped client-side with the bundled fflate
-        // library (see unzipFirstEntry below), then parsed exactly like a
-        // plain CSV.
         if (/\.zip(\?.*)?$/i.test(path)) {
             fetchZippedCSV(path, callback);
             return;
         }
         const xhr = new XMLHttpRequest();
         xhr.open("GET", path, true);
-        // Force UTF-8 decoding regardless of what the server reports, so
-        // Sinhala/Pali text is never mis-decoded.
         xhr.overrideMimeType('text/plain; charset=utf-8');
         xhr.onload = function () {
             if (xhr.status === 200 || xhr.status === 0) {
@@ -137,12 +318,7 @@ if ('requestIdleCallback' in window) {
     // ================================================================
     // Native ZIP reader — the container-format parsing (EOCD / central
     // directory / local file header) is hand-rolled; actual DEFLATE
-    // decompression is delegated to the bundled fflate.min.js (a small,
-    // pure-JS library loaded locally — see index.html/inflections-worker.js
-    // — NOT a CDN). This avoids depending on the browser's own
-    // DecompressionStream API, whose availability can't be guaranteed on
-    // older Android WebView versions used by the native app build; fflate
-    // works identically everywhere since it's plain JavaScript.
+    // decompression is delegated to the bundled fflate.min.js.
     // ================================================================
     function unzipFirstEntry(arrayBuffer) {
         const view = new DataView(arrayBuffer);
@@ -151,7 +327,7 @@ if ('requestIdleCallback' in window) {
 
         const EOCD_SIG = 0x06054b50;
         let eocdOffset = -1;
-        const scanStart = Math.max(0, len - 65557); // 22-byte record + max 65535-byte comment
+        const scanStart = Math.max(0, len - 65557);
         for (let i = len - 22; i >= scanStart; i--) {
             if (view.getUint32(i, true) === EOCD_SIG) { eocdOffset = i; break; }
         }
@@ -172,8 +348,8 @@ if ('requestIdleCallback' in window) {
         const dataStart = localHeaderOffset + 30 + lNameLen + lExtraLen;
         const compData = bytes.slice(dataStart, dataStart + compSize);
 
-        if (method === 0) return compData; // stored, already raw
-        if (method === 8) return fflate.inflateSync(compData); // deflate (raw, no zlib/gzip header)
+        if (method === 0) return compData;
+        if (method === 8) return fflate.inflateSync(compData);
         throw new Error('unsupported zip compression method: ' + method);
     }
 
@@ -202,12 +378,174 @@ if ('requestIdleCallback' in window) {
         xhr.send();
     }
 
+    // ================================================================
+    // Streaming ZIP → CSV reader
+    // Download වන අතරතුරම rows parse කර onBatch(items) කැඳවයි.
+    // Streaming නොහැකි නම් (පැරණි WebView) null ලබා දේ — caller එවිට fetchCSV භාවිතා කරයි.
+    // ================================================================
+    function fetchZippedCSVStreaming(path, handlers) {
+        if (typeof fetch !== 'function' || typeof ReadableStream === 'undefined' || !fflate.Unzip) {
+            return null;
+        }
+
+        let reader = null;
+        let aborted = false;
+
+        (async () => {
+            try {
+                const response = await fetch(path);
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                if (!response.body || !response.body.getReader) {
+                    if (!aborted && handlers.onUnsupported) handlers.onUnsupported();
+                    return;
+                }
+
+                reader = response.body.getReader();
+                const totalBytes = parseInt(response.headers.get('content-length') || '0', 10);
+                let loadedBytes = 0;
+
+                const decoder = new TextDecoder('utf-8');
+                const parser = new IncrementalCSVParser();
+
+                let headerMap = null;
+                let headerParsed = false;
+                let rowIndex = 0;
+                let pendingItems = [];
+                let lastFlush = performance.now();
+                const FLUSH_INTERVAL_MS = 200;
+                const FLUSH_BATCH_SIZE = 500;
+
+                const flush = () => {
+                    if (!pendingItems.length) return;
+                    const batch = pendingItems;
+                    pendingItems = [];
+                    lastFlush = performance.now();
+                    if (handlers.onBatch) handlers.onBatch(batch);
+                };
+
+                const processRow = (row) => {
+                    if (!headerParsed) {
+                        headerMap = detectHeaderMap(row);
+                        headerParsed = true;
+                        if (headerMap) return;
+                    }
+                    rowIndex++;
+                    const item = buildItemFromRow(row, headerMap, rowIndex);
+                    if (!item) return;
+                    pendingItems.push(item);
+                    if (pendingItems.length >= FLUSH_BATCH_SIZE ||
+                        performance.now() - lastFlush >= FLUSH_INTERVAL_MS) {
+                        flush();
+                    }
+                };
+
+                let csvEntrySeen = false;
+                const unzipper = new fflate.Unzip((file) => {
+                    if (csvEntrySeen || !/\.csv$/i.test(file.name)) {
+                        file.ondata = () => {};
+                        file.start();
+                        return;
+                    }
+                    csvEntrySeen = true;
+                    file.ondata = (err, data, final) => {
+                        if (err) { if (handlers.onError) handlers.onError(err); return; }
+                        if (data && data.length) {
+                            const text = decoder.decode(data, { stream: !final });
+                            parser.feed(text, processRow);
+                        }
+                        if (final) {
+                            parser.finish(processRow);
+                            flush();
+                        }
+                    };
+                    file.start();
+                });
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        unzipper.push(new Uint8Array(0), true);
+                        break;
+                    }
+                    loadedBytes += value.length;
+                    if (handlers.onProgress && totalBytes > 0) {
+                        handlers.onProgress(loadedBytes, totalBytes);
+                    }
+                    unzipper.push(value, false);
+                }
+                flush();
+                if (handlers.onDone) handlers.onDone();
+            } catch (err) {
+                if (aborted || err.name === 'AbortError') return;
+                if (handlers.onError) handlers.onError(err);
+            }
+        })();
+
+        return {
+            abort: () => {
+                aborted = true;
+                if (reader) reader.cancel().catch(() => {});
+            }
+        };
+    }
+
+    // ================================================================
+    // Incremental (chunk-by-chunk) CSV tokenizer
+    // Chunks අතරේ state එක රඳවා ගනී. සම්පූර්ණ row එකක් ලැබුණු විට onRow(row) කැඳවයි.
+    // ================================================================
+    class IncrementalCSVParser {
+        constructor() {
+            this.row = [];
+            this.field = '';
+            this.inQuotes = false;
+            this.pendingQuote = false;
+        }
+
+        feed(text, onRow) {
+            let i = 0;
+            const len = text.length;
+            while (i < len) {
+                const ch = text[i];
+
+                if (this.inQuotes) {
+                    if (this.pendingQuote) {
+                        if (ch === '"') { this.field += '"'; this.pendingQuote = false; i++; continue; }
+                        this.inQuotes = false;
+                        this.pendingQuote = false;
+                        // ch එක normal char ලෙස නැවත process කරන්න
+                    }
+                    if (this.inQuotes) {
+                        if (ch === '"') { this.pendingQuote = true; i++; continue; }
+                        this.field += ch; i++; continue;
+                    }
+                }
+
+                if (ch === '"')  { this.inQuotes = true; i++; continue; }
+                if (ch === ',')  { this.row.push(this.field); this.field = ''; i++; continue; }
+                if (ch === '\r') { i++; continue; }
+                if (ch === '\n') {
+                    this.row.push(this.field);
+                    this.field = '';
+                    onRow(this.row);
+                    this.row = [];
+                    i++;
+                    continue;
+                }
+                this.field += ch; i++;
+            }
+        }
+
+        finish(onRow) {
+            if (this.field.length > 0 || this.row.length > 0) {
+                this.row.push(this.field);
+                onRow(this.row);
+                this.row = [];
+                this.field = '';
+            }
+        }
+    }
+
     // --- Real CSV tokenizer (RFC4180-style) ---
-    // A plain line.split(',') breaks the moment any field's own text
-    // contains a comma (e.g. a meaning listing several synonyms) — those
-    // rows silently get extra columns and everything after shifts out of
-    // place. This walks the text character-by-character so quoted commas,
-    // quoted newlines, and escaped "" quotes are all handled correctly.
     function tokenizeCSV(text) {
         const rows = [];
         let row = [];
@@ -237,10 +575,7 @@ if ('requestIdleCallback' in window) {
         return rows;
     }
 
-    // Recognizes the dictionary.csv header and maps column names to
-    // indices, so word/meaning/etc. are read by NAME, not by guessing at
-    // position/ID-format. Returns null if the row doesn't look like a
-    // known header (caller then falls back to flexible positional parsing).
+    // Recognizes the dictionary.csv header and maps column names to indices.
     function detectHeaderMap(headerRow) {
         if (!headerRow || headerRow.length < 2) return null;
         const map = {};
@@ -260,7 +595,58 @@ if ('requestIdleCallback' in window) {
         return (map.word !== undefined) ? map : null;
     }
 
-    // --- Smart CSV Parser ---
+     // CSV row එකක් → item object එකක් බවට හරවයි.
+    function buildItemFromRow(raw, colMap, fallbackId) {
+        if (!raw || raw.length < 2) return null;
+
+        const parts = raw.map(p => (p || '').trim().normalize('NFC'));
+        let item;
+
+        if (colMap) {
+            item = {
+                id: (colMap.id !== undefined ? parts[colMap.id] : '') || String(fallbackId),
+                word: (parts[colMap.word] || '').replace(/\s*\d+(?:\.\d+)*\s*$/, '').trim(),
+                type: (colMap.type !== undefined ? parts[colMap.type] : '') || '',
+                wordDivision: (colMap.wordDivision !== undefined ? parts[colMap.wordDivision] : '') || '',
+                meaning: (colMap.meaning !== undefined ? parts[colMap.meaning] : '') || '',
+                properNoun: (colMap.properNoun !== undefined ? parts[colMap.properNoun] : '') || '',
+                grammarDesc: (colMap.grammarDesc !== undefined ? parts[colMap.grammarDesc] : '') || '',
+                etymology: (colMap.etymology !== undefined ? parts[colMap.etymology] : '') || ''
+            };
+        } else {
+            let offset = 0;
+            let id = String(fallbackId);
+            if (parts.length > 1 && parts[0] !== '' && !isNaN(parts[0])) {
+                id = parts[0];
+                offset = 1;
+            }
+            item = {
+                id: id,
+                word: (parts[offset] || '').replace(/\s*\d+(?:\.\d+)*\s*$/, '').trim(),
+                type: '',
+                wordDivision: '',
+                meaning: '',
+                properNoun: '',
+                grammarDesc: '',
+                etymology: ''
+            };
+            const remaining = parts.length - offset;
+            if (remaining === 2) {
+                item.meaning = parts[offset + 1] || '';
+            } else if (remaining >= 3) {
+                item.type = parts[offset + 1] || '';
+                item.meaning = parts[offset + 2] || '';
+                item.properNoun = parts[offset + 3] || '';
+                item.grammarDesc = parts[offset + 4] || '';
+            }
+        }
+
+        const hasContent = item.meaning || item.type || item.properNoun ||
+                            item.grammarDesc || item.etymology || item.wordDivision;
+        return (item.word && hasContent) ? item : null;
+    }
+
+    // --- Smart CSV Parser (non-streaming; kept as fallback) ---
     function parseCSV(text) {
         const rows = tokenizeCSV(text);
         if (!rows.length) return [];
@@ -270,89 +656,14 @@ if ('requestIdleCallback' in window) {
         const startRow = colMap ? 1 : 0;
 
         for (let i = startRow; i < rows.length; i++) {
-            const raw = rows[i];
-            if (!raw || raw.length < 2) continue;
-
-            // Normalize to a single canonical Unicode form (NFC) so that a
-            // word typed/stored via a different tool or keyboard, which may
-            // produce an equivalent but differently-composed sequence of
-            // combining marks (e.g. hal kirima + following consonant),
-            // still matches consistently at search time.
-            const parts = raw.map(p => (p || '').trim().normalize('NFC'));
-
-            let item;
-            if (colMap) {
-                // Known schema: read every field by its header name. This
-                // works regardless of the ID column's format (numeric like
-                // "42" or alphanumeric like "GAP4-173") since we never have
-                // to guess which column the ID is in.
-                item = {
-                    id: (colMap.id !== undefined ? parts[colMap.id] : '') || String(i),
-                    word: (parts[colMap.word] || '').replace(/\s*\d+(?:\.\d+)*\s*$/, '').trim(),
-                    type: (colMap.type !== undefined ? parts[colMap.type] : '') || '',
-                    wordDivision: (colMap.wordDivision !== undefined ? parts[colMap.wordDivision] : '') || '',
-                    meaning: (colMap.meaning !== undefined ? parts[colMap.meaning] : '') || '',
-                    properNoun: (colMap.properNoun !== undefined ? parts[colMap.properNoun] : '') || '',
-                    grammarDesc: (colMap.grammarDesc !== undefined ? parts[colMap.grammarDesc] : '') || '',
-                    etymology: (colMap.etymology !== undefined ? parts[colMap.etymology] : '') || ''
-                };
-            } else {
-                // No recognizable header (e.g. a simpler word,meaning style
-                // dictionary file): fall back to flexible column-count
-                // handling, same idea as before but on properly quote-aware
-                // tokenized fields instead of a naive comma split.
-                let offset = 0;
-                let id = String(i);
-                if (parts.length > 1 && parts[0] !== '' && !isNaN(parts[0])) {
-                    id = parts[0];
-                    offset = 1;
-                }
-                item = {
-                    id: id,
-                    word: (parts[offset] || '').replace(/\s*\d+(?:\.\d+)*\s*$/, '').trim(),
-                    type: '',
-                    wordDivision: '',
-                    meaning: '',
-                    properNoun: '',
-                    grammarDesc: '',
-                    etymology: ''
-                };
-                const remaining = parts.length - offset;
-                if (remaining === 2) {
-                    item.meaning = parts[offset + 1] || '';
-                } else if (remaining >= 3) {
-                    item.type = parts[offset + 1] || '';
-                    item.meaning = parts[offset + 2] || '';
-                    item.properNoun = parts[offset + 3] || '';
-                    item.grammarDesc = parts[offset + 4] || '';
-                }
-            }
-
-            // Keep the entry as long as it has a word AND at least one
-            // piece of actual content in ANY field — meaning, type,
-            // proper-noun description, grammar note, or etymology. This
-            // fixes rows that were being silently dropped just because
-            // "meaning" and "type" happened to both be empty (common for
-            // DPPN proper-noun rows where the content lives in properNoun /
-            // grammarDesc / etymology instead).
-            const hasContent = item.meaning || item.type || item.properNoun ||
-                                item.grammarDesc || item.etymology || item.wordDivision;
-            if (item.word && hasContent) {
-                result.push(item);
-            }
+            const item = buildItemFromRow(rows[i], colMap, i);
+            if (item) result.push(item);
         }
         return result;
     }
 
     // ================================================================
     // Singlish -> Sinhala Transliteration Engine
-    // Ported from the reference "Pali-Sinhala Dictionary" app's search
-    // algorithm. Instead of doing one fragile sequential text replace,
-    // it builds a lookup of every consonant+vowel-sign combination and,
-    // for a given Singlish string, returns EVERY valid Sinhala spelling
-    // it could correspond to. This correctly handles inherent vowels,
-    // pili (vowel signs), rakaransaya/yansaya (්‍ර / ්‍ය) and the many
-    // ways people casually romanize the same Sinhala letter.
     // ================================================================
     const singlish_vowels = [
         ['අ', 'a'], ['ආ', 'aa'], ['ඇ', 'ae'], ['ඈ', 'ae, aee'],
@@ -378,11 +689,10 @@ if ('requestIdleCallback' in window) {
         ['ඹ', 'mb'], ['ඥ', 'gn']
     ];
 
-    // [pili (vowel sign attached after a consonant), roman suffix]
     const singlish_combinations = [
-        ['්', ''],       // ක්
-        ['', 'a'],        // ක
-        ['ා', 'a, aa'],   // කා
+        ['්', ''],
+        ['', 'a'],
+        ['ා', 'a, aa'],
         ['ැ', 'ae'],
         ['ෑ', 'ae, aee'],
         ['ි', 'i'],
@@ -395,7 +705,7 @@ if ('requestIdleCallback' in window) {
         ['ො', 'o'],
         ['ෝ', 'o, oo'],
 
-        ['්‍ර', 'ra'],       // ක්‍ර
+        ['්‍ර', 'ra'],
         ['්‍රා', 'ra, raa'],
         ['්‍රැ', 'rae'],
         ['්‍රෑ', 'rae, raee'],
@@ -407,7 +717,7 @@ if ('requestIdleCallback' in window) {
         ['්‍රො', 'ro'],
         ['්‍රෝ', 'ro, roo'],
 
-        ['්‍ය', 'ya'],       // ක්‍ය
+        ['්‍ය', 'ya'],
         ['්‍යා', 'ya, yaa'],
         ['්‍යැ', 'yae'],
         ['්‍යෑ', 'yae, yaee'],
@@ -467,8 +777,6 @@ if ('requestIdleCallback' in window) {
         return /[a-zA-Z]/.test(str);
     }
 
-    // Returns every possible Sinhala spelling for a Singlish string.
-    // Memoized on the remaining suffix so it stays fast even for longer words.
     function getPossibleMatches(input) {
         const cache = {};
         function helper(str) {
@@ -488,66 +796,49 @@ if ('requestIdleCallback' in window) {
                     });
                 });
             }
-            // Cap at every recursion level (not just the final result) so the
-            // combinations don't multiply out of control on longer words.
             const unique = Array.from(new Set(matches)).slice(0, 60);
             cache[str] = unique;
             return unique;
         }
-        // Guard against pathological input freezing the UI
         if (!input || input.length > 24) return [];
         return helper(input).slice(0, 300);
     }
-
-    // ================================================================
-    // DPD Inflection ("වර නැගීම") lookup — LAZY, plain-text index.
-    // No zip, no Worker, no IndexedDB caching needed: instead of parsing
-    // all ~900k rows into a big in-memory Map (which caused the earlier
-    // lag), we do a single lightweight pass over the raw CSV text that
-    // only records each headword's LINE BYTE-RANGES (a cheap operation —
-    // no per-row object allocation). Looking up a word then slices out
-    // just its own few lines and parses ONLY those on demand. This keeps
-    // startup fast (~0.5s for the full dataset) and lookups near-instant
-    // (sub-millisecond), with no compression/decompression at all — the
-    // plain inflections.csv file is fetched via XHR exactly like the main
-    // dictionary already is.
-    // ================================================================
-    const INFLECTION_DATA_PATH = 'inflections.zip?v=1'; // Zipped for a small download (~4.4MB vs ~64MB plain). Uses XHR + the bundled fflate library (not fetch()/DecompressionStream/Worker) — the same combination already proven to work for dictionary.zip/sinhala_english.zip in the native WebView app, as well as in normal PWA browsers.
+const INFLECTION_DATA_PATH = 'inflections.zip?v=1';
 
     // Async: කුඩා කොටස් වශයෙන් ක්‍රියාත්මක වන අතර සෑම ~12ms කට වරක් main thread එකට
-// නිදහස් වේ. එමගින් දත්ත පූරණය වන අතරතුරත් ටයිප් කිරීම ක්ෂණිකව සිදු වේ.
-async function buildLazyInflectionIndex(text) {
-    const index = new Map();
-    const len = text.length;
-    let lineStart = 0;
-    let firstLine = true;
-    let lastYield = performance.now();
+    // නිදහස් වේ. එමගින් දත්ත පූරණය වන අතරතුරත් ටයිප් කිරීම ක්ෂණිකව සිදු වේ.
+    async function buildLazyInflectionIndex(text) {
+        const index = new Map();
+        const len = text.length;
+        let lineStart = 0;
+        let firstLine = true;
+        let lastYield = performance.now();
 
-    for (let i = 0; i <= len; i++) {
-        if (i === len || text[i] === '\n') {
-            if (!firstLine && i > lineStart) {
-                let lineEnd = i;
-                if (text[lineEnd - 1] === '\r') lineEnd--;
-                const lastComma = text.lastIndexOf(',', lineEnd - 1);
-                if (lastComma >= lineStart) {
-                    const headword = text.slice(lastComma + 1, lineEnd);
-                    let bucket = index.get(headword);
-                    if (!bucket) { bucket = []; index.set(headword, bucket); }
-                    bucket.push([lineStart, lineEnd]);
+        for (let i = 0; i <= len; i++) {
+            if (i === len || text[i] === '\n') {
+                if (!firstLine && i > lineStart) {
+                    let lineEnd = i;
+                    if (text[lineEnd - 1] === '\r') lineEnd--;
+                    const lastComma = text.lastIndexOf(',', lineEnd - 1);
+                    if (lastComma >= lineStart) {
+                        const headword = text.slice(lastComma + 1, lineEnd);
+                        let bucket = index.get(headword);
+                        if (!bucket) { bucket = []; index.set(headword, bucket); }
+                        bucket.push([lineStart, lineEnd]);
+                    }
                 }
+                firstLine = false;
+                lineStart = i + 1;
             }
-            firstLine = false;
-            lineStart = i + 1;
-        }
 
-        // සෑම ~65k අක්ෂරයකට වරක්, ගත වූ කාලය > 12ms නම් browser එකට yield කරයි
-        if ((i & 0xFFFF) === 0 && performance.now() - lastYield > 12) {
-            await new Promise(r => setTimeout(r, 0));
-            lastYield = performance.now();
+            // සෑම ~65k අක්ෂරයකට වරක්, ගත වූ කාලය > 12ms නම් browser එකට yield කරයි
+            if ((i & 0xFFFF) === 0 && performance.now() - lastYield > 12) {
+                await new Promise(r => setTimeout(r, 0));
+                lastYield = performance.now();
+            }
         }
+        return index;
     }
-    return index;
-}
 
     function lazyInflectionLookup(state, headword) {
         const ranges = state.index.get(headword);
@@ -563,34 +854,30 @@ async function buildLazyInflectionIndex(text) {
     function getInflectionIndex() {
         if (inflectionIndexPromise) return inflectionIndexPromise;
 
-        // Download the small zipped file (XHR, not fetch()), unzip once with
-        // the bundled fflate library (fast, no Worker needed), then build
-        // the SAME lightweight byte-range index over the resulting text —
-        // no big per-row object Map, so parsing stays fast too.
         inflectionIndexPromise = new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.open('GET', INFLECTION_DATA_PATH, true);
             xhr.responseType = 'arraybuffer';
             xhr.onload = async () => {
-    if (xhr.status !== 200 && xhr.status !== 0) {
-        reject(new Error('HTTP ' + xhr.status));
-        return;
-    }
-    try {
-        const bytes = unzipFirstEntry(xhr.response);
-        const text = new TextDecoder('utf-8').decode(bytes);
-        // async yield version එක await කරයි — UI එක block වන්නේ නැත
-        const index = await buildLazyInflectionIndex(text);
-        resolve({ text, index });
-    } catch (err) {
-        reject(err);
-    }
-};
+                if (xhr.status !== 200 && xhr.status !== 0) {
+                    reject(new Error('HTTP ' + xhr.status));
+                    return;
+                }
+                try {
+                    const bytes = unzipFirstEntry(xhr.response);
+                    const text = new TextDecoder('utf-8').decode(bytes);
+                    // async yield version එක await කරයි — UI එක block වන්නේ නැත
+                    const index = await buildLazyInflectionIndex(text);
+                    resolve({ text, index });
+                } catch (err) {
+                    reject(err);
+                }
+            };
             xhr.onerror = () => reject(new Error('network error loading ' + INFLECTION_DATA_PATH));
             xhr.send();
         }).catch(err => {
             console.error('inflections load failed:', err);
-            inflectionIndexPromise = null; // allow retry on next open
+            inflectionIndexPromise = null;
             throw err;
         });
 
@@ -606,31 +893,19 @@ async function buildLazyInflectionIndex(text) {
     const INFL_TENSE_LABELS = { pr: 'වර්තමානා', imp: 'පඤ්චමී', opt: 'සත්තමී', perf: 'පරොක්ඛා', imperf: 'හියත්තනී', aor: 'අජ්ජතනී', fut: 'භවිස්සන්ති', cond: 'කාලාතිපත්ති' };
     const INFL_PERSON_ORDER = ['1st', '2nd', '3rd'];
     const INFL_PERSON_LABELS = { '1st': 'උත්තම පුරුෂ', '2nd': 'මධ්‍යම පුරුෂ', '3rd': 'ප්‍රථම පුරුෂ' };
-    // Personal / dual pronouns (අහං, ත්වං, උභ ...) decline by PERSON, not
-    // gender — DPD stores these as category=person, subcase=case (the
-    // reverse of the verb table, where subcase is the person).
     const INFL_PRON_PERSON_ORDER = ['1st', '2nd', 'dual'];
     const INFL_PRON_PERSON_LABELS = { '1st': 'උත්තම පුරුෂ (මම)', '2nd': 'මධ්‍යම පුරුෂ (ඔබ)', 'dual': 'උභ (දෙදෙනා)' };
 
     // ================================================================
     // Regular-declension fallback generator
-    // DPD's grammar data only records CORPUS-ATTESTED spellings, so rarer
-    // words (e.g. වරාහ) are missing cells that a common word like බුද්ධ
-    // (same a-stem masc pattern) has. When a case×number cell has NO
-    // attested form, we generate the textbook-regular form(s) from the
-    // stem + known endings for a handful of the most common, reliable
-    // noun classes. These are visually marked (see .generated-form CSS)
-    // so they're never confused with real DPD-sourced data. Irregular
-    // words, pronouns, and verbs are NOT covered here — only left blank.
     // ================================================================
-    const VOWEL_SIGN_AA = '\u0DCF'; // ා
-    const VOWEL_SIGN_I = '\u0DD2';  // ි
-    const VOWEL_SIGN_II = '\u0DD3'; // ී
-    const VOWEL_SIGN_U = '\u0DD4';  // ු
-    const VOWEL_SIGN_UU = '\u0DD6'; // ූ
+    const VOWEL_SIGN_AA = '\u0DCF';
+    const VOWEL_SIGN_I = '\u0DD2';
+    const VOWEL_SIGN_II = '\u0DD3';
+    const VOWEL_SIGN_U = '\u0DD4';
+    const VOWEL_SIGN_UU = '\u0DD6';
 
     const DECLENSION_SUFFIXES = {
-        // a-stem masculine (like දම්ම / බුද්ධ) — bare-consonant stem
         a_masc: {
             nom: { sg: ['ො'], pl: ['ා'] },
             acc: { sg: ['ං'], pl: ['ෙ'] },
@@ -641,7 +916,6 @@ async function buildLazyInflectionIndex(text) {
             loc: { sg: ['ම්හි', 'ස්මිං', 'ෙ'], pl: ['ෙසු'] },
             voc: { sg: ['', 'ා'], pl: ['ා'] },
         },
-        // a-stem neuter (like රූප / චිත්ත) — same as a_masc except nom/acc/voc
         a_nt: {
             nom: { sg: ['ං', 'ො'], pl: ['ානි', 'ා'] },
             acc: { sg: ['ං'], pl: ['ානි', 'ෙ'] },
@@ -650,10 +924,8 @@ async function buildLazyInflectionIndex(text) {
             abl: { sg: ['තො', 'ම්හා', 'ස්මා'], pl: ['ෙභි', 'ෙහි'] },
             gen: { sg: ['ස්ස'], pl: ['ානං'] },
             loc: { sg: ['ම්හි', 'ස්මිං', 'ෙ'], pl: ['ෙසු'] },
-            // Vocative NEVER ends in niggahita (ං) — bare stem only.
             voc: { sg: [''], pl: ['ානි', 'ා'] },
         },
-        // ā-stem feminine (like කථා / සද්ධා) — stem with the final ා removed
         aa_fem: {
             nom: { sg: ['ා'], pl: ['ායො', 'ා'] },
             acc: { sg: ['ං'], pl: ['ායො', 'ා'] },
@@ -664,7 +936,6 @@ async function buildLazyInflectionIndex(text) {
             loc: { sg: ['ාය', 'ායං'], pl: ['ාසු'] },
             voc: { sg: ['ෙ', 'ා'], pl: ['ායො', 'ා'] },
         },
-        // u-stem masculine (like භික්ඛු / බබ්බු) — stem with the final ු removed
         u_masc: {
             nom: { sg: ['ු'], pl: ['වො', 'ූ'] },
             acc: { sg: ['ුනං', 'ුං'], pl: ['වො', 'ූ'] },
@@ -675,11 +946,6 @@ async function buildLazyInflectionIndex(text) {
             loc: { sg: ['ුම්හි', 'ුස්මිං'], pl: ['ුසු', 'ූසු'] },
             voc: { sg: ['ු'], pl: ['වෙ', 'වො', 'ූ'] },
         },
-        // ī-stem feminine (like නදී / දේවී / තරුණී) — stem with the final ී removed.
-        // Also used for the feminine of -ant present participles (see the
-        // attested-form fallback in detectDeclensionClass below), since
-        // that fem stem (e.g. bhañjatī) can't be derived from the
-        // masculine/neuter citation headword directly.
         ii_fem: {
             nom: { sg: ['ී'], pl: ['ී', 'ියො'] },
             acc: { sg: ['ිං'], pl: ['ී', 'ියො'] },
@@ -690,7 +956,6 @@ async function buildLazyInflectionIndex(text) {
             loc: { sg: ['ියා', 'ියං'], pl: ['ීසු'] },
             voc: { sg: ['ි'], pl: ['ී', 'ියො'] },
         },
-        // i-stem masculine (like ඉසි / අග්ගි / මුනි) — stem with the final ි removed
         i_masc: {
             nom: { sg: ['ි'], pl: ['යො', 'ී'] },
             acc: { sg: ['ිං'], pl: ['යො', 'ී'] },
@@ -701,7 +966,6 @@ async function buildLazyInflectionIndex(text) {
             loc: { sg: ['ිම්හි', 'ිස්මිං'], pl: ['ිසු', 'ීසු'] },
             voc: { sg: ['ි', 'ෙ'], pl: ['යො', 'ී'] },
         },
-        // i-stem feminine (like රත්ති / ජාති / භූමි) — stem with the final ි removed
         i_fem: {
             nom: { sg: ['ි'], pl: ['ියො', 'ී'] },
             acc: { sg: ['ිං'], pl: ['ියො', 'ී'] },
@@ -712,7 +976,6 @@ async function buildLazyInflectionIndex(text) {
             loc: { sg: ['ියා', 'ියං'], pl: ['ිසු', 'ීසු'] },
             voc: { sg: ['ි'], pl: ['ියො', 'ී'] },
         },
-        // ū-stem masculine agent nouns (like විදූ / සබ්බඤ්ඤූ) — stem with the final ූ removed
         uu_masc: {
             nom: { sg: ['ූ'], pl: ['ූ', 'ුනො'] },
             acc: { sg: ['ුං'], pl: ['ූ', 'ුනො'] },
@@ -723,7 +986,6 @@ async function buildLazyInflectionIndex(text) {
             loc: { sg: ['ුම්හි', 'ුස්මිං'], pl: ['ූසු'] },
             voc: { sg: ['ූ'], pl: ['ූ', 'ුනො'] },
         },
-        // u-stem neuter (like චක්ඛු) — stem with the final ු removed
         u_nt: {
             nom: { sg: ['ු', 'ුං'], pl: ['ූ', 'ූනි'] },
             acc: { sg: ['ුං'], pl: ['ූ', 'ූනි'] },
@@ -734,7 +996,6 @@ async function buildLazyInflectionIndex(text) {
             loc: { sg: ['ුම්හි', 'ුස්මිං'], pl: ['ුසු'] },
             voc: { sg: ['ු'], pl: ['ූ'] },
         },
-        // ū-stem feminine (like වධූ) — stem with the final ූ removed
         uu_fem: {
             nom: { sg: ['ූ'], pl: ['ූ', 'ුයො'] },
             acc: { sg: ['ුං'], pl: ['ූ', 'ුයො'] },
@@ -746,21 +1007,7 @@ async function buildLazyInflectionIndex(text) {
             voc: { sg: ['ු'], pl: ['ූ', 'ුයො'] },
         },
     };
-
-    // Decide which of the 5 supported classes (if any) a headword belongs
-    // to, purely from its final letter + known gender. Anything that
-    // doesn't clearly fit (i/ū-stems, consonant stems, irregulars) is
-    // deliberately left uncovered — better to show nothing than a guess
-    // outside the patterns we're confident about.
-    //
-    // `attestedRows` (optional) is that gender's already-attested rows for
-    // THIS headword — used only for the -ant present-participle/-vant/
-    // -mant adjective feminine fallback: that fem stem (e.g. bhañjanta ->
-    // bhañjatī) can't be derived from the masc/nt citation headword
-    // directly (it's a different, often consonant-altered, ī-stem), so if
-    // an attested nom.sg fem form ending in ී exists, we use IT as the
-    // real stem instead of guessing.
-    const ANT_STEM_SUFFIX = '\u0DB1\u0DCA\u0DAD'; // "න්ත" (-ant/-vant/-mant stems)
+    const ANT_STEM_SUFFIX = '\u0DB1\u0DCA\u0DAD';
 
     function detectDeclensionClass(headwordSi, gender, attestedRows) {
         if (!headwordSi) return null;
@@ -771,7 +1018,7 @@ async function buildLazyInflectionIndex(text) {
         if (last === VOWEL_SIGN_U) {
             if (gender === 'masc') return { stem: headwordSi.slice(0, -1), cls: 'u_masc' };
             if (gender === 'nt') return { stem: headwordSi.slice(0, -1), cls: 'u_nt' };
-            return null; // u-stem fem (rare, irregular kinship terms like mātu/pitu) not covered
+            return null;
         }
         if (last === VOWEL_SIGN_II) {
             return gender === 'fem' ? { stem: headwordSi.slice(0, -1), cls: 'ii_fem' } : null;
@@ -779,7 +1026,7 @@ async function buildLazyInflectionIndex(text) {
         if (last === VOWEL_SIGN_I) {
             if (gender === 'masc') return { stem: headwordSi.slice(0, -1), cls: 'i_masc' };
             if (gender === 'fem') return { stem: headwordSi.slice(0, -1), cls: 'i_fem' };
-            return null; // i-stem neuter not covered yet
+            return null;
         }
         if (last === VOWEL_SIGN_UU) {
             if (gender === 'masc') return { stem: headwordSi.slice(0, -1), cls: 'uu_masc' };
@@ -787,24 +1034,16 @@ async function buildLazyInflectionIndex(text) {
             return null;
         }
 
-        // Bare consonant ending => inherent "a" (a-stem masc/nt citation form)
         const isAntStem = headwordSi.endsWith(ANT_STEM_SUFFIX);
 
         if (gender === 'fem') {
             if (isAntStem) {
-                // -ant/-vant/-mant feminine uses a DIFFERENT derived
-                // ī-stem (bhañjanta -> bhañjatī), not simple "+ā" — only
-                // proceed if we can anchor on a real attested form.
                 if (attestedRows) {
                     const nomSg = attestedRows.find(r => r.subcase === 'nom' && r.number === 'sg' && r.inflected.endsWith(VOWEL_SIGN_II));
                     if (nomSg) return { stem: nomSg.inflected.slice(0, -1), cls: 'ii_fem' };
                 }
                 return null;
             }
-            // Regular adjective/participle feminine shares the SAME
-            // bare-consonant stem as its masc/nt citation form — e.g.
-            // abala (adj) -> fem abalā, abalaṃ, abale — so no stripping is
-            // needed before appending aa_fem endings.
             return { stem: headwordSi, cls: 'aa_fem' };
         }
         if (gender === 'masc') return { stem: headwordSi, cls: 'a_masc' };
@@ -820,13 +1059,7 @@ async function buildLazyInflectionIndex(text) {
     }
 
     // ================================================================
-    // Verb conjugation fallback generator — same idea as the noun
-    // declension generator above, but for the "ati" present-stem class
-    // (bhū-class: gacchati, bhavati, cavati ...), by far the most common
-    // and regular Pali verb pattern. Endings below are cross-checked
-    // against gacchati's fully-attested DPD paradigm. Other conjugation
-    // classes (oti, āti, eti/causative, ṇāti, ṇoti ...) are NOT covered —
-    // left blank rather than guessed, since they follow different rules.
+    // Verb conjugation fallback generator
     // ================================================================
     const VERB_SUFFIXES_ATI_PR = {
         pr: {
@@ -851,15 +1084,6 @@ async function buildLazyInflectionIndex(text) {
         },
     };
 
-    // ================================================================
-    // "karoti" — DPD documents this as its own fixed irregular pattern
-    // (root kar-/kur- suppletion, optative uses a wholly different stem
-    // "kayirā-"). Since it's a closed, fully-specified table rather than a
-    // rule, it's hardcoded verbatim here (verified against the DPD
-    // reference table) with a variable PREFIX so compounds like
-    // අභිකරොති still conjugate correctly. Cells DPD itself leaves
-    // genuinely blank (opt 3rd/2nd reflexive) are left blank here too.
-    // ================================================================
     const KAROTI_IRREGULAR = {
         pr: {
             '3rd': { sg: ['කරොති'], pl: ['කරොන්ති'], rsg: ['කුරුතෙ'], rpl: ['කුරුන්තෙ'] },
@@ -882,12 +1106,8 @@ async function buildLazyInflectionIndex(text) {
             '1st': { sg: ['කරිස්සාමි'], pl: ['කරිස්සාම'], rsg: ['කරිස්සං'], rpl: ['කරිස්සාම්හෙ'] },
         },
     };
-    const KAROTI_SUFFIX = 'කරොති'; // ක,ර,ො,ත,ි
+    const KAROTI_SUFFIX = 'කරොති';
 
-    // A verb qualifies for the "ati" bhū-class pattern only if its
-    // citation form ends in bare-consonant + ති (e.g. ගච්ඡති), NOT
-    // vowel-sign + ති (e.g. කරොති "oti" class, which conjugates
-    // differently) — checked by looking at the character just before "ති".
     function detectVerbClass(headwordSi) {
         if (!headwordSi) return null;
         if (headwordSi.endsWith(KAROTI_SUFFIX)) {
@@ -895,10 +1115,10 @@ async function buildLazyInflectionIndex(text) {
         }
         if (headwordSi.length < 3) return null;
         const n = headwordSi.length;
-        if (headwordSi[n - 2] !== '\u0DAD' || headwordSi[n - 1] !== '\u0DD2') return null; // must end in "ති"
+        if (headwordSi[n - 2] !== '\u0DAD' || headwordSi[n - 1] !== '\u0DD2') return null;
         const preceding = headwordSi[n - 3];
         const vowelSigns = new Set(['\u0DCF', '\u0DD0', '\u0DD1', '\u0DD2', '\u0DD3', '\u0DD4', '\u0DD6', '\u0DD9', '\u0DDA', '\u0DDC', '\u0DDD', '\u0DDE', '\u0D82']);
-        if (vowelSigns.has(preceding)) return null; // e.g. "āti", "ṇāti" classes
+        if (vowelSigns.has(preceding)) return null;
         return { base: headwordSi.slice(0, -2), cls: 'ati_pr' };
     }
 
@@ -920,9 +1140,6 @@ async function buildLazyInflectionIndex(text) {
         return Array.from(new Set(rows.map(r => r.inflected))).join('<br>');
     }
 
-    // Renders a table cell's form list. `generated` wraps each form in a
-    // muted/italic span so rule-generated (unattested) forms are always
-    // visually distinct from real DPD-sourced ones.
     function formsCellHtml(forms, generated) {
         if (!forms.length) return '—';
         const unique = Array.from(new Set(forms));
@@ -934,10 +1151,6 @@ async function buildLazyInflectionIndex(text) {
         noun: 'නාම පදය', adj: 'විශේෂණය', pp: 'අතීත කෘදන්තය', prp: 'වර්තමාන කෘදන්තය',
         ptp: 'කෘත්‍ය කෘදන්තය', card: 'මූලික සංඛ්‍යාව', ordin: 'පූරණ සංඛ්‍යාව', interr: 'ප්‍රශ්නාර්ථ',
     };
-    // NOTE: 'adj' is deliberately excluded — DPD's adjective-tagged forms
-    // for many common nouns (e.g. පුරිස, ධම්ම, කස්සක) don't hold up against
-    // the actual corpus examples (checked directly), so we only show the
-    // pos types whose gender-tagging has proven reliable.
     const NOMINAL_POS_ORDER = ['noun', 'pp', 'prp', 'ptp', 'card', 'ordin', 'interr'];
 
     const OBLIQUE_CASES = new Set(['instr', 'dat', 'abl', 'gen', 'loc']);
@@ -950,50 +1163,44 @@ async function buildLazyInflectionIndex(text) {
         if (sameNumberNom && sameNumberNom.length) {
             const set = new Set(sameNumberNom);
             const filtered = out.filter(f => !set.has(f));
-            if (filtered.length) out = filtered; // keep only if something survives
+            if (filtered.length) out = filtered;
         }
         if (otherNumberNom && otherNumberNom.length) {
             if (gender === 'masc') {
                 if (out.length === 1 && otherNumberNom.includes(out[0])) {
-                    return []; // sole attestation duplicates the other number's nominative — let generator take over
+                    return [];
                 }
             } else {
                 const set = new Set(otherNumberNom);
                 const filtered = out.filter(f => !set.has(f));
-                if (filtered.length) out = filtered; // fem/nt: always strip, keep whatever else survives
-                else if (out.every(f => set.has(f))) out = []; // nothing legitimate left — let generator take over
+                if (filtered.length) out = filtered;
+                else if (out.every(f => set.has(f))) out = [];
             }
         }
         return out;
     }
 
-    // Rule: dat.pl/gen.pl sometimes carries both a complete "-ānaṃ" form and
-    // a truncated "-āna" (no niggahita) duplicate of the SAME cell. Drop the
-    // truncated one when the complete one is also present.
     function dropTruncatedNiggahita(forms) {
         if (forms.length <= 1) return forms;
         const set = new Set(forms);
         return forms.filter(f => !set.has(f + '\u0D82'));
     }
 
-    // Rule: the vocative NEVER ends in niggahita (ං) in real Pali, regardless
-    // of what the corpus data (or an over-eager generator) might suggest.
     function dropVocativeNiggahita(forms) {
         if (!forms.length) return forms;
         const filtered = forms.filter(f => !f.endsWith('\u0D82'));
         return filtered.length ? filtered : forms;
     }
 
-    
     function dropAblPluralTo(forms) {
         if (!forms.length) return forms;
-        const filtered = forms.filter(f => !f.endsWith('\u0DAD\u0DDC')); // ...තො
+        const filtered = forms.filter(f => !f.endsWith('\u0DAD\u0DDC'));
         return filtered.length ? filtered : forms;
     }
 
     function dropAaseNomPl(forms) {
         if (!forms.length) return forms;
-        const filtered = forms.filter(f => !f.endsWith('\u0DCF\u0DC3\u0DD9')); // ...ාසෙ
+        const filtered = forms.filter(f => !f.endsWith('\u0DCF\u0DC3\u0DD9'));
         return filtered.length ? filtered : forms;
     }
 
@@ -1031,8 +1238,7 @@ async function buildLazyInflectionIndex(text) {
             if (showPosHeader) {
                 html += `<div class="inflection-pos-title">${POS_LABEL_MAP[pos] || pos}</div>`;
             }
-
-            INFL_GENDER_ORDER.filter(g => posRows.some(r => r.category === g)).forEach(g => {
+    INFL_GENDER_ORDER.filter(g => posRows.some(r => r.category === g)).forEach(g => {
                 const genderRows = posRows.filter(r => r.category === g);
                 const declClass = detectDeclensionClass(headwordSi, g, genderRows);
                 const nomSgForms = genderRows.filter(r => r.subcase === 'nom' && r.number === 'sg').map(r => r.inflected);
@@ -1044,7 +1250,6 @@ async function buildLazyInflectionIndex(text) {
                         let plForms = genderRows.filter(r => r.subcase === c && r.number === 'pl').map(r => r.inflected);
                         let sgGenerated = false, plGenerated = false;
 
-                        // Clean up attested data before deciding whether generation is even needed.
                         if (c === 'dat' || c === 'gen') {
                             sgForms = dropTruncatedNiggahita(sgForms);
                             plForms = dropTruncatedNiggahita(plForms);
@@ -1072,9 +1277,6 @@ async function buildLazyInflectionIndex(text) {
                             const gen = generateRegularForms(declClass.stem, declClass.cls, c, 'pl');
                             if (gen.length) { plForms = gen; plGenerated = true; usedGeneratedForms = true; }
                         } else if (plForms.length && declClass) {
-                            // instr.pl / abl.pl: make sure both the -hi and
-                            // -bhi (etc.) alternates are shown even if the
-                            // corpus only attests one of them.
                             const completed = completeHiBhiPair(plForms, declClass, c, 'pl');
                             if (completed.addedGenerated) { plForms = completed.forms; plGenerated = true; usedGeneratedForms = true; }
                         }
@@ -1093,7 +1295,6 @@ async function buildLazyInflectionIndex(text) {
             });
         });
 
-        // --- Personal/dual pronoun declension: one table per person present ---
         INFL_PRON_PERSON_ORDER.filter(p => rows.some(r => r.category === p && INFL_CASE_ORDER.includes(r.subcase))).forEach(p => {
             const personRows = rows.filter(r => r.category === p && INFL_CASE_ORDER.includes(r.subcase));
             const caseRows = INFL_CASE_ORDER
@@ -1114,7 +1315,6 @@ async function buildLazyInflectionIndex(text) {
             html += '</table></div>';
         });
 
-
         const verbRows = rows.filter(r => INFL_PERSON_ORDER.includes(r.subcase));
         if (verbRows.length) {
             const verbClass = detectVerbClass(headwordSi);
@@ -1123,8 +1323,6 @@ async function buildLazyInflectionIndex(text) {
             const plainTenses = INFL_TENSE_ORDER.filter(t => presentCategories.has(t));
             const reflxTenses = INFL_TENSE_ORDER.filter(t => presentCategories.has('reflx ' + t));
             const hasReflx = reflxTenses.length > 0 || !!verbClass;
-            // Row order follows tense group order; within a tense, person
-            // is listed ප්‍රථම (3rd) → මධ්‍යම (2nd) → උත්තම (1st) පුරුෂ.
             const VERB_ROW_PERSON_ORDER = ['3rd', '2nd', '1st'];
             const tenseUnion = INFL_TENSE_ORDER.filter(t =>
                 plainTenses.includes(t) || reflxTenses.includes(t) || (verbClass && GENERATABLE_TENSES.includes(t))
@@ -1181,7 +1379,7 @@ async function buildLazyInflectionIndex(text) {
 
         panel.style.display = 'block';
         panel.classList.add('open');
-        if (panel.dataset.loaded === '1') return; // already fetched, just re-showing
+        if (panel.dataset.loaded === '1') return;
 
         panel.innerHTML = '<div class="inflection-loading">වර නැගීම් දත්ත පූරණය වෙමින්...</div>';
         getInflectionIndex()
@@ -1204,9 +1402,9 @@ async function buildLazyInflectionIndex(text) {
         const possibleMatches = isSinglishQuery(rawQuery) ? getPossibleMatches(rawQuery) : [];
 
         suggestionsBox.innerHTML = "";
-        if (rawQuery.length < 1) { 
-            suggestionsBox.style.display = "none"; 
-            return; 
+        if (rawQuery.length < 1) {
+            suggestionsBox.style.display = "none";
+            return;
         }
 
         searchTimeout = setTimeout(() => {
@@ -1309,7 +1507,6 @@ async function buildLazyInflectionIndex(text) {
                         const row = document.createElement('div');
                         row.className = 'meaning-row';
                         let detailsBtnHtml = (item.properNoun || item.grammarDesc || item.etymology) ? `<button class="details-btn" onclick="toggleDetails('${dict.id}-${item.id}')">විස්තර <svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-info"></use></svg></button>` : '';
-                        // Inflection ("වර නැගීම") lookup only applies to the Pali dictionary.
                         const safeHeadword = mainWord.replace(/'/g, "\\'");
                         let inflectionBtnHtml = (dict.id === 'pali') ? `<button class="inflection-btn" onclick="toggleInflection('${dict.id}-${item.id}', '${safeHeadword}')">වර නැගීම</button>` : '';
 
@@ -1362,15 +1559,11 @@ async function buildLazyInflectionIndex(text) {
 
             if (tabId !== 'home') {
                 if (currentTab === 'home') {
-                    // Leaving the search page: push ONE history entry as the single "back stop".
                     history.pushState({ tab: tabId, title: titleText }, '');
                 } else {
-                    // Moving between other tabs: replace in place so the back stack
-                    // never grows beyond that one entry — back always lands on home.
                     history.replaceState({ tab: tabId, title: titleText }, '');
                 }
             } else if (currentTab !== 'home') {
-                // Navigated to Home directly (not via back press): collapse the back-stop entry.
                 history.replaceState({ tab: 'home', title: titleText }, '');
             }
         }
@@ -1391,9 +1584,7 @@ async function buildLazyInflectionIndex(text) {
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
     }
 
-    // --- Zoom / Text Size Functions ---
-    // Note: zoom is applied only to .container (the page content),
-    // never to <html>/<body>, so the bottom-nav icon row stays a fixed size.
+  // --- Zoom / Text Size Functions ---
     function applyZoomPreview(value) {
         const zoomTarget = document.querySelector('.container');
         if (zoomTarget) zoomTarget.style.zoom = value + '%';

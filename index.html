@@ -30,8 +30,54 @@
 </script>
     <title>පාලි-සිංහල ශබ්දකෝෂය</title>
   <link rel="stylesheet" href="styles.css">
+  <style>
+    /* "වැරදි නිවැරදි කිරීම් සහ යෝජනා" බටනය styles.css හි tab-scope කර ඇති
+       .download-link-btn නීති මත රඳා නොසිටින ලෙස තනි class එකක් */
+    .feedback-link-btn{
+      display:inline-block;
+      margin-top:10px;
+      padding:10px 18px;
+      border-radius:8px;
+      background:#1E8F6C !important;
+      color:#ffffff !important;
+      text-decoration:none;
+      font-weight:600;
+      font-size:14.5px;
+      text-align:center;
+    }
+    .feedback-link-btn:hover{ filter:brightness(1.08); }
+  </style>
 </head>
 <body>
+
+<!-- =========================================================
+     SPLASH SCREEN — Falling letters animation
+     ========================================================= -->
+<div id="splashScreen" class="splash-screen" aria-hidden="true">
+  <div class="splash-letters" id="splashLetters"></div>
+  <div class="splash-content">
+    <div class="splash-icon-wrap">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" class="splash-icon-svg">
+        <path d="M15 20 Q15 15 20 15 L48 15 L48 82 L20 82 Q15 82 15 77 Z"
+              fill="rgba(255,255,255,0.15)" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M85 20 Q85 15 80 15 L52 15 L52 82 L80 82 Q85 82 85 77 Z"
+              fill="rgba(255,255,255,0.08)" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>
+        <line x1="50" y1="15" x2="50" y2="82" stroke="#fff" stroke-width="2.5"/>
+        <line x1="22" y1="30" x2="42" y2="30" stroke="rgba(255,255,255,0.5)" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="22" y1="42" x2="42" y2="42" stroke="rgba(255,255,255,0.5)" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="22" y1="54" x2="42" y2="54" stroke="rgba(255,255,255,0.5)" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="22" y1="66" x2="36" y2="66" stroke="rgba(255,255,255,0.5)" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="58" y1="30" x2="78" y2="30" stroke="rgba(255,255,255,0.5)" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="58" y1="42" x2="78" y2="42" stroke="rgba(255,255,255,0.5)" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="58" y1="54" x2="78" y2="54" stroke="rgba(255,255,255,0.5)" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="58" y1="66" x2="72" y2="66" stroke="rgba(255,255,255,0.5)" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <h1 class="splash-title">පාලි සිංහල ශබ්දකෝෂය</h1>
+    <p class="splash-subtitle">Pali&nbsp;·&nbsp;Sinhala&nbsp;·&nbsp;Dictionary</p>
+    <div class="splash-loader"></div>
+  </div>
+</div>
 <svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false">
   <defs>
     <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -148,7 +194,7 @@
             <div id="suggestionsBox" class="suggestions-box"></div>
         </div>
         <div id="resultsContainer" class="results-container">
-            <div id="initialMessage" class="no-results" style="color: var(--text-color);">සෙවීම් සිදු කිරීම සඳහා දත්ත පූරණය වන තෙක් සිටින්න...</div>
+            <div id="initialMessage" class="no-results" style="color: var(--text-color);">දත්ත පූරණය වෙමින් පවතී...</div>
         </div>
     </div>
 
@@ -205,6 +251,11 @@
     bhamarawali@gmail.com
 </a>
             <p>ඔබට අවශ්‍ය පරිදි ශබ්දකෝෂ තෝරාගැනීමටත්, Dark mode පහසුකම භාවිතා කිරීමටත් මෙහි ඉඩ ලබා දී ඇත.</p>
+        </div>
+        <div class="download-card">
+            <h3><svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-info"></use></svg> වැරදි නිවැරදි කිරීම් සහ යෝජනා</h3>
+            <p>ශබ්දකෝෂය කියවනවිට හමුවූ වැරදි, අඩුපාඩු, හෝ එකතු කළ යුතු වචන අප වෙත දන්වන්න.</p>
+            <a href="feedback.html" class="feedback-link-btn" target="_blank" rel="noopener noreferrer">වැරදි නිවැරදි කිරීම් සහ යෝජනා</a>
         </div>
     </div>
 </div>
