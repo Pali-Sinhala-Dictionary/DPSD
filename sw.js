@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pali-sin-dict-v4.8'; // v6: inflections.zip data fix (r-stem headwords: pitar/mātar/kattar -> pitu/mātu/kattu) නිසා bump කරන ලදී
+const CACHE_NAME = 'pali-sin-dict-v4.9'; // v4.9: navigation fallback fix (feedback.html සේවය කිරීම)
 
 const CACHE_ASSETS = [
   './',
@@ -10,7 +10,7 @@ const CACHE_ASSETS = [
   './inflections-worker.js',
   './fflate.min.js',
   './feedback.html',
-  './AbhayaLibre-Regular.ttf', // Font file එක cache කිරීමට එක් කරන ලදී
+  './AbhayaLibre-Regular.ttf',
   './icon-192x192.png',
   './icon-512x512.png'
 ];
@@ -57,18 +57,56 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // ============================================================
   // HTML page navigation
+  // ============================================================
   if (req.mode === 'navigate') {
+    const url = new URL(req.url);
+    const path = url.pathname;
+
+    // feedback.html ඉල්ලූ විට එයම ලබා දෙන්න
+    if (path.endsWith('/feedback.html') || path.endsWith('feedback.html')) {
+      event.respondWith(
+        caches.match('./feedback.html', { ignoreSearch: true })
+          .then((cached) => cached || fetch(req).catch(() => caches.match('./feedback.html')))
+      );
+      return;
+    }
+
+    // Root (/) හෝ index.html ඉල්ලූ විට index.html ලබා දෙන්න
+    if (path.endsWith('/') || path.endsWith('/index.html')) {
+      event.respondWith(
+        caches.match('./index.html', { ignoreSearch: true })
+          .then((cached) => cached || fetch(req))
+      );
+      return;
+    }
+
+    // අනෙක් ඕනෑම navigation — Network first, fallback to cache, fallback to index
     event.respondWith(
-      caches.match('./index.html')
-        .then((cachedPage) => {
-          return cachedPage || fetch(req);
+      fetch(req)
+        .then((response) => {
+          // සාර්ථක response එකක් නම් cache කරන්න
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(req, clone);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Network fail නම් cache එකෙන් සොයන්න
+          return caches.match(req, { ignoreSearch: true })
+            .then((cached) => cached || caches.match('./index.html'));
         })
     );
     return;
   }
 
+  // ============================================================
   // අනෙක් සියලුම files (Query params නොසලකා හරිමින් cache සෙවීම)
+  // ============================================================
   event.respondWith(
     caches.match(req, { ignoreSearch: true }).then((cachedResponse) => {
 
