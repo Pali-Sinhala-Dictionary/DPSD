@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pali-sin-dict-v4.7'; // v6: inflections.zip data fix (r-stem headwords: pitar/mātar/kattar -> pitu/mātu/kattu) නිසා bump කරන ලදී
+const CACHE_NAME = 'pali-sin-dict-v4.8'; // v6: inflections.zip data fix (r-stem headwords: pitar/mātar/kattar -> pitu/mātu/kattu) නිසා bump කරන ලදී
 
 const CACHE_ASSETS = [
   './',
@@ -9,6 +9,7 @@ const CACHE_ASSETS = [
   './inflections.zip',
   './inflections-worker.js',
   './fflate.min.js',
+  './feedback.html',
   './AbhayaLibre-Regular.ttf', // Font file එක cache කිරීමට එක් කරන ලදී
   './icon-192x192.png',
   './icon-512x512.png'
