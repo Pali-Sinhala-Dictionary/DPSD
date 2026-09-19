@@ -29,24 +29,79 @@
   gtag('config', 'G-MYL09BJLR5');
 </script>
     <title>පාලි-සිංහල ශබ්දකෝෂය</title>
-  <link rel="stylesheet" href="styles.css">
-  <style>
-    /* "වැරදි නිවැරදි කිරීම් සහ යෝජනා" බටනය styles.css හි tab-scope කර ඇති
-       .download-link-btn නීති මත රඳා නොසිටින ලෙස තනි class එකක් */
-    .feedback-link-btn{
-      display:inline-block;
-      margin-top:10px;
-      padding:10px 18px;
-      border-radius:8px;
-      background:#1E8F6C !important;
-      color:#ffffff !important;
-      text-decoration:none;
-      font-weight:600;
-      font-size:14.5px;
-      text-align:center;
-    }
-    .feedback-link-btn:hover{ filter:brightness(1.08); }
-  </style>
+    <link rel="stylesheet" href="styles.css?v=6">
+
+    <!-- =========================================================
+         Style Block 1: Feedback Button
+         ========================================================= -->
+    <style>
+        .feedback-link-btn{
+            display:inline-block;
+            margin-top:10px;
+            padding:10px 18px;
+            border-radius:8px;
+            background:#1E8F6C !important;
+            color:#ffffff !important;
+            text-decoration:none;
+            font-weight:600;
+            font-size:14.5px;
+            text-align:center;
+        }
+        .feedback-link-btn:hover{ filter:brightness(1.08); }
+    </style>
+
+    <!-- =========================================================
+         Style Block 2: CRITICAL SPLASH CSS
+         පළමු paint එකේදීම නිවැරදි පෙනුම සහතික කරයි
+         ========================================================= -->
+    <style>
+        #splashScreen {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: linear-gradient(135deg, #fdfcf9 0%, #faf8f4 50%, #f5f1ea 100%);
+            transition: opacity 0.7s ease, visibility 0.7s ease;
+        }
+
+        body.dark-theme #splashScreen {
+            background: linear-gradient(135deg, #090a10 0%, #101426 50%, #1a0f29 100%);
+        }
+
+        #splashScreen.hide {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        #splashLetters {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        /* 🔑 අකුරු ජනනය වන තෙක් content එක සැඟවී තබන්න */
+        #splashScreen .splash-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            animation: none !important;
+        }
+
+        /* අකුරු සූදානම් වූ පසු content එක fade වී පෙන්වන්න */
+        #splashScreen.ready .splash-content {
+            opacity: 1;
+        }
+    </style>
 </head>
 <body>
 
@@ -78,6 +133,75 @@
     <div class="splash-loader"></div>
   </div>
 </div>
+<script>
+(function() {
+  var splash = document.getElementById('splashScreen');
+  var container = document.getElementById('splashLetters');
+  if (!splash || !container) return;
+
+  var sinhalaLetters = ['අ','ආ','ඇ','ඉ','ඊ','උ','එ','ඒ','ඔ','ඕ','ක','ඛ','ග','ඝ','ච','ජ','ඤ','ට','ඩ','ණ','ත','ථ','ද','ධ','න','ප','ඵ','බ','භ','ම','ය','ර','ල','ව','ශ','ෂ','ස','හ','ළ','ෆ','ං','ඃ'];
+  var englishLetters = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','k','m','n','o','p','r','s','t','u','v','w','y'];
+  var allLetters = sinhalaLetters.concat(englishLetters);
+
+  var isDark = document.body.classList.contains('dark-theme');
+  var palette = isDark
+    ? ['rgba(179,136,255,0.85)','rgba(0,229,255,0.75)','rgba(255,255,255,0.65)','rgba(0,230,118,0.60)']
+    : ['rgba(139,0,0,0.75)','rgba(184,134,11,0.85)','rgba(62,39,35,0.65)','rgba(0,51,153,0.55)','rgba(106,27,154,0.55)','rgba(46,125,50,0.55)'];
+
+  var isSinRe = /[\u0D80-\u0DFF]/;
+  var rand = function(a, b) { return a + Math.random() * (b - a); };
+  var COUNT = 65;
+  var frag = document.createDocumentFragment();
+
+  for (var i = 0; i < COUNT; i++) {
+    var span = document.createElement('span');
+    span.className = 'splash-letter';
+    var letter = allLetters[Math.floor(Math.random() * allLetters.length)];
+    span.textContent = letter;
+    var isSin = isSinRe.test(letter);
+    span.style.left = rand(0, 98).toFixed(1) + '%';
+    span.style.fontSize = (isSin ? rand(20, 62) : rand(16, 50)).toFixed(1) + 'px';
+    span.style.animationDuration = rand(2.6, 5.2).toFixed(2) + 's';
+    span.style.animationDelay = rand(0, 2.4).toFixed(2) + 's';
+    span.style.color = palette[Math.floor(Math.random() * palette.length)];
+    span.style.fontWeight = isSin ? 'bold' : (Math.random() > 0.5 ? '300' : '700');
+    span.style.setProperty('--splash-rot', rand(-360, 360).toFixed(0) + 'deg');
+    span.style.setProperty('--splash-opacity', rand(0.25, 0.65).toFixed(2));
+    frag.appendChild(span);
+  }
+  container.appendChild(frag);
+
+  // අකුරු සූදානම් — දැන් content එක fade වී පෙන්වන්න
+  requestAnimationFrame(function() {
+    splash.classList.add('ready');
+  });
+
+  // ---- Auto-hide logic ----
+  var MIN_SHOW_MS = 3000;
+  var MAX_SHOW_MS = 4500;
+  var startTime = Date.now();
+  var hidden = false;
+  var hideRequested = false;
+
+  function hideSplash() {
+    if (hidden) return;
+    hidden = true;
+    splash.classList.add('hide');
+    setTimeout(function() { splash.style.display = 'none'; }, 800);
+  }
+
+  window.__hideSplash = function() {
+    if (hideRequested) return;
+    hideRequested = true;
+    var elapsed = Date.now() - startTime;
+    var remaining = Math.max(0, MIN_SHOW_MS - elapsed);
+    setTimeout(hideSplash, remaining);
+  };
+
+  setTimeout(hideSplash, MAX_SHOW_MS);
+})();
+</script>
+
 <svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false">
   <defs>
     <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -87,37 +211,27 @@
     </linearGradient>
   </defs>
 
-  <!-- සොයන්න (Search) -->
   <symbol id="icon-search" viewBox="0 0 24 24">
     <circle cx="10.3" cy="10.3" r="6.6" fill="none" stroke="url(#iconGrad)" stroke-width="1.8" stroke-linecap="round"/>
     <path d="M15.1 15.1L21 21" fill="none" stroke="url(#iconGrad)" stroke-width="1.8" stroke-linecap="round"/>
     <path d="M7.4 7.2a4.2 4.2 0 0 1 3.9 4.1" fill="none" stroke="url(#iconGrad)" stroke-width="1.3" stroke-linecap="round"/>
   </symbol>
 
-  <!-- ශබ්දකෝෂ (Dictionaries / Book) -->
   <symbol id="icon-book" viewBox="0 0 24 24">
     <path d="M3.4 5.6c2.6-1.4 5.7-1.4 8.1 0v13.8c-2.4-1.4-5.5-1.4-8.1 0z" fill="none" stroke="url(#iconGrad)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
     <path d="M20.6 5.6c-2.6-1.4-5.7-1.4-8.1 0v13.8c2.4-1.4 5.5-1.4 8.1 0z" fill="none" stroke="url(#iconGrad)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
   </symbol>
 
-  <!-- බාගත කරන්න (Download) -->
   <symbol id="icon-download" viewBox="0 0 24 24">
     <path d="M12 3.3v11.2M7.4 10.4L12 15l4.6-4.6" fill="none" stroke="url(#iconGrad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M4 15.3v3.2A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5v-3.2" fill="none" stroke="url(#iconGrad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
   </symbol>
 
-  <!-- විස්තර (Info) -->
-<symbol id="icon-info" viewBox="0 0 24 24">
-  <!-- පිටත රවුම -->
-  <circle cx="12" cy="12" r="9" fill="none" stroke="url(#iconGrad)" stroke-width="2"/>
-  
-  <!-- i අකුරේ ඉහළ තිත -->
-  <circle cx="12" cy="7.2" r="1.3" fill="url(#iconGrad)"/>
-  
-  <!-- i අකුරේ පහළ ඉරිකැබැල්ල -->
-  <rect x="11" y="10.5" width="2" height="7" rx="1" fill="url(#iconGrad)"/>
-</symbol>
-
+  <symbol id="icon-info" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="9" fill="none" stroke="url(#iconGrad)" stroke-width="2"/>
+    <circle cx="12" cy="7.2" r="1.3" fill="url(#iconGrad)"/>
+    <rect x="11" y="10.5" width="2" height="7" rx="1" fill="url(#iconGrad)"/>
+  </symbol>
 
   <symbol id="icon-moon" viewBox="0 0 24 24">
     <path d="M20.1 14.7A8.6 8.6 0 1 1 9.4 4a7 7 0 0 0 10.7 10.7z" fill="none" stroke="url(#iconGrad)" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>
@@ -137,36 +251,30 @@
     </g>
   </symbol>
 
-  <!-- Arrow up (priority) -->
   <symbol id="icon-arrow-up" viewBox="0 0 24 24">
     <path d="M12 19.2V5.6M6.2 11.4L12 5.6l5.8 5.8" fill="none" stroke="url(#iconGrad)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
   </symbol>
 
-  <!-- Arrow down (priority) -->
   <symbol id="icon-arrow-down" viewBox="0 0 24 24">
     <path d="M12 4.8v13.6M6.2 12.6L12 18.4l5.8-5.8" fill="none" stroke="url(#iconGrad)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
   </symbol>
 
-  <!-- Android (Phone) -->
   <symbol id="icon-phone" viewBox="0 0 24 24">
     <rect x="7" y="2.4" width="10" height="19.2" rx="2.2" fill="none" stroke="url(#iconGrad)" stroke-width="1.6"/>
     <path d="M10.4 18.4h3.2" fill="none" stroke="url(#iconGrad)" stroke-width="1.6" stroke-linecap="round"/>
   </symbol>
 
-  <!-- iOS (Phone with notch + gesture bar) -->
   <symbol id="icon-iphone" viewBox="0 0 24 24">
     <rect x="7" y="2.2" width="10" height="19.6" rx="3.1" fill="none" stroke="url(#iconGrad)" stroke-width="1.6"/>
     <path d="M10.1 3.6h3.8" fill="none" stroke="url(#iconGrad)" stroke-width="1.6" stroke-linecap="round"/>
     <path d="M10.3 20.3h3.4" fill="none" stroke="url(#iconGrad)" stroke-width="1.6" stroke-linecap="round"/>
   </symbol>
 
-  <!-- Windows (Laptop) -->
   <symbol id="icon-laptop" viewBox="0 0 24 24">
     <rect x="4.7" y="4" width="14.6" height="9.6" rx="1.3" fill="none" stroke="url(#iconGrad)" stroke-width="1.6"/>
     <path d="M2.6 17.6h18.8l-1.5 2.4a1.5 1.5 0 0 1-1.3.7H5.4a1.5 1.5 0 0 1-1.3-.7z" fill="none" stroke="url(#iconGrad)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
   </symbol>
 
-  <!-- විශාලනය (Zoom / Text size) -->
   <symbol id="icon-zoom" viewBox="0 0 24 24">
     <path d="M9 3H4.5A1.5 1.5 0 0 0 3 4.5V9" fill="none" stroke="url(#iconGrad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M15 3h4.5A1.5 1.5 0 0 1 21 4.5V9" fill="none" stroke="url(#iconGrad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
