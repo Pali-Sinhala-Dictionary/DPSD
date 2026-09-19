@@ -193,9 +193,73 @@
     text-align:center;color:var(--ink-soft);font-size:12.5px;
     margin-top:22px;line-height:1.6;
   }
+/* =========================================================
+   Back Button — Light Red Background
+   ========================================================= */
+.back-btn {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px 9px 12px;
+
+  /* ලා රතු පසුබිම */
+  background: linear-gradient(135deg, #FDEAEA 0%, #F9D5D5 100%);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  border: 1.5px solid #E8A0A0;
+  border-radius: 999px;
+
+  color: #8B0000;
+  font-family: 'Noto Sans Sinhala', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+
+  box-shadow: 0 8px 20px -12px rgba(139, 0, 0, 0.35);
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.back-btn:hover {
+  background: linear-gradient(135deg, #FBDBDB 0%, #F5C0C0 100%);
+  border-color: #D97070;
+  transform: translateX(-2px);
+  box-shadow: 0 10px 24px -12px rgba(139, 0, 0, 0.55);
+}
+
+.back-btn:active {
+  transform: translateX(0);
+  background: linear-gradient(135deg, #F9D0D0 0%, #F0B0B0 100%);
+}
+
+.back-btn svg {
+  flex-shrink: 0;
+  color: #8B0000;
+}
+
+@media (max-width: 480px) {
+  .back-btn {
+    top: 12px;
+    left: 12px;
+    padding: 7px 13px 7px 10px;
+    font-size: 13px;
+  }
+}
 </style>
 </head>
 <body>
+<a href="index.html" class="back-btn" aria-label="Back to dictionary">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+    <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <span>ආපසු</span>
+</a>
 <div class="wrap">
 
   <svg class="leaf" viewBox="0 0 48 48" fill="none">
@@ -241,13 +305,13 @@
     <label for="comments">අදහස් සහ යෝජනා</label>
     <textarea id="comments" placeholder="වෙනත් අදහසක් හෝ යෝජනාවක් තිබේනම් මෙහි ලියන්න"></textarea>
 
-    <label for="email">ඔබේ ඊමේල් ලිපිනය<span class="opt">(අත්‍යවශ්‍ය නොවේ)</span></label>
+    <label for="email">ඔබේ ඊමේල් ලිපිනය<span class="opt"></span></label>
     <input type="email" id="email" placeholder="you@example.com">
 
     <div class="btn-row">
       <button type="submit">යොමු කරන්න</button>
     </div>
-    <p class="hint">ඉදිරිපත් කරන සියලු තොරතුරු ශබ්දකෝෂ සංශෝධන කටයුතු සඳහා පමණක් භාවිත කෙරේ.</p>
+    <p class="hint">ඉදිරිපත් කරන තොරතුරු ත්‍රිපිටක අටුවා ටීකා වලට ගැලපේ නම් ශබ්දකෝෂ සංශෝධන කටයුතු සඳහා භාවිතා කෙරේ.</p>
 
     <div class="success" id="successBox">
       <div class="check">
