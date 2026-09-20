@@ -10,7 +10,7 @@
 }
 
 
-/* =======================================================
+/* ======================================================
    THEME VARIABLES
    ========================================================= */
 
@@ -135,8 +135,9 @@ body {
 
         linear-gradient(
             135deg,
-            #faf8f4,
-            #eee9e1
+            #fdfcf9 0%,
+            #faf8f4 50%,
+            #f5f1ea 100%
         );
 
     transition:
@@ -598,15 +599,9 @@ h1 {
 
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
-
+    border-radius: 17px;
     border-left:
-        1px solid var(--secondary-color);
-
-    padding: 17px;
-
-    margin-bottom: 15px;
-
-    border-radius: 4px 17px 17px 4px;
+        1px solid rgba(255,255,255,0.75); 
 
     border-top:
         1px solid rgba(255,255,255,0.75);
@@ -1564,10 +1559,6 @@ body.dark-theme .download-card {
         inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
-body.dark-theme .word-card {
-
-    border-left: 1px solid var(--secondary-color);
-}
 
 
 /* =========================================================
@@ -2033,22 +2024,17 @@ body.dark-theme .word-division {
     position: fixed;
     inset: 0;
     z-index: 99999;
-
-    /* Light theme: සුදු/ක්‍රීම් පසුබිම */
     background:
         radial-gradient(circle at 25% 25%, rgba(212, 175, 55, 0.10), transparent 55%),
         radial-gradient(circle at 75% 75%, rgba(139, 0, 0, 0.06), transparent 55%),
         linear-gradient(135deg, #fdfcf9 0%, #faf8f4 50%, #f5f1ea 100%);
-
     display: flex;
-    align-items: center;
+    align-items: flex-end;      /* ← වෙනස් */
     justify-content: center;
     overflow: hidden;
-
     opacity: 1;
     visibility: visible;
     transition: opacity 0.7s ease, visibility 0.7s ease;
-
     font-family: 'UN Abhaya', 'Noto Sans Sinhala', sans-serif;
 }
 
@@ -2086,7 +2072,14 @@ body.dark-theme .splash-screen {
     text-shadow: 0 0 8px currentColor;
     user-select: none;
 }
-
+/* Dark mode හිදී අකුරු වඩාත් පැහැදිලිව පෙනීමට */
+body.dark-theme .splash-letter {
+    text-shadow:
+        0 0 10px currentColor,
+        0 0 22px currentColor,
+        0 0 36px currentColor;
+    filter: brightness(1.25);
+}
 @keyframes splashLetterFall {
     0% {
         transform: translateY(0) rotate(0deg);
@@ -2104,12 +2097,11 @@ body.dark-theme .splash-screen {
     }
 }
 
-/* Centered content */
 .splash-content {
     position: relative;
     z-index: 2;
     text-align: center;
-    padding: 20px;
+    padding: 20px 20px 8vh 20px;   /* ← පහළින් අමතර ඉඩ */
     animation: splashContentIn 0.9s ease-out both;
 }
 
@@ -2231,4 +2223,157 @@ body.dark-theme .splash-loader::after {
     .splash-title     { font-size: 26px !important; }
     .splash-subtitle  { font-size: 11px; letter-spacing: 2px; }
     .splash-loader    { width: 140px; }
+}
+/* =========================================================
+   PWA INSTALL BANNER
+   ========================================================= */
+
+#pwa-install-banner {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+    color: #fff;
+    padding: 14px 14px 14px 16px;
+    border-radius: 18px;
+    box-shadow:
+        0 15px 40px rgba(139, 0, 0, 0.35),
+        0 0 40px rgba(212, 175, 55, 0.25),
+        inset 0 1px 2px rgba(255, 255, 255, 0.30);
+    border: 1px solid var(--gold-light);
+    display: none;
+    align-items: center;
+    gap: 12px;
+    z-index: 1200;
+    max-width: calc(100% - 32px);
+    width: 420px;
+    animation: pwaBannerSlideUp 0.4s ease-out;
+    font-family: 'UN Abhaya', 'Noto Sans Sinhala', sans-serif;
+}
+#pwa-install-banner.show { display: flex; }
+
+body.dark-theme #pwa-install-banner {
+    background: linear-gradient(135deg, #b388ff, #5e35b1);
+    box-shadow:
+        0 15px 40px rgba(94, 53, 177, 0.5),
+        0 0 50px rgba(179, 136, 255, 0.35),
+        inset 0 1px 2px rgba(255, 255, 255, 0.18);
+    border-color: #b388ff;
+}
+
+@keyframes pwaBannerSlideUp {
+    from { transform: translate(-50%, 100px); opacity: 0; }
+    to   { transform: translate(-50%, 0); opacity: 1; }
+}
+
+#pwa-install-banner .pwa-banner-icon {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    border-radius: 13px;
+    background: rgba(255, 255, 255, 0.20);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+#pwa-install-banner .pwa-banner-icon svg { width: 22px; height: 22px; }
+
+#pwa-install-banner .pwa-banner-text {
+    flex: 1;
+    min-width: 0;
+}
+#pwa-install-banner .pwa-banner-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    margin: 0 0 3px;
+    color: #fff;
+    line-height: 1.3;
+}
+#pwa-install-banner .pwa-banner-sub {
+    font-size: 11px;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.88);
+    line-height: 1.35;
+}
+
+#pwa-install-banner .pwa-banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+#pwa-install-banner button {
+    white-space: nowrap;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+#pwa-install-banner .pwa-install-btn {
+    background: #fff;
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 13px;
+    padding: 9px 16px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.20);
+    transition: transform 0.15s ease;
+}
+body.dark-theme #pwa-install-banner .pwa-install-btn { color: #5e35b1; }
+#pwa-install-banner .pwa-install-btn:active { transform: scale(0.95); }
+
+#pwa-install-banner .pwa-dismiss-btn {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.80);
+    font-size: 22px;
+    line-height: 1;
+    padding: 4px 7px;
+    border-radius: 8px;
+}
+#pwa-install-banner .pwa-dismiss-btn:active { background: rgba(255, 255, 255, 0.18); }
+
+/* iOS "Add to Home Screen" instructions popover */
+#pwa-ios-tip {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--card-bg-strong);
+    color: var(--text-color);
+    padding: 16px 18px;
+    border-radius: 16px;
+    box-shadow: 0 15px 40px var(--shadow-color, rgba(0,0,0,0.25));
+    border: 1px solid var(--border-color);
+    max-width: calc(100% - 32px);
+    width: 320px;
+    font-size: 13px;
+    line-height: 1.55;
+    z-index: 1201;
+    display: none;
+    backdrop-filter: blur(10px);
+    font-family: 'UN Abhaya', 'Noto Sans Sinhala', sans-serif;
+}
+#pwa-ios-tip.show { display: block; animation: pwaBannerSlideUp 0.35s ease-out; }
+#pwa-ios-tip strong { color: var(--primary-color); }
+#pwa-ios-tip p { margin: 6px 0 0; }
+#pwa-ios-tip .pwa-share-icon { font-weight: 700; }
+#pwa-ios-tip .pwa-ios-tip-close {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    line-height: 1;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+}
+
+@media (max-width: 420px) {
+    #pwa-install-banner { padding: 12px; gap: 10px; }
+    #pwa-install-banner .pwa-banner-title { font-size: 12.5px; }
+    #pwa-install-banner .pwa-banner-sub { font-size: 10px; }
+    #pwa-install-banner .pwa-install-btn { padding: 8px 12px; font-size: 12px; }
 }

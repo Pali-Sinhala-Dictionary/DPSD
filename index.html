@@ -29,7 +29,7 @@
   gtag('config', 'G-MYL09BJLR5');
 </script>
     <title>පාලි-සිංහල ශබ්දකෝෂය</title>
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=8">
 
     <!-- =========================================================
          Style Block 1: Feedback Button
@@ -404,6 +404,28 @@
             <span class="zoom-edge-label">200%</span>
         </div>
     </div>
+</div>
+
+<!-- PWA Install Banner -->
+<div id="pwa-install-banner" role="dialog" aria-label="Install App">
+    <div class="pwa-banner-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
+    </div>
+    <div class="pwa-banner-text">
+        <p class="pwa-banner-title">ශබ්දකෝෂය ඔබේ දුරකථනයට එක් කරගන්න</p>
+        <p class="pwa-banner-sub" id="pwaBannerSub">ඉක්මන් හා offline ප්‍රවේශයක් සඳහා Install කරන්න</p>
+    </div>
+    <div class="pwa-banner-actions">
+        <button type="button" class="pwa-install-btn" id="pwaInstallBtn">Install</button>
+        <button type="button" class="pwa-dismiss-btn" id="pwaDismissBtn" aria-label="close">&times;</button>
+    </div>
+</div>
+
+<!-- iOS "Add to Home Screen" instructions popover -->
+<div id="pwa-ios-tip" role="dialog" aria-label="iOS Install Instructions">
+    <button type="button" class="pwa-ios-tip-close" id="pwaIosTipClose" aria-label="close">&times;</button>
+    <strong>iPhone / iPad වල Install කරගන්නා ආකාරය:</strong>
+    <p>Safari පහළ පෙන්වන Share <span class="pwa-share-icon">⎋</span> බටනය click කර, පහළට scroll කර <b>“Add to Home Screen”</b> තෝරන්න.</p>
 </div>
 
 <script src="fflate.min.js"></script>

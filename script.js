@@ -1557,3 +1557,100 @@ if ('serviceWorker' in navigator) {
         window.location.reload();
     });
 }
+// =========================================================
+// PWA Install Banner (Android / Desktop / iOS)
+// =========================================================
+(function () {
+    const STORAGE_KEY = 'pwaInstallBannerSeen';
+    let deferredPrompt = null;
+
+    function isStandalone() {
+        return window.matchMedia('(display-mode: standalone)').matches ||
+            window.navigator.standalone === true || // iOS Safari
+            document.referrer.startsWith('android-app://');
+    }
+
+    function isIOS() {
+        const ua = window.navigator.userAgent;
+        const iOSDevice = /iPad|iPhone|iPod/.test(ua);
+        const iPadOS13Up = ua.includes('Macintosh') && 'ontouchend' in document;
+        return iOSDevice || iPadOS13Up;
+    }
+
+    function alreadySeen() {
+        try { return localStorage.getItem(STORAGE_KEY) === '1'; }
+        catch (e) { return false; }
+    }
+
+    function markSeen() {
+        try { localStorage.setItem(STORAGE_KEY, '1'); } catch (e) {}
+    }
+
+    function initInstallBanner() {
+        // Already installed, or user has already been shown the banner once: do nothing.
+        if (isStandalone() || alreadySeen()) return;
+
+        const banner = document.getElementById('pwa-install-banner');
+        const iosTip = document.getElementById('pwa-ios-tip');
+        const installBtn = document.getElementById('pwaInstallBtn');
+        const dismissBtn = document.getElementById('pwaDismissBtn');
+        const iosTipClose = document.getElementById('pwaIosTipClose');
+        const subText = document.getElementById('pwaBannerSub');
+        if (!banner) return;
+
+        function showBanner() {
+            if (alreadySeen()) return;
+            banner.classList.add('show');
+        }
+
+        function hideBanner() {
+            banner.classList.remove('show');
+            iosTip.classList.remove('show');
+            markSeen();
+        }
+
+        if (isIOS()) {
+            // iOS has no beforeinstallprompt — show manual instructions on tap.
+            subText.textContent = 'Home Screen එකට එක් කර, App එකක් ලෙසම භාවිතා කරන්න';
+            installBtn.textContent = 'Install';
+            installBtn.addEventListener('click', () => {
+                iosTip.classList.add('show');
+            });
+            iosTipClose.addEventListener('click', () => {
+                hideBanner();
+            });
+            // Show after a short delay so it doesn't collide with the splash screen.
+            setTimeout(showBanner, 2500);
+        } else {
+            // Android / Desktop Chrome, Edge, etc.
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                setTimeout(showBanner, 1200);
+            });
+
+            installBtn.addEventListener('click', async () => {
+                if (!deferredPrompt) {
+                    hideBanner();
+                    return;
+                }
+                deferredPrompt.prompt();
+                await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                hideBanner();
+            });
+        }
+
+        dismissBtn.addEventListener('click', hideBanner);
+
+        window.addEventListener('appinstalled', () => {
+            hideBanner();
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initInstallBanner);
+    } else {
+        initInstallBanner();
+    }
+})();
