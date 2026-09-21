@@ -1399,6 +1399,28 @@ function performSearch(query, exactOnly = false) {
                     `;
                     card.appendChild(row);
                 });
+                items.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'meaning-row';
+    // ... (පවතින කේතය)
+    card.appendChild(row);
+});
+
+// ✅ අලුතින් එක් කළ කොටස — පාලි ශබ්දකෝෂයට පමණක්
+if (dict.id === 'pali') {
+    const footer = document.createElement('div');
+    footer.className = 'card-footer';
+    const encodedWord = encodeURIComponent(mainWord);
+    footer.innerHTML = `<a class="correction-link"
+        href="feedback.html?word=${encodedWord}"
+        target="_blank"
+        rel="noopener noreferrer">
+        <svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-edit"></use></svg>
+        වැරදි නිවැරදි කරන්න
+    </a>`;
+    card.appendChild(footer);
+}
+
                 resultsContainer.appendChild(card);
             });
         }

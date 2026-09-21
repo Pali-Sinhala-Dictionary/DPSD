@@ -106,6 +106,20 @@
 <body>
 
 <!-- =========================================================
+     🔑 CRITICAL: Theme restore — runs before ANY other content
+     Splash screen එකට පෙරම theme class එක apply කරයි.
+     ========================================================= -->
+<script>
+(function () {
+    try {
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-theme');
+        }
+    } catch (e) {}
+})();
+</script>
+
+<!-- =========================================================
      SPLASH SCREEN — Falling letters animation
      ========================================================= -->
 <div id="splashScreen" class="splash-screen" aria-hidden="true">
@@ -281,6 +295,11 @@
     <path d="M9 21H4.5A1.5 1.5 0 0 1 3 19.5V15" fill="none" stroke="url(#iconGrad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M15 21h4.5A1.5 1.5 0 0 0 21 19.5V15" fill="none" stroke="url(#iconGrad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
   </symbol>
+
+  <!-- ✅ අලුතින් එක් කළ icon — "වැරදි නිවැරදි කරන්න" සඳහා -->
+  <symbol id="icon-edit" viewBox="0 0 24 24">
+    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="url(#iconGrad)"/>
+  </symbol>
 </svg>
 
 <div class="container">
@@ -358,7 +377,7 @@
    rel="noopener noreferrer">
     bhamarawali@gmail.com
 </a>
-            <p>ඔබට අවශ්‍ය පරිදි ශබ්දකෝෂ තෝරාගැනීමටත්, Dark mode පහසුකම භාවිතා කිරීමටත් මෙහි ඉඩ ලබා දී ඇත.</p>
+           
         </div>
         <div class="download-card">
             <h3><svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-info"></use></svg> වැරදි නිවැරදි කිරීම් සහ යෝජනා</h3>
@@ -425,7 +444,7 @@
 <div id="pwa-ios-tip" role="dialog" aria-label="iOS Install Instructions">
     <button type="button" class="pwa-ios-tip-close" id="pwaIosTipClose" aria-label="close">&times;</button>
     <strong>iPhone / iPad වල Install කරගන්නා ආකාරය:</strong>
-    <p>Safari පහළ පෙන්වන Share <span class="pwa-share-icon">⎋</span> බටනය click කර, පහළට scroll කර <b>“Add to Home Screen”</b> තෝරන්න.</p>
+    <p>Safari පහළ පෙන්වන Share <span class="pwa-share-icon">⎋</span> බටනය click කර, පහළට scroll කර <b>"Add to Home Screen"</b> තෝරන්න.</p>
 </div>
 
 <script src="fflate.min.js"></script>

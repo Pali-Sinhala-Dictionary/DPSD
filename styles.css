@@ -2377,3 +2377,48 @@ body.dark-theme #pwa-install-banner .pwa-install-btn { color: #5e35b1; }
     #pwa-install-banner .pwa-banner-sub { font-size: 10px; }
     #pwa-install-banner .pwa-install-btn { padding: 8px 12px; font-size: 12px; }
 }
+/* =========================================================
+   WORD CARD FOOTER — Correction link (Pali dict only)
+   ========================================================= */
+.card-footer {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(139, 0, 0, 0.15);
+}
+
+.correction-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--primary-color);
+    text-decoration: none;
+    padding: 5px 12px;
+    
+    transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+    line-height: 1.4;
+}
+.correction-link:hover {
+    background: rgba(139, 0, 0, 0.12);
+    border-color: rgba(139, 0, 0, 0.38);
+    transform: translateY(-1px);
+}
+.correction-link .icon-inline { width: 0.95em; height: 0.95em; }
+
+body.dark-theme .card-footer {
+    border-top-color: rgba(179, 136, 255, 0.20);
+}
+body.dark-theme .correction-link {
+    color: var(--primary-color);
+    background: rgba(179, 136, 255, 0.10);
+    border-color: rgba(179, 136, 255, 0.30);
+}
+body.dark-theme .correction-link:hover {
+    background: rgba(179, 136, 255, 0.20);
+    border-color: rgba(179, 136, 255, 0.55);
+}
