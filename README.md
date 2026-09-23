@@ -1,1 +1,1 @@
-Descriptive Pāli–Sinhala Dictionary
+Descriptive Pāli–Sinhala Dictionary[DSPD]
