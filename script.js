@@ -3,7 +3,29 @@ let availableDicts = [
     { id: 'pali', name: 'පාලි - සිංහල ශබ්දකෝෂය', path: 'dictionary.zip', enabled: true, data: [], _loaded: false },
     { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.zip', enabled: true, data: [], _loaded: false }
 ];
+// ===== FUZZY SEARCH STATE =====
+let _fuseCache = {};
 
+function _getFuse(dict) {
+    if (!dict || !dict.data || !dict.data.length) return null;
+    if (_fuseCache[dict.id]) return _fuseCache[dict.id];
+    if (typeof Fuse === 'undefined') {
+        console.warn('Fuse.js නොමැත — fuzzy search off');
+        return null;
+    }
+    try {
+        _fuseCache[dict.id] = new Fuse(dict.data, {
+            keys: ['word', 'meaning'],
+            threshold: 0.35,
+            minMatchCharLength: 2,
+            ignoreLocation: true
+        });
+    } catch (e) {
+        console.warn('Fuse build error:', e);
+        _fuseCache[dict.id] = null;
+    }
+    return _fuseCache[dict.id];
+}
 const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
 const suggestionsBox = document.getElementById('suggestionsBox');
@@ -1341,13 +1363,18 @@ function performSearch(query, exactOnly = false) {
             return w === lowerQuery || possibleMatches.some(pm => w === pm);
         });
 
-        if (matches.length === 0 && !exactOnly) {
-            matches = dict.data.filter(item => {
-                if (!item || !item.word) return false;
-                const w = item.word.toLowerCase();
-                return w.includes(lowerQuery) || possibleMatches.some(pm => w.includes(pm));
-            });
-        }
+        // 🆕 FUZZY SEARCH — වැරදි ටයිප් කිරීම් සඳහා
+if (matches.length === 0 && !exactOnly) {
+    const _f = _getFuse(dict);
+    if (_f) {
+        try {
+            const fz = _f.search(lowerQuery, { limit: 15 });
+            if (fz.length > 0) {
+                matches = fz.map(x => x.item);
+            }
+        } catch (e) { /* skip */ }
+    }
+}
 
         if (matches.length === 0 && !exactOnly) {
             matches = dict.data.filter(item => {

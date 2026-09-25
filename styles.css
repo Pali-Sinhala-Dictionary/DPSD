@@ -187,48 +187,307 @@ body {
         0 20px 55px rgba(55,30,20,0.12);
 }
 
-
 /* =========================================================
-   TOP BAR
+   TOP BAR — Full-Width Premium Header
+   (Edge-to-Edge · No Rounded Corners · Flush to Top)
    ========================================================= */
 
 .top-bar {
-
     display: flex;
-
     justify-content: center;
-
-    align-items: center;
-
-    width: 100%;
-
-    margin-bottom: 18px;
+    align-items: stretch;
+    width: auto;
+    /* Container padding එකට negative margin දී full-width කරයි */
+    margin: -20px -20px 22px -20px;
+    padding: 0;
 }
 
+.header-card {
+    position: relative;
+    width: 100%;
+    border-radius: 0;
+    overflow: hidden;
+    padding: 16px 22px 22px;
+    background:
+        radial-gradient(circle at 15% 20%, rgba(212, 175, 55, 0.18), transparent 45%),
+        radial-gradient(circle at 88% 82%, rgba(212, 175, 55, 0.12), transparent 50%),
+        linear-gradient(
+            135deg,
+            #a91f1f 0%,
+            #8B0000 45%,
+            #560000 100%
+        );
+    border: none;
+    box-shadow:
+        0 12px 30px rgba(139, 0, 0, 0.30),
+        0 4px 10px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+    transition: box-shadow 0.3s ease;
+}
+
+/* ඉහළ රන්වන් සිහින් රේඛාව */
+.header-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(243, 214, 117, 0.0) 10%,
+        rgba(243, 214, 117, 0.9) 50%,
+        rgba(243, 214, 117, 0.0) 90%,
+        transparent 100%
+    );
+    z-index: 4;
+}
+
+/* ✨ Shine Effect — ආලෝකය header එක හරහා ගමන් කරයි */
+.header-card::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -100%;
+    width: 50%;
+    height: 200%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.10),
+        rgba(255, 255, 255, 0.05),
+        transparent
+    );
+    transform: rotate(25deg);
+    animation: headerShine 7s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 3;
+}
+
+@keyframes headerShine {
+    0%, 55%, 100% { left: -100%; }
+    70%           { left: 150%; }
+}
+
+.header-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+}
+
+/* පොතේ සංකේතය — රන්වන් වළල්ලක් තුළ */
+.header-icon {
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+        radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.22), transparent 55%),
+        linear-gradient(135deg, #d4af37 0%, #8B0000 75%, #560000 100%);
+    border: 2px solid #f3d675;
+    box-shadow:
+        0 5px 14px rgba(0, 0, 0, 0.40),
+        0 0 12px rgba(212, 175, 55, 0.30),
+        inset 0 1px 0 rgba(255, 255, 255, 0.30);
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.35s ease;
+}
+
+/* 🎯 Hover කළ විට පොත කැරකෙන අතර වළල්ල දීප්තිමත් වේ */
+.header-card:hover .header-icon {
+    transform: rotate(-8deg) scale(1.10);
+    box-shadow:
+        0 7px 18px rgba(0, 0, 0, 0.45),
+        0 0 22px rgba(243, 214, 117, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.header-icon svg {
+    width: 28px;
+    height: 28px;
+    display: block;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+}
+
+.top-bar h1 {
+    color: #ffffff !important;
+    margin: 0;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    letter-spacing: 0.4px;
+    line-height: 1.2;
+    text-shadow:
+        0 2px 5px rgba(0, 0, 0, 0.50),
+        0 0 14px rgba(243, 214, 117, 0.28);
+}
 
 /* =========================================================
-   TITLE
+   බෞද්ධ කොඩියේ වර්ණ 5 පහළින් ඉරක් ලෙස
+   නීල · පීත · ලෝහිත · ඕදාත · මංජිෂ්ට
    ========================================================= */
 
-h1 {
-
-    color: var(--primary-color);
-
-    margin: 0;
-
-    font-size: 28px;
-
-    font-weight: bold;
-
-    text-align: center;
-
-    letter-spacing: 0.2px;
-
-    text-shadow:
-        0 1px 0 rgba(255,255,255,0.7);
+.buddhist-flag-stripe {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 5px;
+    display: flex;
+    z-index: 5;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        0 -1px 3px rgba(0, 0, 0, 0.30);
 }
 
+.buddhist-flag-stripe span {
+    flex: 1 1 20%;
+    height: 100%;
+}
 
+/* නීල — Blue */
+.buddhist-flag-stripe span:nth-child(1) {
+    background: linear-gradient(180deg, #1a52c9, #0b3a99);
+}
+/* පීත — Yellow */
+.buddhist-flag-stripe span:nth-child(2) {
+    background: linear-gradient(180deg, #ffdc26, #ffc400);
+}
+/* ලෝහිත — Red */
+.buddhist-flag-stripe span:nth-child(3) {
+    background: linear-gradient(180deg, #ed2f36, #c9101a);
+}
+/* ඕදාත — White */
+.buddhist-flag-stripe span:nth-child(4) {
+    background: linear-gradient(180deg, #ffffff, #e8e8e8);
+}
+/* මංජිෂ්ට — Orange */
+.buddhist-flag-stripe span:nth-child(5) {
+    background: linear-gradient(180deg, #fda83c, #ee7f0c);
+}
+
+/* =========================================================
+   DARK MODE — Header Card
+   ========================================================= */
+
+body.dark-theme .header-card {
+    background:
+        radial-gradient(circle at 15% 20%, rgba(179, 136, 255, 0.25), transparent 45%),
+        radial-gradient(circle at 88% 82%, rgba(0, 229, 255, 0.15), transparent 50%),
+        linear-gradient(
+            135deg,
+            #1d1233 0%,
+            #121628 50%,
+            #0d1022 100%
+        );
+    border: none;
+    box-shadow:
+        0 12px 30px rgba(0, 0, 0, 0.60),
+        0 0 24px rgba(179, 136, 255, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.55);
+}
+
+body.dark-theme .header-card::before {
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(0, 229, 255, 0.0) 10%,
+        rgba(0, 229, 255, 0.85) 50%,
+        rgba(0, 229, 255, 0.0) 90%,
+        transparent 100%
+    );
+}
+
+body.dark-theme .header-card::after {
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(179, 136, 255, 0.15),
+        rgba(0, 229, 255, 0.08),
+        transparent
+    );
+}
+
+body.dark-theme .header-icon {
+    background:
+        radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.30), transparent 55%),
+        linear-gradient(135deg, #b388ff 0%, #7c4dff 60%, #4a26a8 100%);
+    border-color: #d1b3ff;
+    box-shadow:
+        0 5px 14px rgba(0, 0, 0, 0.55),
+        0 0 16px rgba(179, 136, 255, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+body.dark-theme .header-card:hover .header-icon {
+    box-shadow:
+        0 7px 18px rgba(0, 0, 0, 0.60),
+        0 0 26px rgba(179, 136, 255, 0.70),
+        inset 0 1px 0 rgba(255, 255, 255, 0.30);
+}
+
+body.dark-theme .top-bar h1 {
+    color: #ffffff !important;
+    text-shadow:
+        0 2px 6px rgba(0, 0, 0, 0.75),
+        0 0 16px rgba(179, 136, 255, 0.45);
+}
+
+body.dark-theme .buddhist-flag-stripe {
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.15),
+        0 -1px 4px rgba(0, 0, 0, 0.60),
+        0 0 10px rgba(179, 136, 255, 0.12);
+}
+
+/* =========================================================
+   MOBILE — Header Card
+   ========================================================= */
+
+@media (max-width: 480px) {
+    .top-bar {
+        /* Mobile container padding: 15px 12px 20px */
+        margin: -15px -12px 18px -12px;
+    }
+
+    .header-card {
+        padding: 14px 16px 20px;
+        border-radius: 0;
+    }
+
+    .header-content {
+        gap: 10px;
+    }
+
+    .header-icon {
+        width: 38px;
+        height: 38px;
+        border-width: 1.6px;
+    }
+
+    .header-icon svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .top-bar h1 {
+        font-size: 18px;
+        letter-spacing: 0.2px;
+    }
+
+    .buddhist-flag-stripe {
+        height: 4px;
+    }
+}
 /* =========================================================
    TABS
    ========================================================= */
@@ -583,42 +842,89 @@ h1 {
 
 
 /* =========================================================
-   WORD CARD
+   WORD CARD — Premium Edition
    ========================================================= */
 
 .word-card {
 
     position: relative;
 
+    padding: 20px 22px 18px 26px;   /* ← වම් පැත්තට අමතර ඉඩ (accent stripe සඳහා) */
+
     background:
         linear-gradient(
             135deg,
-            rgba(255,255,255,0.82),
+            rgba(255,255,255,0.88),
             rgba(255,255,255,0.62)
         );
 
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
-    border-radius: 17px;
-    border-left:
-        1px solid rgba(255,255,255,0.75); 
 
-    border-top:
-        1px solid rgba(255,255,255,0.75);
+    border-radius: 18px;
 
-    border-right:
-        1px solid rgba(255,255,255,0.75);
-
-    border-bottom:
-        1px solid rgba(255,255,255,0.75);
+    border:
+        1px solid rgba(255,255,255,0.80);
 
     box-shadow:
-        0 8px 25px rgba(55,30,20,0.09),
-        inset 0 1px 0 rgba(255,255,255,0.75);
+        0 10px 28px rgba(55,30,20,0.10),
+        0 1px 0 rgba(255,255,255,0.85) inset,
+        0 -1px 0 rgba(139,0,0,0.05) inset;
+
+    overflow: hidden;
 
     transition:
         transform 0.25s ease,
         box-shadow 0.25s ease;
+}
+
+/* රන්වන් රතු accent stripe එක වම් පසින් */
+.word-card::before {
+
+    content: '';
+
+    position: absolute;
+
+    top: 0;
+    left: 0;
+    bottom: 0;
+
+    width: 4px;
+
+    background:
+        linear-gradient(
+            180deg,
+            #d4af37,
+            #8B0000 60%,
+            #560000
+        );
+
+    border-radius: 18px 0 0 18px;
+}
+
+/* මෘදු රන්වන් ආලෝකය ඉහළ-දකුණු කෙළවරේ */
+.word-card::after {
+
+    content: '';
+
+    position: absolute;
+
+    top: -50px;
+    right: -50px;
+
+    width: 160px;
+    height: 160px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(212,175,55,0.12),
+            transparent 70%
+        );
+
+    pointer-events: none;
 }
 
 @media (hover: hover) {
@@ -628,8 +934,9 @@ h1 {
         transform: translateY(-2px);
 
         box-shadow:
-            0 13px 32px rgba(55,30,20,0.13),
-            inset 0 1px 0 rgba(255,255,255,0.8);
+            0 16px 38px rgba(55,30,20,0.14),
+            0 1px 0 rgba(255,255,255,0.90) inset,
+            0 -1px 0 rgba(139,0,0,0.06) inset;
     }
 }
 
@@ -646,12 +953,12 @@ h1 {
 
     color: var(--primary-color);
 
-    margin-bottom: 10px;
+    margin: 0 0 12px 0;
+
+    padding-bottom: 9px;
 
     border-bottom:
-        1px solid rgba(212,175,55,0.40);
-
-    padding-bottom: 7px;
+        1px solid rgba(212,175,55,0.38);
 
     display: flex;
 
@@ -660,6 +967,8 @@ h1 {
     align-items: center;
 
     gap: 10px;
+
+    line-height: 1.25;
 }
 
 
@@ -1730,7 +2039,7 @@ body.dark-theme .word-type {
 
     background: rgba(179, 136, 255, 0.15);
 
-    color: #b388ff;
+    color: #DB7070;
 
     border-color: rgba(179, 136, 255, 0.30);
 }
@@ -1747,6 +2056,66 @@ body.dark-theme .word-division {
     color: #00e5ff;
 
     border-color: rgba(0, 229, 255, 0.25);
+}
+
+
+/* =========================================================
+   DARK THEME — WORD CARD Premium
+   ========================================================= */
+
+body.dark-theme .word-card {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(24, 28, 44, 0.92),
+            rgba(16, 19, 32, 0.86)
+        );
+
+    border-color: rgba(179, 136, 255, 0.22);
+
+    box-shadow:
+        0 12px 34px rgba(0, 0, 0, 0.55),
+        0 0 22px rgba(179, 136, 255, 0.06),
+        0 1px 0 rgba(255, 255, 255, 0.05) inset,
+        0 -1px 0 rgba(179, 136, 255, 0.10) inset;
+}
+
+body.dark-theme .word-card::before {
+
+    background:
+        linear-gradient(
+            180deg,
+            #00e5ff,
+            #b388ff 55%,
+            #7c4dff
+        );
+}
+
+body.dark-theme .word-card::after {
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(179, 136, 255, 0.15),
+            transparent 70%
+        );
+}
+
+@media (hover: hover) {
+
+    body.dark-theme .word-card:hover {
+
+        box-shadow:
+            0 18px 44px rgba(0, 0, 0, 0.65),
+            0 0 32px rgba(179, 136, 255, 0.12),
+            0 1px 0 rgba(255, 255, 255, 0.07) inset;
+    }
+}
+
+body.dark-theme .main-word-title {
+
+    border-bottom-color: rgba(179, 136, 255, 0.28);
 }
 
 
@@ -1931,10 +2300,6 @@ body.dark-theme .word-division {
 }
 
 
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
 @media (max-width: 480px) {
 
     body {
@@ -1979,8 +2344,7 @@ body.dark-theme .word-division {
     }
 
     .word-card {
-        padding:
-            14px;
+        padding: 16px 16px 14px 20px;
     }
 
     .main-word-title {
@@ -2377,9 +2741,12 @@ body.dark-theme #pwa-install-banner .pwa-install-btn { color: #5e35b1; }
     #pwa-install-banner .pwa-banner-sub { font-size: 10px; }
     #pwa-install-banner .pwa-install-btn { padding: 8px 12px; font-size: 12px; }
 }
+
+
 /* =========================================================
    WORD CARD FOOTER — Correction link (Pali dict only)
    ========================================================= */
+
 .card-footer {
     display: flex;
     justify-content: flex-start;
@@ -2399,7 +2766,7 @@ body.dark-theme #pwa-install-banner .pwa-install-btn { color: #5e35b1; }
     color: var(--primary-color);
     text-decoration: none;
     padding: 5px 12px;
-    
+
     transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
     line-height: 1.4;
 }

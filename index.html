@@ -2,38 +2,36 @@
 <html lang="si">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="icon" href="data:,">
     <link rel="apple-touch-icon" href="icon-192x192.png?v=2">
     <link rel="manifest" href="manifest.json?v=1">
     <meta name="google" content="notranslate">
     <meta name="theme-color" content="#8B0000">
-<meta property="og:title" content="Pali Sinhala Dictionary | පාලි සිංහල ශබ්දකෝෂය">
-<meta property="og:description" content="පාලි - සිංහල ශබ්දකෝෂය. Pali Sinhala Dictionary.">
-<meta property="og:image" content="https://pali-sinhala-dictionary.github.io/DPSD/icon-512x512.png">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://pali-sinhala-dictionary.github.io/DPSD/">
-<meta property="og:site_name" content="Pali Sinhala Dictionary">
 
-<!-- Basic SEO & Responsive Tags -->
-<meta name="description" content="පාලි - සිංහල ශබ්දකෝෂය. Pali Sinhala Dictionary (DPSD).">
-<meta name="keywords" content="Pali Sinhala Dictionary, Pali Dictionary, DPSD, පාලි සිංහල ශබ්දකෝෂය, පාලි ශබ්දකෝෂය, Pali Grammar, Pali Words">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-MYL09BJLR5"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+    <meta property="og:title" content="Pali Sinhala Dictionary | පාලි සිංහල ශබ්දකෝෂය">
+    <meta property="og:description" content="පාලි - සිංහල ශබ්දකෝෂය. Pali Sinhala Dictionary.">
+    <meta property="og:image" content="https://pali-sinhala-dictionary.github.io/DPSD/icon-512x512.png">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://pali-sinhala-dictionary.github.io/DPSD/">
+    <meta property="og:site_name" content="Pali Sinhala Dictionary">
 
-  gtag('config', 'G-MYL09BJLR5');
-</script>
+    <meta name="description" content="පාලි - සිංහල ශබ්දකෝෂය. Pali Sinhala Dictionary (DPSD).">
+    <meta name="keywords" content="Pali Sinhala Dictionary, Pali Dictionary, DPSD, පාලි සිංහල ශබ්දකෝෂය, පාලි ශබ්දකෝෂය, Pali Grammar, Pali Words">
+
     <title>පාලි-සිංහල ශබ්දකෝෂය</title>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-MYL09BJLR5"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-MYL09BJLR5');
+    </script>
+
     <link rel="stylesheet" href="styles.css?v=8">
 
-    <!-- =========================================================
-         Style Block 1: Feedback Button
-         ========================================================= -->
     <style>
         .feedback-link-btn{
             display:inline-block;
@@ -48,12 +46,27 @@
             text-align:center;
         }
         .feedback-link-btn:hover{ filter:brightness(1.08); }
+
+        /* Fuzzy match badge — වැරදි ටයිප් කිරීමට ගැලපුණු ප්රතිඵල සඳහා */
+        .fuzzy-tag {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            margin-left: 6px;
+            border-radius: 10px;
+            background: rgba(7, 89, 165, 0.12);
+            color: var(--blue-color);
+            border: 1px solid rgba(7, 89, 165, 0.25);
+            vertical-align: middle;
+        }
+        body.dark-theme .fuzzy-tag {
+            background: rgba(0, 229, 255, 0.12);
+            color: #00e5ff;
+            border-color: rgba(0, 229, 255, 0.30);
+        }
     </style>
 
-    <!-- =========================================================
-         Style Block 2: CRITICAL SPLASH CSS
-         පළමු paint එකේදීම නිවැරදි පෙනුම සහතික කරයි
-         ========================================================= -->
     <style>
         #splashScreen {
             position: fixed;
@@ -86,7 +99,6 @@
             pointer-events: none;
         }
 
-        /* 🔑 අකුරු ජනනය වන තෙක් content එක සැඟවී තබන්න */
         #splashScreen .splash-content {
             position: relative;
             z-index: 2;
@@ -97,7 +109,6 @@
             animation: none !important;
         }
 
-        /* අකුරු සූදානම් වූ පසු content එක fade වී පෙන්වන්න */
         #splashScreen.ready .splash-content {
             opacity: 1;
         }
@@ -105,10 +116,6 @@
 </head>
 <body>
 
-<!-- =========================================================
-     🔑 CRITICAL: Theme restore — runs before ANY other content
-     Splash screen එකට පෙරම theme class එක apply කරයි.
-     ========================================================= -->
 <script>
 (function () {
     try {
@@ -119,9 +126,6 @@
 })();
 </script>
 
-<!-- =========================================================
-     SPLASH SCREEN — Falling letters animation
-     ========================================================= -->
 <div id="splashScreen" class="splash-screen" aria-hidden="true">
   <div class="splash-letters" id="splashLetters"></div>
   <div class="splash-content">
@@ -185,12 +189,10 @@
   }
   container.appendChild(frag);
 
-  // අකුරු සූදානම් — දැන් content එක fade වී පෙන්වන්න
   requestAnimationFrame(function() {
     splash.classList.add('ready');
   });
 
-  // ---- Auto-hide logic ----
   var MIN_SHOW_MS = 3000;
   var MAX_SHOW_MS = 4500;
   var startTime = Date.now();
@@ -296,7 +298,6 @@
     <path d="M15 21h4.5A1.5 1.5 0 0 0 21 19.5V15" fill="none" stroke="url(#iconGrad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
   </symbol>
 
-  <!-- ✅ අලුතින් එක් කළ icon — "වැරදි නිවැරදි කරන්න" සඳහා -->
   <symbol id="icon-edit" viewBox="0 0 24 24">
     <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="url(#iconGrad)"/>
   </symbol>
@@ -304,12 +305,36 @@
 
 <div class="container">
     <div class="top-bar">
-        <h1 id="pageTitle">පාලි සිංහල ශබ්දකෝෂය</h1>
+    <div class="header-card">
+        <div class="header-content">
+            <div class="header-icon">
+                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15 20 Q15 15 20 15 L48 15 L48 82 L20 82 Q15 82 15 77 Z"
+                          fill="rgba(255,255,255,0.18)" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>
+                    <path d="M85 20 Q85 15 80 15 L52 15 L52 82 L80 82 Q85 82 85 77 Z"
+                          fill="rgba(255,255,255,0.10)" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>
+                    <line x1="50" y1="15" x2="50" y2="82" stroke="#fff" stroke-width="2.5"/>
+                    <line x1="22" y1="30" x2="42" y2="30" stroke="rgba(255,255,255,0.55)" stroke-width="1.8" stroke-linecap="round"/>
+                    <line x1="22" y1="42" x2="42" y2="42" stroke="rgba(255,255,255,0.55)" stroke-width="1.8" stroke-linecap="round"/>
+                    <line x1="22" y1="54" x2="42" y2="54" stroke="rgba(255,255,255,0.55)" stroke-width="1.8" stroke-linecap="round"/>
+                    <line x1="22" y1="66" x2="36" y2="66" stroke="rgba(255,255,255,0.55)" stroke-width="1.8" stroke-linecap="round"/>
+                    <line x1="58" y1="30" x2="78" y2="30" stroke="rgba(255,255,255,0.55)" stroke-width="1.8" stroke-linecap="round"/>
+                    <line x1="58" y1="42" x2="78" y2="42" stroke="rgba(255,255,255,0.55)" stroke-width="1.8" stroke-linecap="round"/>
+                    <line x1="58" y1="54" x2="78" y2="54" stroke="rgba(255,255,255,0.55)" stroke-width="1.8" stroke-linecap="round"/>
+                    <line x1="58" y1="66" x2="72" y2="66" stroke="rgba(255,255,255,0.55)" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <h1 id="pageTitle">පාලි සිංහල ශබ්දකෝෂය</h1>
+        </div>
+        <div class="buddhist-flag-stripe" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+        </div>
     </div>
+</div>
 
     <!-- 1. HOME / SEARCH TAB -->
     <div id="tab-home" class="tab-view active">
-        <div style="position: relative;">
+        <div style="position: relative; margin-top: 2rem;">
             <div class="search-box-container">
                 <input type="text" id="searchInput" class="search-input" placeholder="දත්ත පූරණය වෙමින් පවතී..." autocomplete="off" disabled>
                 <button id="searchBtn" class="search-btn" title="සොයන්න" disabled>
@@ -334,7 +359,7 @@
         </div>
     </div>
 
- <!-- 3. DOWNLOADS TAB -->
+    <!-- 3. DOWNLOADS TAB -->
     <div id="tab-download" class="tab-view">
         <h2>App බාගත කරගන්න</h2>
         <p>මෙම ශබ්දකෝෂ මෘදුකාංගය offline භාවිතය සඳහා පහත මෙහෙයුම් පද්ධති වලට ලබාගත හැක.</p>
@@ -345,21 +370,13 @@
         </div>
         <div class="download-card">
             <h3><svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-iphone"></use></svg> iOS Application</h3>
-            <p>iPhone / iPad සඳහා පහත ලින්ක් එක Safari තුළ විවෘත කර Share -> Add to home screen කරන්න.<a href="https://pali-sinhala-dictionary.github.io/DPSD/"
-   target="_blank"
-   rel="noopener noreferrer">
-    Pali–Sinhala Dictionary
-</a></p>
+            <p>iPhone / iPad සඳහා පහත ලින්ක් එක Safari තුළ විවෘත කර Share -> Add to home screen කරන්න.<a href="https://pali-sinhala-dictionary.github.io/DPSD/" target="_blank" rel="noopener noreferrer">Pali–Sinhala Dictionary</a></p>
             <a href="https://pali-sinhala-dictionary.github.io/DPSD/" class="download-link-btn" style="background:#333333;" target="_blank">iOS App බාගත කරන්න</a>
         </div>
         <div class="download-card">
             <h3><svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-laptop"></use></svg> Windows Application</h3>
             <p>පරිගණක සඳහා පහත ලිපිනය ක්‍රෝම් browser එකින් ඕපන් කර install කරන්න.
-            <a href="https://pali-sinhala-dictionary.github.io/DPSD/"
-   target="_blank"
-   rel="noopener noreferrer">
-    Pali–Sinhala Dictionary
-</a></p>
+            <a href="https://pali-sinhala-dictionary.github.io/DPSD/" target="_blank" rel="noopener noreferrer">Pali–Sinhala Dictionary</a></p>
             <a href="https://pali-sinhala-dictionary.github.io/DPSD/" class="download-link-btn" style="background:#0056b3;" target="_blank">Windows App බාගත කරන්න</a>
         </div>
     </div>
@@ -371,13 +388,8 @@
             <h3>ශබ්දකෝෂය පිළිබඳව</h3>
             <p>මෙහි පාලි-සිංහල ශබ්ද කෝෂය, සිංහල-ඉංග්‍රීසි ශබ්දකෝෂ අඩංගු වේ. අවශ්‍යතාවය අනුව ඔබට තෝරා ගැනීමේ හැකියාව ඇත. 
             පාලි සිංහල ශබ්දකෝෂය තවමත් සංස්කරණය කරමින් පවතී. අඩුපාඩු ඇතොත් දන්වන්න. 
-            පරිපූර්ණ පාලි සිංහල ශබ්දකෝෂයක් සකස් කිරීම අපගේ අරමුණයි.<p>
-            <a href="https://mail.google.com/mail/?view=cm&to=bhamarawali@gmail.com"
-   target="_blank"
-   rel="noopener noreferrer">
-    bhamarawali@gmail.com
-</a>
-           
+            පරිපූර්ණ පාලි සිංහල ශබ්දකෝෂයක් සකස් කිරීම අපගේ අරමුණයි.</p>
+            <a href="https://mail.google.com/mail/?view=cm&to=bhamarawali@gmail.com" target="_blank" rel="noopener noreferrer">bhamarawali@gmail.com</a>
         </div>
         <div class="download-card">
             <h3><svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-info"></use></svg> වැරදි නිවැරදි කිරීම් සහ යෝජනා</h3>
@@ -447,6 +459,8 @@
     <p>Safari පහළ පෙන්වන Share <span class="pwa-share-icon">⎋</span> බටනය click කර, පහළට scroll කර <b>"Add to Home Screen"</b> තෝරන්න.</p>
 </div>
 
+<!-- 🔑 Fuzzy Search සඳහා Fuse.js -->
+<script src="fuse.min.js"></script>
 <script src="fflate.min.js"></script>
 <script src="script.js"></script>
 
