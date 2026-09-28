@@ -1,17 +1,17 @@
-const CACHE_NAME = 'pali-sin-dict-v4.15'; // v4.9: navigation fallback fix (feedback.html සේවය කිරීම)
+const CACHE_NAME = 'pali-sin-dict-v4.16'; // v4.9: navigation fallback fix (feedback.html සේවය කිරීම)
 
 const CACHE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './dictionary.zip',
-  './sinhala_english.zip',
-  './inflections.zip',
-  './inflections-worker.js',
-  './fflate.min.js',
+  './sinhala_english.zip?v=l',
+  './inflections.zip?v=1',
+  './inflections-worker.js?v=1',
+  './fflate.min.js?v=1',
   './feedback.html',
   './Fuse.min.js',
-  './AbhayaLibre-Regular.ttf',
+  './AbhayaLibre-Regular.ttf?v=1',
   './icon-192x192.png',
   './icon-512x512.png'
 ];
