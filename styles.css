@@ -330,48 +330,76 @@ body {
         0 0 14px rgba(243, 214, 117, 0.28);
 }
 
-/* =========================================================
-   බෞද්ධ කොඩියේ වර්ණ 5 පහළින් ඉරක් ලෙස
-   නීල · පීත · ලෝහිත · ඕදාත · මංජිෂ්ට
-   ========================================================= */
-
+/* ---------- BUDDHIST FLAG STRIPE ---------- */
 .buddhist-flag-stripe {
     position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: 0; right: 0; bottom: 0;
     height: 5px;
     display: flex;
     z-index: 5;
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.25),
-        0 -1px 3px rgba(0, 0, 0, 0.30);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 -1px 3px rgba(0,0,0,0.30);
 }
 
 .buddhist-flag-stripe span {
-    flex: 1 1 20%;
+    flex: 1 1 16.6667%;
     height: 100%;
+    position: relative;
+    overflow: hidden;
 }
 
-/* නීල — Blue */
-.buddhist-flag-stripe span:nth-child(1) {
-    background: linear-gradient(180deg, #1a52c9, #0b3a99);
+.buddhist-flag-stripe span:nth-child(1) { background: linear-gradient(180deg,#1a52c9,#0b3a99); }
+.buddhist-flag-stripe span:nth-child(2) { background: linear-gradient(180deg,#ffdc26,#ffc400); }
+.buddhist-flag-stripe span:nth-child(3) { background: linear-gradient(180deg,#ed2f36,#c9101a); }
+.buddhist-flag-stripe span:nth-child(4) { background: linear-gradient(180deg,#ffffff,#e8e8e8); }
+.buddhist-flag-stripe span:nth-child(5) { background: linear-gradient(180deg,#fda83c,#ee7f0c); }
+
+.buddhist-flag-stripe span:nth-child(6) {
+    background: linear-gradient(90deg,#0b3a99 0%,#1a52c9 12%,#ffdc26 30%,#fda83c 45%,
+                #ed2f36 62%,#ffffff 82%,#e8e8e8 100%);
+    background-size: 300% 100%;
+    box-shadow: inset 0 0 4px rgba(255,255,255,0.55), 0 0 6px rgba(255,220,38,0.45);
+    animation: prabhasvaraFlow 8s ease-in-out infinite;
 }
-/* පීත — Yellow */
-.buddhist-flag-stripe span:nth-child(2) {
-    background: linear-gradient(180deg, #ffdc26, #ffc400);
+
+.buddhist-flag-stripe span:nth-child(6)::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, rgba(26,82,201,0.9) 0%, rgba(255,220,38,0.9) 25%,
+                rgba(237,47,54,0.9) 50%, rgba(255,255,255,0.9) 75%, rgba(253,168,60,0.9) 100%);
+    background-size: 200% 100%;
+    mix-blend-mode: overlay;
+    opacity: 0.55;
+    animation: prabhasvaraFlow 6s linear infinite reverse;
+    pointer-events: none;
 }
-/* ලෝහිත — Red */
-.buddhist-flag-stripe span:nth-child(3) {
-    background: linear-gradient(180deg, #ed2f36, #c9101a);
+
+.buddhist-flag-stripe span:nth-child(6)::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.85) 45%,
+                rgba(255,255,255,0) 100%);
+    mix-blend-mode: overlay;
+    animation: prabhasvaraShimmer 5s linear infinite;
+    pointer-events: none;
 }
-/* ඕදාත — White */
-.buddhist-flag-stripe span:nth-child(4) {
-    background: linear-gradient(180deg, #ffffff, #e8e8e8);
+
+@keyframes prabhasvaraFlow {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
-/* මංජිෂ්ට — Orange */
-.buddhist-flag-stripe span:nth-child(5) {
-    background: linear-gradient(180deg, #fda83c, #ee7f0c);
+@keyframes prabhasvaraShimmer {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(100%); }
+}
+
+body.dark-theme .buddhist-flag-stripe {
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), 0 -1px 4px rgba(0,0,0,0.60),
+                0 0 10px rgba(179,136,255,0.12);
+}
+body.dark-theme .buddhist-flag-stripe span:nth-child(6) {
+    box-shadow: inset 0 0 5px rgba(255,255,255,0.65), 0 0 10px rgba(255,220,38,0.55),
+                0 0 16px rgba(179,136,255,0.35);
 }
 
 /* =========================================================
@@ -442,12 +470,7 @@ body.dark-theme .top-bar h1 {
         0 0 16px rgba(179, 136, 255, 0.45);
 }
 
-body.dark-theme .buddhist-flag-stripe {
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.15),
-        0 -1px 4px rgba(0, 0, 0, 0.60),
-        0 0 10px rgba(179, 136, 255, 0.12);
-}
+
 
 /* =========================================================
    MOBILE — Header Card
@@ -1265,159 +1288,110 @@ body.dark-theme .buddhist-flag-stripe {
 }
 
 
-/* =========================================================
-   INFLECTION PANEL & TABLES
-   ========================================================= */
-
+/* ---------- INFLECTION PANEL & TABLES ---------- */
 .inflection-panel {
-
     display: none;
-
-    margin-top: 8px;
-
-    padding: 12px;
-
-    border-radius: 12px;
-
-    background:
-        rgba(139,0,0,0.05);
-
-    border:
-        1px solid rgba(139,0,0,0.16);
+    margin-top: 15px;
+    padding: 20px;
+    border-radius: 18px;
+    background: #fdfbf7;
+    border: 1.5px solid rgba(212,175,55,0.4);
+    box-shadow: 0 8px 24px rgba(139,0,0,0.06);
 }
 
 .inflection-group-title {
-
     font-weight: bold;
-
-    color: var(--primary-color);
-
-    margin: 10px 0 6px;
-
-    font-size: 14px;
-}
-
-.inflection-group-title:first-child {
-
-    margin-top: 0;
+    color: #8b0000;
+    margin: 12px 0 8px;
+    font-size: 16px;
 }
 
 .inflection-pos-title {
-
     font-weight: bold;
-
-    font-size: 15px;
-
-    color: var(--text-color);
-
-    background: rgba(139,0,0,0.1);
-
-    border-radius: 8px;
-
-    padding: 4px 10px;
-
-    margin: 14px 0 4px;
-
+    font-size: 16px;
+    color: #8b0000;
+    background: transparent;
+    border: none;
+    padding: 4px 0;
+    margin: 10px 0 12px;
     display: inline-block;
+    border-bottom: 2px solid #d4af37;
 }
 
-.inflection-pos-title:first-child {
-
-    margin-top: 0;
-}
-
-.inflection-loading,
-.inflection-empty {
-
-    color: var(--text-secondary);
-
-    font-style: italic;
-
-    padding: 6px 2px;
-}
-
-/* Horizontal scroll wrapper so a wide table (e.g. verb conjugation with
-   3 person columns) never breaks the page layout on a narrow phone screen. */
 .inflection-table-wrapper {
-
     overflow-x: auto;
-
     -webkit-overflow-scrolling: touch;
-
-    margin-bottom: 4px;
+    margin: 10px 0 12px;
+    padding: 2px;
 }
 
 .inflection-table {
-
-    border-collapse: collapse;
-
+    border-collapse: separate;
+    border-spacing: 0;
     width: 100%;
-
     min-width: 340px;
-
-    font-size: 13px;
+    font-size: 15px;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    border-left: 5px solid #8b0000;
+    border-top: 1px solid rgba(212,175,55,0.3);
+    border-right: 1px solid rgba(212,175,55,0.3);
+    border-bottom: 1px solid rgba(212,175,55,0.3);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.05);
 }
 
 .inflection-table th,
 .inflection-table td {
-
-    border: 1px solid rgba(139,0,0,0.22);
-
-    padding: 6px 8px;
-
+    border: none;
+    border-right: 1px solid rgba(212,175,55,0.2);
+    border-bottom: 1px solid rgba(212,175,55,0.2);
+    padding: 10px 12px;
     text-align: center;
-
     white-space: nowrap;
+    color: #333;
 }
+.inflection-table tr > *:last-child { border-right: none; }
+.inflection-table tr:last-child > * { border-bottom: none; }
 
-.inflection-table th {
-
-    background: rgba(139,0,0,0.08);
-
-    color: var(--primary-color);
-
-    font-weight: bold;
+.inflection-table th,
+.inflection-table td:first-child {
+    font-weight: bold !important;
+    color: #8b0000;
+    background: #fffdf0;
 }
+.inflection-table th.inflection-corner { background: #fff9d6; }
+.inflection-table tr:hover td { background-color: #fffde6; }
 
-.inflection-table th.inflection-corner {
-
-    background: rgba(139,0,0,0.08);
+body.dark-theme .inflection-panel {
+    background: #1e1212;
+    border-color: #d4af37;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
-
-.inflection-table td {
-
-    background: rgba(255,255,255,0.55);
-
-    color: var(--text-color);
+body.dark-theme .inflection-group-title,
+body.dark-theme .inflection-pos-title {
+    color: #ffd700;
+    border-bottom-color: #ffd700;
 }
-
-.inflection-table tr:nth-child(even) td {
-
-    background: rgba(139,0,0,0.05);
+body.dark-theme .inflection-table {
+    background: #2a1818;
+    border-left: 5px solid #ffd700;
+    border-top: 1px solid rgba(212,175,55,0.3);
+    border-right: 1px solid rgba(212,175,55,0.3);
+    border-bottom: 1px solid rgba(212,175,55,0.3);
 }
-
-/* Rule-generated (unattested) forms — visually distinct from real
-   DPD-sourced data so the two are never confused. */
-.generated-form {
-
-    color: var(--text-secondary);
-
-    font-style: italic;
+body.dark-theme .inflection-table th,
+body.dark-theme .inflection-table td {
+    border-right-color: rgba(212,175,55,0.15);
+    border-bottom-color: rgba(212,175,55,0.15);
+    color: #fff5cc;
 }
-
-.inflection-generated-note {
-
-    font-size: 11px;
-
-    color: var(--text-secondary);
-
-    font-style: italic;
-
-    margin-top: 6px;
-
-    padding: 0 2px;
+body.dark-theme .inflection-table th,
+body.dark-theme .inflection-table td:first-child {
+    color: #ffd700;
+    background: #381e1e;
 }
-
+body.dark-theme .inflection-table tr:hover td { background-color: #442424; }
 
 /* =========================================================
    DESCRIPTIONS
@@ -1879,69 +1853,6 @@ body.dark-theme .details-panel {
     background: rgba(15, 23, 42, 0.90);
 
     border-color: rgba(0, 229, 255, 0.15);
-}
-
-
-/* =========================================================
-   DARK INFLECTION — වර නැගීම් ලා රතුපාටම රැක ගනී
-   ========================================================= */
-
-body.dark-theme .inflection-btn {
-
-    background: rgba(224, 90, 90, 0.12);
-
-    color: var(--inflection-color);
-
-    border-color: rgba(224, 90, 90, 0.35);
-}
-
-body.dark-theme .inflection-btn:hover {
-
-    background: rgba(224, 90, 90, 0.22);
-}
-
-body.dark-theme .inflection-panel {
-
-    background: rgba(224, 90, 90, 0.06);
-
-    border-color: rgba(224, 90, 90, 0.22);
-}
-
-body.dark-theme .inflection-group-title {
-
-    color: var(--inflection-color);
-}
-
-body.dark-theme .inflection-pos-title {
-
-    background: rgba(224, 90, 90, 0.14);
-
-    color: var(--inflection-color);
-}
-
-body.dark-theme .inflection-table th,
-body.dark-theme .inflection-table td {
-
-    border-color: rgba(224, 90, 90, 0.30);
-}
-
-body.dark-theme .inflection-table th {
-
-    background: rgba(224, 90, 90, 0.14);
-
-    color: var(--inflection-color);
-}
-
-body.dark-theme .inflection-table td {
-
-    background: rgba(38, 38, 38, 0.70);
-
-    color: var(--text-color);
-}
-
-body.dark-theme .inflection-table tr:nth-child(even) td {
-
-    background: rgba(224, 90, 90, 0.08);
 }
 
 
