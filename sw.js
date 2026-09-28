@@ -10,7 +10,7 @@ const CACHE_ASSETS = [
   './inflections-worker.js?v=1',
   './fflate.min.js?v=1',
   './feedback.html',
-  './Fuse.min.js',
+  './fuse.min.js',
   './AbhayaLibre-Regular.ttf?v=1',
   './icon-192x192.png',
   './icon-512x512.png'
