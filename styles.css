@@ -165,6 +165,16 @@ body {
     padding: 20px;
 
     background:
+        /* සියුම් ඇල රේඛා — header එකේ රටාවම, 2cm පරතරයකින් (අතිශය මදක් පෙනෙන) */
+        repeating-linear-gradient(
+            125deg,
+            rgba(139,0,0,0.000) 0cm,
+            rgba(139,0,0,0.000) 1.08cm,
+            rgba(139,0,0,0.055) 1.08cm,
+            rgba(139,0,0,0.055) calc(1.08cm + 1px),
+            rgba(139,0,0,0.028) calc(1.08cm + 1px),
+            rgba(139,0,0,0.000) 2cm
+        ),
         linear-gradient(
             135deg,
             rgba(255,255,255,0.88),
@@ -208,41 +218,34 @@ body {
     border-radius: 0;
     overflow: hidden;
     padding: 16px 22px 22px;
+    /* 🎨 Aurora diagonal gradient — orange → hot-pink → violet → blue */
     background:
-        radial-gradient(circle at 15% 20%, rgba(212, 175, 55, 0.18), transparent 45%),
-        radial-gradient(circle at 88% 82%, rgba(212, 175, 55, 0.12), transparent 50%),
-        linear-gradient(
-            135deg,
-            #a91f1f 0%,
-            #8B0000 45%,
-            #560000 100%
-        );
+        /* diagonal soft bands */
+        repeating-linear-gradient(
+            125deg,
+            rgba(255, 255, 255, 0.00) 0px,
+            rgba(255, 255, 255, 0.00) 70px,
+            rgba(255, 255, 255, 0.10) 71px,
+            rgba(130, 0, 30, 0.08) 72px,
+            rgba(130, 0, 30, 0.00) 130px
+        ),
+        /* top crimson glow */
+        linear-gradient(180deg, rgba(215, 25, 70, 0.75) 0%, rgba(215, 25, 70, 0) 55%),
+        /* bottom deep-red glow */
+        linear-gradient(0deg, rgba(175, 15, 55, 0.85) 0%, rgba(175, 15, 55, 0) 55%),
+        /* left orange glow */
+        radial-gradient(ellipse at 0% 55%, rgba(255, 150, 80, 0.95), transparent 50%),
+        /* right light-pink glow */
+        radial-gradient(ellipse at 100% 90%, rgba(255, 190, 235, 0.95), transparent 45%),
+        /* base */
+        linear-gradient(105deg, #ff6a45 0%, #ff2a3f 38%, #f01e55 68%, #ff5a7e 100%);
     border: none;
     box-shadow:
-        0 12px 30px rgba(139, 0, 0, 0.30),
+        0 12px 30px rgba(210, 25, 50, 0.38),
         0 4px 10px rgba(0, 0, 0, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.18),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+        inset 0 1px 0 rgba(255, 255, 255, 0.30),
+        inset 0 -1px 0 rgba(110, 0, 20, 0.40);
     transition: box-shadow 0.3s ease;
-}
-
-/* ඉහළ රන්වන් සිහින් රේඛාව */
-.header-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba(243, 214, 117, 0.0) 10%,
-        rgba(243, 214, 117, 0.9) 50%,
-        rgba(243, 214, 117, 0.0) 90%,
-        transparent 100%
-    );
-    z-index: 4;
 }
 
 /* ✨ Shine Effect — ආලෝකය header එක හරහා ගමන් කරයි */
@@ -280,7 +283,7 @@ body {
     gap: 14px;
 }
 
-/* පොතේ සංකේතය — රන්වන් වළල්ලක් තුළ */
+/* පොතේ සංකේතය — aurora වළල්ලක් තුළ */
 .header-icon {
     width: 46px;
     height: 46px;
@@ -290,13 +293,13 @@ body {
     align-items: center;
     justify-content: center;
     background:
-        radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.22), transparent 55%),
-        linear-gradient(135deg, #d4af37 0%, #8B0000 75%, #560000 100%);
-    border: 2px solid #f3d675;
+        radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.55), transparent 55%),
+        linear-gradient(135deg, #ffa05a 0%, #ff2a3f 48%, #a50f2a 100%);
+    border: 2px solid rgba(255, 255, 255, 0.92);
     box-shadow:
-        0 5px 14px rgba(0, 0, 0, 0.40),
-        0 0 12px rgba(212, 175, 55, 0.30),
-        inset 0 1px 0 rgba(255, 255, 255, 0.30);
+        0 5px 14px rgba(110, 10, 25, 0.45),
+        0 0 14px rgba(255, 110, 110, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.45);
     transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
                 box-shadow 0.35s ease;
 }
@@ -305,9 +308,9 @@ body {
 .header-card:hover .header-icon {
     transform: rotate(-8deg) scale(1.10);
     box-shadow:
-        0 7px 18px rgba(0, 0, 0, 0.45),
-        0 0 22px rgba(243, 214, 117, 0.55),
-        inset 0 1px 0 rgba(255, 255, 255, 0.35);
+        0 7px 18px rgba(110, 10, 25, 0.50),
+        0 0 26px rgba(255, 140, 140, 0.85),
+        inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .header-icon svg {
@@ -408,60 +411,55 @@ body.dark-theme .buddhist-flag-stripe span:nth-child(6) {
 
 body.dark-theme .header-card {
     background:
-        radial-gradient(circle at 15% 20%, rgba(179, 136, 255, 0.25), transparent 45%),
-        radial-gradient(circle at 88% 82%, rgba(0, 229, 255, 0.15), transparent 50%),
-        linear-gradient(
-            135deg,
-            #1d1233 0%,
-            #121628 50%,
-            #0d1022 100%
-        );
+        repeating-linear-gradient(
+            125deg,
+            rgba(255, 255, 255, 0.00) 0px,
+            rgba(255, 255, 255, 0.00) 70px,
+            rgba(255, 255, 255, 0.06) 71px,
+            rgba(0, 0, 0, 0.18) 72px,
+            rgba(0, 0, 0, 0.00) 130px
+        ),
+        linear-gradient(180deg, rgba(165, 25, 50, 0.65) 0%, rgba(165, 25, 50, 0) 55%),
+        linear-gradient(0deg, rgba(95, 12, 38, 0.90) 0%, rgba(95, 12, 38, 0) 55%),
+        radial-gradient(ellipse at 0% 55%, rgba(225, 90, 60, 0.55), transparent 50%),
+        radial-gradient(ellipse at 100% 90%, rgba(235, 110, 140, 0.45), transparent 45%),
+        linear-gradient(105deg, #3a0a10 0%, #7c101f 40%, #8c1533 72%, #3c0f22 100%);
     border: none;
     box-shadow:
         0 12px 30px rgba(0, 0, 0, 0.60),
-        0 0 24px rgba(179, 136, 255, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 0 26px rgba(230, 50, 70, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.10),
         inset 0 -1px 0 rgba(0, 0, 0, 0.55);
-}
-
-body.dark-theme .header-card::before {
-    background: linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba(0, 229, 255, 0.0) 10%,
-        rgba(0, 229, 255, 0.85) 50%,
-        rgba(0, 229, 255, 0.0) 90%,
-        transparent 100%
-    );
 }
 
 body.dark-theme .header-card::after {
     background: linear-gradient(
         90deg,
         transparent,
-        rgba(179, 136, 255, 0.15),
-        rgba(0, 229, 255, 0.08),
+        rgba(255, 120, 120, 0.14),
+        rgba(255, 150, 120, 0.08),
         transparent
     );
 }
 
 body.dark-theme .header-icon {
     background:
-        radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.30), transparent 55%),
-        linear-gradient(135deg, #b388ff 0%, #7c4dff 60%, #4a26a8 100%);
-    border-color: #d1b3ff;
+        radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.40), transparent 55%),
+        linear-gradient(135deg, #ff8a7a 0%, #d42040 48%, #7a0f2a 100%);
+    border-color: rgba(255, 220, 215, 0.85);
     box-shadow:
         0 5px 14px rgba(0, 0, 0, 0.55),
-        0 0 16px rgba(179, 136, 255, 0.45),
-        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        0 0 18px rgba(240, 70, 80, 0.50),
+        inset 0 1px 0 rgba(255, 255, 255, 0.30);
 }
 
 body.dark-theme .header-card:hover .header-icon {
     box-shadow:
         0 7px 18px rgba(0, 0, 0, 0.60),
-        0 0 26px rgba(179, 136, 255, 0.70),
-        inset 0 1px 0 rgba(255, 255, 255, 0.30);
+        0 0 28px rgba(255, 110, 100, 0.80),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
+
 
 body.dark-theme .top-bar h1 {
     color: #ffffff !important;
@@ -1544,6 +1542,14 @@ body.dark-theme .inflection-table tr:hover td { background-color: #442424; }
         64px;
 
     background:
+        /* nav සඳහා වෙනස් රටාව — ප්‍රධාන පිටුවේ දිශාවම, ඝන සිහින් hatch රේඛා (0.45cm) */
+        repeating-linear-gradient(
+            125deg,
+            rgba(139,0,0,0.000) 0cm,
+            rgba(139,0,0,0.000) calc(0.45cm - 1px),
+            rgba(139,0,0,0.060) calc(0.45cm - 1px),
+            rgba(139,0,0,0.060) 0.45cm
+        ),
         rgba(255,255,255,0.82);
 
     backdrop-filter:
@@ -1755,6 +1761,16 @@ body.dark-theme {
 body.dark-theme .container {
 
     background:
+        /* සියුම් ඇල රේඛා — dark mode (2cm පරතරය, අතිශය මදක් පෙනෙන) */
+        repeating-linear-gradient(
+            125deg,
+            rgba(200,170,255,0.000) 0cm,
+            rgba(200,170,255,0.000) 1.08cm,
+            rgba(200,170,255,0.060) 1.08cm,
+            rgba(200,170,255,0.060) calc(1.08cm + 1px),
+            rgba(200,170,255,0.026) calc(1.08cm + 1px),
+            rgba(200,170,255,0.000) 2cm
+        ),
         linear-gradient(
             135deg,
             rgba(19, 23, 36, 0.92),
@@ -1895,7 +1911,15 @@ body.dark-theme .suggestion-item:hover {
 
 body.dark-theme .bottom-nav {
 
-    background: rgba(19, 23, 36, 0.92);
+    background:
+        repeating-linear-gradient(
+            125deg,
+            rgba(200,170,255,0.000) 0cm,
+            rgba(200,170,255,0.000) calc(0.45cm - 1px),
+            rgba(200,170,255,0.065) calc(0.45cm - 1px),
+            rgba(200,170,255,0.065) 0.45cm
+        ),
+        rgba(19, 23, 36, 0.92);
 
     border-top: 1px solid rgba(179, 136, 255, 0.25);
 
