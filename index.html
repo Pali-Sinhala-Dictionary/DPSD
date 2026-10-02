@@ -30,7 +30,7 @@
       gtag('config', 'G-MYL09BJLR5');
     </script>
 
-    <link rel="stylesheet" href="styles.css?v=10">
+    <link rel="stylesheet" href="styles.css?v=8">
 
     <style>
         .feedback-link-btn{
@@ -46,25 +46,6 @@
             text-align:center;
         }
         .feedback-link-btn:hover{ filter:brightness(1.08); }
-
-        /* Fuzzy match badge — වැරදි ටයිප් කිරීමට ගැලපුණු ප්රතිඵල සඳහා */
-        .fuzzy-tag {
-            display: inline-block;
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 8px;
-            margin-left: 6px;
-            border-radius: 10px;
-            background: rgba(7, 89, 165, 0.12);
-            color: var(--blue-color);
-            border: 1px solid rgba(7, 89, 165, 0.25);
-            vertical-align: middle;
-        }
-        body.dark-theme .fuzzy-tag {
-            background: rgba(0, 229, 255, 0.12);
-            color: #00e5ff;
-            border-color: rgba(0, 229, 255, 0.30);
-        }
     </style>
 
     <style>
@@ -394,7 +375,7 @@
         <div class="download-card">
             <h3><svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-info"></use></svg> වැරදි නිවැරදි කිරීම් සහ යෝජනා</h3>
             <p>ශබ්දකෝෂය කියවනවිට හමුවූ වැරදි, අඩුපාඩු, හෝ එකතු කළ යුතු වචන අප වෙත දන්වන්න.</p>
-            <a href="feedback.html" class="feedback-link-btn" target="_blank" rel="noopener noreferrer">වැරදි නිවැරදි කිරීම් සහ යෝජනා</a>
+            <a href="#" class="feedback-link-btn" data-feedback>වැරදි නිවැරදි කිරීම් සහ යෝජනා</a>
         </div>
     </div>
 </div>
@@ -459,10 +440,9 @@
     <p>Safari පහළ පෙන්වන Share <span class="pwa-share-icon">⎋</span> බටනය click කර, පහළට scroll කර <b>"Add to Home Screen"</b> තෝරන්න.</p>
 </div>
 
-<!-- 🔑 Fuzzy Search සඳහා Fuse.js -->
-<script src="fuse.min.js"></script>
 <script src="fflate.min.js"></script>
 <script src="script.js"></script>
+<script src="feedback.js" defer></script>
 
 </body>
 </html>

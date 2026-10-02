@@ -133,7 +133,7 @@ function updateDictLoadUI() {
     if (dictLoadState.anyDataYet && searchInput.disabled) {
         searchInput.disabled = false;
         searchBtn.disabled = false;
-        searchInput.placeholder = "වචනයක් ඇතුළත් කරන්න...";
+        searchInput.placeholder = "වචනයක් ටයිප් කරන්න...";
     }
 
     const allDone = dictLoadState.done === dictLoadState.total;
@@ -1410,11 +1410,10 @@ function performSearch(query, exactOnly = false) {
 if (dict.id === 'pali') {
     const footer = document.createElement('div');
     footer.className = 'card-footer';
-    const encodedWord = encodeURIComponent(mainWord);
     footer.innerHTML = `<a class="correction-link"
-        href="feedback.html?word=${encodedWord}"
-        target="_blank"
-        rel="noopener noreferrer">
+        href="#"
+        data-feedback
+        data-feedback-word="${mainWord.replace(/"/g, '&quot;')}">
         <svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-edit"></use></svg>
         වැරදි නිවැරදි කරන්න
     </a>`;
