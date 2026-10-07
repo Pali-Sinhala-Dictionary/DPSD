@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pali-sin-dict-v4.19'; // v4.9: navigation fallback fix (feedback.html සේවය කිරීම)
+const CACHE_NAME = 'pali-sin-dict-v4.20'; // v4.9: navigation fallback fix (feedback.html සේවය කිරීම)
 
 const CACHE_ASSETS = [
   './',
@@ -10,6 +10,8 @@ const CACHE_ASSETS = [
   './fflate.min.js?v=1',
   './feedback.js?v=1',
   './AbhayaLibre-Regular.ttf?v=1',
+  ',/script.js',
+  ',/styles.css',
   './icon-192x192.png',
   './icon-512x512.png'
 ];
