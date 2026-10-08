@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pali-sin-dict-v4.23'; // v4.9: navigation fallback fix (feedback.html සේවය කිරීම)
+const CACHE_NAME = 'pali-sin-dict-v4.24'; // v4.24: Typo නිවැරදි කිරීම් සහ feedback.html ඉවත් කිරීම
 
 const CACHE_ASSETS = [
   './',
@@ -10,8 +10,8 @@ const CACHE_ASSETS = [
   './fflate.min.js?v=1',
   './feedback.js?v=1',
   './AbhayaLibre-Regular.ttf?v=1',
-  ',/script.js',
-  ',/styles.css',
+  './script.js', // නිවැරදි කරන ලදී (කලින් ,/script.js ලෙස තිබුණි)
+  './styles.css', // නිවැරදි කරන ලදී (කලින් ,/styles.css ලෙස තිබුණි)
   './icon-192x192.png?v=3',
   './icon-512x512.png?v=3'
 ];
@@ -64,15 +64,6 @@ self.addEventListener('fetch', (event) => {
   if (req.mode === 'navigate') {
     const url = new URL(req.url);
     const path = url.pathname;
-
-    // feedback.html ඉල්ලූ විට එයම ලබා දෙන්න
-    if (path.endsWith('/feedback.html') || path.endsWith('feedback.html')) {
-      event.respondWith(
-        caches.match('./feedback.html', { ignoreSearch: true })
-          .then((cached) => cached || fetch(req).catch(() => caches.match('./feedback.html')))
-      );
-      return;
-    }
 
     // Root (/) හෝ index.html ඉල්ලූ විට index.html ලබා දෙන්න
     if (path.endsWith('/') || path.endsWith('/index.html')) {
