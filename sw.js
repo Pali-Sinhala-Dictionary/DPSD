@@ -5,15 +5,15 @@ const CACHE_ASSETS = [
   './index.html',
   './manifest.json',
   './dictionary.zip',
-  './sinhala_english.zip?v=2',
+  './sinhala_english.zip?v=3',
   './inflections.zip?v=1',
   './fflate.min.js?v=1',
   './feedback.js?v=1',
   './AbhayaLibre-Regular.ttf?v=1',
   ',/script.js',
   ',/styles.css',
-  './icon-192x192.png?v=2',
-  './icon-512x512.png?v=2'
+  './icon-192x192.png?v=3',
+  './icon-512x512.png?v=3'
 ];
 
 // INSTALL
