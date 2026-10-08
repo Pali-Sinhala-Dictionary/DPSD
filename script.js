@@ -1582,89 +1582,151 @@ if ('serviceWorker' in navigator) {
 // PWA Install Banner (Android / Desktop / iOS)
 // =========================================================
 (function () {
-    const STORAGE_KEY = 'pwaInstallBannerSeen';
+    const INSTALLED_KEY  = 'pwaInstalled';
+    const DISMISS_KEY    = 'pwaInstallDismissedSession';
+
     let deferredPrompt = null;
+    let bannerShown    = false;
 
     function isStandalone() {
         return window.matchMedia('(display-mode: standalone)').matches ||
-            window.navigator.standalone === true || // iOS Safari
+            window.navigator.standalone === true ||
             document.referrer.startsWith('android-app://');
     }
 
     function isIOS() {
         const ua = window.navigator.userAgent;
-        const iOSDevice = /iPad|iPhone|iPod/.test(ua);
-        const iPadOS13Up = ua.includes('Macintosh') && 'ontouchend' in document;
+        const iOSDevice   = /iPad|iPhone|iPod/.test(ua);
+        const iPadOS13Up  = ua.includes('Macintosh') && 'ontouchend' in document;
         return iOSDevice || iPadOS13Up;
     }
 
-    function alreadySeen() {
-        try { return localStorage.getItem(STORAGE_KEY) === '1'; }
+    // Installed ද යන්න පරීක්ෂා කරයි (standalone හෝ කලින් install කර ඇත්නම්)
+    function isInstalled() {
+        if (isStandalone()) return true;
+        try { return localStorage.getItem(INSTALLED_KEY) === '1'; }
         catch (e) { return false; }
     }
 
-    function markSeen() {
-        try { localStorage.setItem(STORAGE_KEY, '1'); } catch (e) {}
+    function markInstalled() {
+        try { localStorage.setItem(INSTALLED_KEY, '1'); } catch (e) {}
+    }
+
+    // Session එක තුළ dismiss කර ඇත්නම් පමණක් නැවත නොපෙන්වයි
+    function wasDismissedThisSession() {
+        try { return sessionStorage.getItem(DISMISS_KEY) === '1'; }
+        catch (e) { return false; }
+    }
+
+    function markDismissedThisSession() {
+        try { sessionStorage.setItem(DISMISS_KEY, '1'); } catch (e) {}
     }
 
     function initInstallBanner() {
-        // Already installed, or user has already been shown the banner once: do nothing.
-        if (isStandalone() || alreadySeen()) return;
+        if (isInstalled()) return;              // ✅ install කර ඇත්නම් කවදාවත් නොපෙන්වයි
+        if (wasDismissedThisSession()) return;  // ✅ මෙම session එකේ dismiss කර ඇත්නම් නොපෙන්වයි
 
-        const banner = document.getElementById('pwa-install-banner');
-        const iosTip = document.getElementById('pwa-ios-tip');
-        const installBtn = document.getElementById('pwaInstallBtn');
-        const dismissBtn = document.getElementById('pwaDismissBtn');
+        const banner      = document.getElementById('pwa-install-banner');
+        const iosTip      = document.getElementById('pwa-ios-tip');
+        const installBtn  = document.getElementById('pwaInstallBtn');
+        const dismissBtn  = document.getElementById('pwaDismissBtn');
         const iosTipClose = document.getElementById('pwaIosTipClose');
-        const subText = document.getElementById('pwaBannerSub');
+        const subText     = document.getElementById('pwaBannerSub');
         if (!banner) return;
 
         function showBanner() {
-            if (alreadySeen()) return;
+            if (isInstalled() || bannerShown) return;
+            bannerShown = true;
             banner.classList.add('show');
         }
 
         function hideBanner() {
             banner.classList.remove('show');
-            iosTip.classList.remove('show');
-            markSeen();
+            if (iosTip) iosTip.classList.remove('show');
+        }
+
+        function hideBannerAndRemember() {
+            hideBanner();
+            markDismissedThisSession();
+        }
+
+        // ✅ Splash එක hide වූ වහාම banner එක show කරයි
+        function scheduleStartupShow() {
+            const splash = document.getElementById('splashScreen');
+
+            if (splash && !splash.classList.contains('hide')) {
+                const observer = new MutationObserver(() => {
+                    if (splash.classList.contains('hide')) {
+                        observer.disconnect();
+                        setTimeout(showBanner, 700);
+                    }
+                });
+                observer.observe(splash, { attributes: true, attributeFilter: ['class'] });
+
+                // Safety fallback — splash එක හසු නොවුනොත්
+                setTimeout(() => {
+                    if (!bannerShown && !isInstalled()) {
+                        observer.disconnect();
+                        showBanner();
+                    }
+                }, 6500);
+            } else {
+                setTimeout(showBanner, 700);
+            }
         }
 
         if (isIOS()) {
-            // iOS has no beforeinstallprompt — show manual instructions on tap.
-            subText.textContent = 'Home Screen එකට එක් කර, App එකක් ලෙසම භාවිතා කරන්න';
-            installBtn.textContent = 'Install';
-            installBtn.addEventListener('click', () => {
-                iosTip.classList.add('show');
-            });
-            iosTipClose.addEventListener('click', () => {
-                hideBanner();
-            });
-            // Show after a short delay so it doesn't collide with the splash screen.
-            setTimeout(showBanner, 2500);
+            // iOS — beforeinstallprompt නොමැති නිසා manual instructions
+            if (subText) subText.textContent =
+                'Home Screen එකට එක් කර, App එකක් ලෙසම භාවිතා කරන්න';
+            if (installBtn) installBtn.textContent = 'Install';
+
+            if (installBtn) {
+                installBtn.addEventListener('click', () => {
+                    if (iosTip) iosTip.classList.add('show');
+                });
+            }
+            if (iosTipClose) {
+                iosTipClose.addEventListener('click', hideBannerAndRemember);
+            }
+
+            scheduleStartupShow();
         } else {
             // Android / Desktop Chrome, Edge, etc.
+            // Banner එක startup එකේදී පෙන්වන නිසා event එක පසුව fire වුනත් අල්ලා ගනී
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 deferredPrompt = e;
-                setTimeout(showBanner, 1200);
             });
 
-            installBtn.addEventListener('click', async () => {
-                if (!deferredPrompt) {
-                    hideBanner();
-                    return;
-                }
-                deferredPrompt.prompt();
-                await deferredPrompt.userChoice;
-                deferredPrompt = null;
-                hideBanner();
-            });
+            if (installBtn) {
+                installBtn.addEventListener('click', async () => {
+                    if (!deferredPrompt) {
+                        // Browser එක තවම prompt එක offer කර නැත — session එකට hide
+                        hideBannerAndRemember();
+                        return;
+                    }
+                    deferredPrompt.prompt();
+                    let choice = null;
+                    try { choice = await deferredPrompt.userChoice; } catch (e) {}
+                    deferredPrompt = null;
+
+                    if (choice && choice.outcome === 'accepted') {
+                        markInstalled();   // ✅ install වූ පසු නැවත නොපෙන්වයි
+                    }
+                    hideBannerAndRemember();
+                });
+            }
+
+            scheduleStartupShow();
         }
 
-        dismissBtn.addEventListener('click', hideBanner);
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', hideBannerAndRemember);
+        }
 
         window.addEventListener('appinstalled', () => {
+            markInstalled();
             hideBanner();
         });
     }
@@ -1675,3 +1737,4 @@ if ('serviceWorker' in navigator) {
         initInstallBanner();
     }
 })();
+

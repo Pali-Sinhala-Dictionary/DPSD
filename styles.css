@@ -2522,32 +2522,40 @@ body.dark-theme .splash-loader::after {
     .splash-title     { font-size: 26px !important; }
     .splash-subtitle  { font-size: 11px; letter-spacing: 2px; }
     .splash-loader    { width: 140px; }
-}
-/* =========================================================
+}/* =========================================================
    PWA INSTALL BANNER
    ========================================================= */
 
 #pwa-install-banner {
     position: fixed;
-    bottom: 16px;
+    bottom: 76px;                /* ✅ Bottom nav (64px) එකට ඉහළින් */
     left: 50%;
     transform: translateX(-50%);
+
     background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
     color: #fff;
+
     padding: 14px 14px 14px 16px;
     border-radius: 18px;
+
     box-shadow:
         0 15px 40px rgba(139, 0, 0, 0.35),
         0 0 40px rgba(212, 175, 55, 0.25),
         inset 0 1px 2px rgba(255, 255, 255, 0.30);
+
     border: 1px solid var(--gold-light);
+
     display: none;
     align-items: center;
     gap: 12px;
-    z-index: 1200;
+
+    z-index: 2500;               /* ✅ Bottom nav (2000) එකට ඉහළින් */
+
     max-width: calc(100% - 32px);
     width: 420px;
+
     animation: pwaBannerSlideUp 0.4s ease-out;
+
     font-family: 'UN Abhaya', 'Noto Sans Sinhala', sans-serif;
 }
 #pwa-install-banner.show { display: flex; }
@@ -2635,20 +2643,27 @@ body.dark-theme #pwa-install-banner .pwa-install-btn { color: #5e35b1; }
 /* iOS "Add to Home Screen" instructions popover */
 #pwa-ios-tip {
     position: fixed;
-    bottom: 100px;
+    bottom: 170px;               /* ✅ Banner එකට ඉහළින් */
     left: 50%;
     transform: translateX(-50%);
+
     background: var(--card-bg-strong);
     color: var(--text-color);
+
     padding: 16px 18px;
     border-radius: 16px;
+
     box-shadow: 0 15px 40px var(--shadow-color, rgba(0,0,0,0.25));
     border: 1px solid var(--border-color);
+
     max-width: calc(100% - 32px);
     width: 320px;
+
     font-size: 13px;
     line-height: 1.55;
-    z-index: 1201;
+
+    z-index: 2600;               /* ✅ Banner එකට ඉහළින් */
+
     display: none;
     backdrop-filter: blur(10px);
     font-family: 'UN Abhaya', 'Noto Sans Sinhala', sans-serif;
@@ -2671,13 +2686,21 @@ body.dark-theme #pwa-install-banner .pwa-install-btn { color: #5e35b1; }
 }
 
 @media (max-width: 420px) {
-    #pwa-install-banner { padding: 12px; gap: 10px; }
+    #pwa-install-banner {
+        bottom: 72px;
+        padding: 12px;
+        gap: 10px;
+        width: calc(100% - 24px);
+    }
     #pwa-install-banner .pwa-banner-title { font-size: 12.5px; }
     #pwa-install-banner .pwa-banner-sub { font-size: 10px; }
     #pwa-install-banner .pwa-install-btn { padding: 8px 12px; font-size: 12px; }
+
+    #pwa-ios-tip {
+        bottom: 160px;
+        width: calc(100% - 24px);
+    }
 }
-
-
 /* =========================================================
    WORD CARD FOOTER — Correction link (Pali dict only)
    ========================================================= */
