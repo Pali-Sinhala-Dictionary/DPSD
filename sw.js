@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pali-sin-dict-v4.22'; // v4.9: navigation fallback fix (feedback.html සේවය කිරීම)
+const CACHE_NAME = 'pali-sin-dict-v4.23'; // v4.9: navigation fallback fix (feedback.html සේවය කිරීම)
 
 const CACHE_ASSETS = [
   './',
