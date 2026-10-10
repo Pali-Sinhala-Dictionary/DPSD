@@ -1,28 +1,50 @@
-const CACHE_NAME = 'pali-sin-dict-v4.25'; // v4.24: Typo නිවැරදි කිරීම් සහ feedback.html ඉවත් කිරීම
+const CACHE_NAME = 'pali-sin-dict-v4.26'; // v4.26: install වේගවත් කිරීම (විශාල zip files පසුබිමින් cache වේ)
 
-const CACHE_ASSETS = [
+// 1) අනිවාර්ය app shell — මේවා නැතිව SW install නොවේ (කුඩා files පමණි)
+const CORE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './dictionary.zip',
-  './sinhala_english.zip?v=4',
-  './inflections.zip?v=1',
-  './fflate.min.js?v=1',
-  './feedback.js?v=1',
-  './AbhayaLibre-Regular.ttf?v=1',
-  './script.js', // නිවැරදි කරන ලදී (කලින් ,/script.js ලෙස තිබුණි)
-  './styles.css', // නිවැරදි කරන ලදී (කලින් ,/styles.css ලෙස තිබුණි)
+  './script.js',
+  './styles.css',
   './icon-192x192.png?v=3',
   './icon-512x512.png?v=3'
 ];
+
+// 2) කුඩා, නමුත් එකක් නැතිවුණත් SW install අසාර්ථක නොවිය යුතු files
+const OPTIONAL_ASSETS = [
+  './fflate.min.js?v=1',
+  './feedback.js?v=1',
+  './AbhayaLibre-Regular.ttf?v=1'
+];
+
+// 3) විශාල දත්ත files — install අවහිර නොකර පසුබිමින් cache කරයි
+const BIG_ASSETS = [
+  './dictionary.zip',
+  './sinhala_english.zip?v=4',
+  './inflections.zip?v=1'
+];
+
+function warmBigAssets() {
+  return caches.open(CACHE_NAME).then((cache) =>
+    Promise.allSettled(
+      BIG_ASSETS.map(async (url) => {
+        const hit = await cache.match(url, { ignoreSearch: true });
+        if (!hit) await cache.add(url);
+      })
+    )
+  );
+}
 
 // INSTALL
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(CACHE_ASSETS))
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await cache.addAll(CORE_ASSETS);
+      await Promise.allSettled(OPTIONAL_ASSETS.map((u) => cache.add(u)));
+    })
   );
 });
 
@@ -38,6 +60,10 @@ self.addEventListener('activate', (event) => {
         })
       )
     ).then(() => self.clients.claim())
+     .then(() => {
+       // ❗ await නොකරයි — activation (සහ install prompt) ප්‍රමාද නොවීමට
+       warmBigAssets();
+     })
   );
 });
 
@@ -78,7 +104,6 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(req)
         .then((response) => {
-          // සාර්ථක response එකක් නම් cache කරන්න
           if (response && response.status === 200) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
@@ -88,7 +113,6 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Network fail නම් cache එකෙන් සොයන්න
           return caches.match(req, { ignoreSearch: true })
             .then((cached) => cached || caches.match('./index.html'));
         })
