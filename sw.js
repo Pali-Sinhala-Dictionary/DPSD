@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pali-sin-dict-v4.24'; // v4.24: Typo නිවැරදි කිරීම් සහ feedback.html ඉවත් කිරීම
+const CACHE_NAME = 'pali-sin-dict-v4.25'; // v4.24: Typo නිවැරදි කිරීම් සහ feedback.html ඉවත් කිරීම
 
 const CACHE_ASSETS = [
   './',
