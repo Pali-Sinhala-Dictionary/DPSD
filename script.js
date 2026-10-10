@@ -1562,6 +1562,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // Service Worker Registration
 if ('serviceWorker' in navigator) {
+    // ✅ පළමු වරට install වන විට (කලින් controller නැති විට) page එක reload නොකරන්න.
+    //    එසේ නොකළොත් reload වීමෙන් beforeinstallprompt event එක සහ banner එක නැති වී යයි.
+    const hadController = !!navigator.serviceWorker.controller;
+
     navigator.serviceWorker.register('sw.js')
         .then(reg => {
             console.log('Service Worker Registered');
@@ -1573,6 +1577,7 @@ if ('serviceWorker' in navigator) {
 
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController) return;   // පළමු install එක — reload අවශ්‍ය නැත
         if (refreshing) return;
         refreshing = true;
         window.location.reload();
@@ -1585,8 +1590,28 @@ if ('serviceWorker' in navigator) {
     const INSTALLED_KEY  = 'pwaInstalled';
     const DISMISS_KEY    = 'pwaInstallDismissedSession';
 
-    let deferredPrompt = null;
+    // ✅ beforeinstallprompt event එක හැකි තරම් කලින් අල්ලා ගැනීම.
+    //    (index.html <head> හි දැමූ කුඩා script එකෙන් අල්ලා ගත් event එකත් මෙහිදී ගනී)
+    let deferredPrompt = window.__pwaDeferredPrompt || null;
     let bannerShown    = false;
+    let onPromptReady  = null;   // banner init වූ පසු set වේ
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        window.__pwaDeferredPrompt = e;
+        // මෙම event එක එන්නේ app එක install කර නැති විට පමණි — පැරණි 'installed' ලකුණ ඉවත් කරයි
+        try { localStorage.removeItem(INSTALLED_KEY); } catch (err) {}
+        if (onPromptReady) onPromptReady();
+    });
+
+    window.addEventListener('appinstalled', () => {
+        deferredPrompt = null;
+        window.__pwaDeferredPrompt = null;
+        try { localStorage.setItem(INSTALLED_KEY, '1'); } catch (err) {}
+        const b = document.getElementById('pwa-install-banner');
+        if (b) b.classList.remove('show');
+    });
 
     function isStandalone() {
         return window.matchMedia('(display-mode: standalone)').matches ||
@@ -1634,6 +1659,9 @@ if ('serviceWorker' in navigator) {
         const subText     = document.getElementById('pwaBannerSub');
         if (!banner) return;
 
+        const defaultSubText = subText ? subText.textContent : '';
+        let manualHintShown  = false;
+
         function showBanner() {
             if (isInstalled() || bannerShown) return;
             bannerShown = true;
@@ -1649,6 +1677,22 @@ if ('serviceWorker' in navigator) {
             hideBanner();
             markDismissedThisSession();
         }
+
+        // Browser එකේ install prompt එක තවම නැති විට banner එක නොනැවතී
+        // අතින් install කරන ආකාරය පෙන්වයි (පෙර: නිකම්ම banner එක නැති වී යයි)
+        function showManualHint() {
+            manualHintShown = true;
+            if (subText) {
+                subText.textContent =
+                    'Chrome මෙනුව (⋮) විවෘත කර "Install app" හෝ "Add to Home screen" තෝරන්න';
+            }
+        }
+
+        // Prompt එක පසුව ලැබුණොත් සාමාන්‍ය පණිවිඩය නැවත පෙන්වයි
+        onPromptReady = () => {
+            if (manualHintShown && subText) subText.textContent = defaultSubText;
+            manualHintShown = false;
+        };
 
         // ✅ Splash එක hide වූ වහාම banner එක show කරයි
         function scheduleStartupShow() {
@@ -1693,28 +1737,35 @@ if ('serviceWorker' in navigator) {
             scheduleStartupShow();
         } else {
             // Android / Desktop Chrome, Edge, etc.
-            // Banner එක startup එකේදී පෙන්වන නිසා event එක පසුව fire වුනත් අල්ලා ගනී
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-            });
-
             if (installBtn) {
                 installBtn.addEventListener('click', async () => {
                     if (!deferredPrompt) {
-                        // Browser එක තවම prompt එක offer කර නැත — session එකට hide
-                        hideBannerAndRemember();
+                        // Prompt එක තවම නැත — banner එක තබාගෙන උපදෙස් පෙන්වන්න
+                        showManualHint();
                         return;
                     }
-                    deferredPrompt.prompt();
-                    let choice = null;
-                    try { choice = await deferredPrompt.userChoice; } catch (e) {}
+
+                    // ⚠️ prompt() ක්ලික් එකේදීම (await එකකට පෙර) කැඳවිය යුතුය
+                    const promptEvent = deferredPrompt;
                     deferredPrompt = null;
+                    window.__pwaDeferredPrompt = null;
+
+                    let choice = null;
+                    try {
+                        await promptEvent.prompt();
+                        choice = await promptEvent.userChoice;
+                    } catch (err) {
+                        console.warn('Install prompt failed:', err);
+                    }
 
                     if (choice && choice.outcome === 'accepted') {
                         markInstalled();   // ✅ install වූ පසු නැවත නොපෙන්වයි
+                        hideBannerAndRemember();
+                    } else if (choice) {
+                        hideBannerAndRemember();   // පරිශීලකයා cancel කළා
+                    } else {
+                        showManualHint();          // prompt() අසාර්ථක විය
                     }
-                    hideBannerAndRemember();
                 });
             }
 
@@ -1724,11 +1775,6 @@ if ('serviceWorker' in navigator) {
         if (dismissBtn) {
             dismissBtn.addEventListener('click', hideBannerAndRemember);
         }
-
-        window.addEventListener('appinstalled', () => {
-            markInstalled();
-            hideBanner();
-        });
     }
 
     if (document.readyState === 'loading') {
@@ -1737,4 +1783,3 @@ if ('serviceWorker' in navigator) {
         initInstallBanner();
     }
 })();
-
