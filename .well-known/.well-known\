@@ -1,1 +1,9 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.pali_sinhala_dictionary.twa",
+        "sha256_cert_fingerprints": ["B8:9E:B6:86:10:0C:EF:34:42:28:9D:03:C2:D4:8F:C0:96:0A:87:42:F0:A8:74:9A:4C:CF:6F:23:8F:C6:D2:C0"]
+      }
+    }]
 
