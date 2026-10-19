@@ -1,7 +1,7 @@
 // සියලු ශබ්දකෝෂ Configuration (Oxford Dictionary ඉවත් කර ඇත)
 let availableDicts = [
     { id: 'pali', name: 'පාලි - සිංහල ශබ්දකෝෂය', path: 'dictionary.zip', enabled: true, data: [], _loaded: false },
-    { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.zip', enabled: true, data: [], _loaded: false }
+    { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.zip', enabled: true, data: [], _loaded: false, englishMeanings: true }
 ];
 
 const searchInput = document.getElementById('searchInput');
@@ -162,7 +162,12 @@ function onAllDictsLoaded() {
     updateDictLoadUI();
 
     // Inflections index එක පසුබිමින් warm up කරන්න
-    const warmUpInflections = () => { getInflectionIndex().catch(() => {}); };
+    const warmUpInflections = () => {
+        getInflectionIndex().catch(() => {});
+        availableDicts.forEach(d => {
+            if (d.enabled && d.englishMeanings && d._loaded && d.data.length) ensureEnglishIndex(d);
+        });
+    };
     if ('requestIdleCallback' in window) {
         requestIdleCallback(warmUpInflections);
     } else {
@@ -679,6 +684,9 @@ const INFLECTION_DATA_PATH = 'inflections.zip?v=1';
 // නිදහස් වේ. එමගින් දත්ත පූරණය වන අතරතුරත් ටයිප් කිරීම ක්ෂණිකව සිදු වේ.
 async function buildLazyInflectionIndex(text) {
     const index = new Map();
+    // ප්‍රතිලෝම index: වර නැගුණු රූපය (පළමු තීරුව) -> පේළියේ ආරම්භක offset
+    // (එකක් නම් number එකක්, කිහිපයක් නම් number array එකක්)
+    const formIndex = new Map();
     const len = text.length;
     let lineStart = 0;
     let firstLine = true;
@@ -695,6 +703,15 @@ async function buildLazyInflectionIndex(text) {
                     let bucket = index.get(headword);
                     if (!bucket) { bucket = []; index.set(headword, bucket); }
                     bucket.push([lineStart, lineEnd]);
+
+                    const firstComma = text.indexOf(',', lineStart);
+                    if (firstComma > lineStart && firstComma < lastComma) {
+                        const form = text.slice(lineStart, firstComma);
+                        const prev = formIndex.get(form);
+                        if (prev === undefined) formIndex.set(form, lineStart);
+                        else if (typeof prev === 'number') formIndex.set(form, [prev, lineStart]);
+                        else prev.push(lineStart);
+                    }
                 }
             }
             firstLine = false;
@@ -706,7 +723,7 @@ async function buildLazyInflectionIndex(text) {
             lastYield = performance.now();
         }
     }
-    return index;
+    return { index, formIndex };
 }
 
 function lazyInflectionLookup(state, headword) {
@@ -719,6 +736,7 @@ function lazyInflectionLookup(state, headword) {
 }
 
 let inflectionIndexPromise = null;
+let inflectionState = null;   // index පූරණය වූ පසු { text, index, formIndex }
 
 function getInflectionIndex() {
     if (inflectionIndexPromise) return inflectionIndexPromise;
@@ -735,8 +753,11 @@ function getInflectionIndex() {
             try {
                 const bytes = unzipFirstEntry(xhr.response);
                 const text = new TextDecoder('utf-8').decode(bytes);
-                const index = await buildLazyInflectionIndex(text);
-                resolve({ text, index });
+                const built = await buildLazyInflectionIndex(text);
+                const state = { text, index: built.index, formIndex: built.formIndex };
+                inflectionState = state;
+                resolve(state);
+                refreshSuggestionsIfTyping();
             } catch (err) {
                 reject(err);
             }
@@ -763,6 +784,188 @@ const INFL_PERSON_ORDER = ['1st', '2nd', '3rd'];
 const INFL_PERSON_LABELS = { '1st': 'උත්තම පුරුෂ', '2nd': 'මධ්‍යම පුරුෂ', '3rd': 'ප්‍රථම පුරුෂ' };
 const INFL_PRON_PERSON_ORDER = ['1st', '2nd', 'dual'];
 const INFL_PRON_PERSON_LABELS = { '1st': 'උත්තම පුරුෂ (මම)', '2nd': 'මධ්‍යම පුරුෂ (ඔබ)', 'dual': 'උභ (දෙදෙනා)' };
+
+// ================================================================
+// වර නැගුණු රූපයෙන් (inflected form) මූල වචනය සෙවීම
+// උදා: "මය්හං" -> අහං  ("අහං ශබ්දයේ චතුත්ථී ... ස්වරූපය, අහං බලන්න")
+// ================================================================
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function joinSi(list) {
+    if (list.length <= 1) return list.join('');
+    return list.slice(0, -1).join(', ') + ' හා ' + list[list.length - 1];
+}
+
+// inflections.csv හි පේළි -> object (headword = අවසාන තීරුව)
+function lazyInflectionFormLookup(state, form) {
+    const entry = state.formIndex.get(form);
+    if (entry === undefined) return [];
+    const starts = (typeof entry === 'number') ? [entry] : entry;
+    const out = [];
+    for (let i = 0; i < starts.length; i++) {
+        const s = starts[i];
+        let e = state.text.indexOf('\n', s);
+        if (e === -1) e = state.text.length;
+        if (e > s && state.text[e - 1] === '\r') e--;
+        const cols = state.text.slice(s, e).split(',');
+        if (cols.length < 6) continue;
+        out.push({
+            inflected: cols[0], pos: cols[1], category: cols[2],
+            subcase: cols[3], number: cols[4], headword: cols[cols.length - 1]
+        });
+    }
+    return out;
+}
+
+// පාලි ශබ්දකෝෂයේ මූල වචන set එක (දත්ත ප්‍රමාණය වෙනස් වූ විට පමණක් නැවත සාදයි)
+let paliHeadSetCache = { dict: null, size: -1, set: null };
+function getPaliHeadwordSet(dict) {
+    if (paliHeadSetCache.dict === dict && paliHeadSetCache.size === dict.data.length) {
+        return paliHeadSetCache.set;
+    }
+    const set = new Set();
+    for (let i = 0; i < dict.data.length; i++) {
+        const it = dict.data[i];
+        if (it && it.word) set.add(it.word);
+    }
+    paliHeadSetCache = { dict, size: dict.data.length, set };
+    return set;
+}
+
+// එක් මූල වචනයකට අදාළ පේළි -> "චතුත්ථී හා ෂෂ්ඨී විභක්ති ඒක වචන" වැනි විස්තරයක්
+function describeInflectionRows(headword, rows) {
+    const nomGroups = new Map();
+    const verbDescs = [];
+    const otherDescs = [];
+    const seenVerb = new Set();
+    const seenOther = new Set();
+
+    rows.forEach(r => {
+        if (INFL_CASE_ORDER.indexOf(r.subcase) !== -1) {
+            // නාම පද / සර්වනාම: විභක්තිය + වචනය
+            const gender = INFL_GENDER_LABELS[r.category] ? r.category : '';
+            const key = gender + '|' + r.number;
+            let g = nomGroups.get(key);
+            if (!g) { g = { gender, number: r.number, cases: new Set() }; nomGroups.set(key, g); }
+            g.cases.add(r.subcase);
+        } else if (INFL_PERSON_ORDER.indexOf(r.subcase) !== -1) {
+            // ක්‍රියා පද: කාලය (විභක්තිය) + පුරුෂ + වචනය
+            const reflx = /^reflx/.test(r.category);
+            const tense = r.category.replace(/^reflx\s*/, '');
+            const text = (INFL_TENSE_LABELS[tense] || tense) + ' විභක්ති ' +
+                INFL_PERSON_LABELS[r.subcase] + ' ' +
+                (INFL_NUMBER_LABELS[r.number] || r.number) +
+                (reflx ? ' (අත්තනොපද)' : '');
+            if (!seenVerb.has(text)) { seenVerb.add(text); verbDescs.push(text); }
+        } else {
+            const text = [r.category, r.subcase, r.number].filter(Boolean).join(' ');
+            if (text && !seenOther.has(text)) { seenOther.add(text); otherDescs.push(text); }
+        }
+    });
+
+    const groups = Array.from(nomGroups.values()).sort((a, b) => {
+        const ga = INFL_GENDER_ORDER.indexOf(a.gender), gb = INFL_GENDER_ORDER.indexOf(b.gender);
+        if (ga !== gb) return ga - gb;
+        return (a.number === 'sg' ? 0 : 1) - (b.number === 'sg' ? 0 : 1);
+    });
+    // එකම මූල වචනයට ලිංග කිහිපයක් ගැළපෙන විට පමණක් ලිංගය සඳහන් කරයි
+    const showGender = new Set(groups.map(g => g.gender).filter(Boolean)).size > 1;
+
+    const nomDescs = groups.map(g => {
+        const cases = INFL_CASE_ORDER.filter(c => g.cases.has(c)).map(c => INFL_CASE_LABELS[c]);
+        return (showGender && g.gender ? INFL_GENDER_LABELS[g.gender] + ' ' : '') +
+            joinSi(cases) + ' විභක්ති ' + (INFL_NUMBER_LABELS[g.number] || g.number);
+    });
+
+    const all = nomDescs.concat(verbDescs, otherDescs);
+    return {
+        headword,
+        kind: (verbDescs.length && !nomDescs.length) ? 'ක්‍රියා පදයේ' : 'ශබ්දයේ',
+        desc: all.length ? all.join(' හෝ ') : 'වර නැගුණු'
+    };
+}
+
+// ටයිප් කළ වචනය (හෝ එහි Singlish හැරවුම්) වර නැගුණු රූපයක් නම්, එහි මූල වචන සොයයි.
+// මූල වචනය පාලි ශබ්දකෝෂයේ තිබෙන විට පමණක් ප්‍රතිඵල ලැබේ.
+function findInflectionRefs(query, possibleMatches) {
+    const state = inflectionState;
+    if (!state) return [];
+    const paliDict = availableDicts.find(d => d.id === 'pali' && d.enabled);
+    if (!paliDict || !paliDict.data || paliDict.data.length === 0) return [];
+    const headSet = getPaliHeadwordSet(paliDict);
+
+    const seen = new Set();
+    const candidates = [];
+    [query].concat(possibleMatches || []).forEach(c => {
+        if (c && !seen.has(c)) { seen.add(c); candidates.push(c); }
+    });
+
+    const refs = [];
+    for (let i = 0; i < candidates.length; i++) {
+        const cand = candidates[i];
+        const rows = lazyInflectionFormLookup(state, cand);
+        if (!rows.length) continue;
+
+        const byHead = new Map();
+        rows.forEach(r => {
+            const hw = r.headword.normalize('NFC');
+            if (hw === cand || !headSet.has(hw)) return;   // තමාටම යොමු නොකරයි
+            if (!byHead.has(hw)) byHead.set(hw, []);
+            byHead.get(hw).push(r);
+        });
+        if (!byHead.size) continue;
+
+        refs.push({
+            form: cand,
+            entries: Array.from(byHead.entries()).map(([hw, rs]) => describeInflectionRows(hw, rs))
+        });
+        if (refs.length >= 6) break;
+    }
+    return refs;
+}
+
+function buildInflectionRefCard(ref) {
+    const paliDict = availableDicts.find(d => d.id === 'pali');
+    const card = document.createElement('div');
+    card.className = 'word-card inflection-ref-card';
+    card.innerHTML = `<div class="main-word-title">${escapeHtml(ref.form)} <span class="dict-tag">${escapeHtml(paliDict ? paliDict.name : 'පාලි')}</span></div>`;
+
+    ref.entries.forEach(entry => {
+        const hw = escapeHtml(entry.headword);
+        const row = document.createElement('div');
+        row.className = 'meaning-row';
+        row.innerHTML = `<div class="inflection-ref-text">${hw} ${entry.kind} ${escapeHtml(entry.desc)} ස්වරූපය, ` +
+            `<a href="#" class="inflection-ref-link" data-word="${hw}">${hw}</a> බලන්න</div>`;
+        card.appendChild(row);
+    });
+    return card;
+}
+
+// Index එක සූදානම් වූ පසු: පරිශීලකයා තවමත් ටයිප් කරමින් සිටී නම් suggestions යළි ගණනය කරයි
+function refreshSuggestionsIfTyping() {
+    try {
+        if (document.activeElement === searchInput && searchInput.value.trim()) updateSuggestions();
+    } catch (e) { /* ignore */ }
+}
+
+// "මූල වචනය බලන්න" සබැඳිය ක්ලික් කළ විට එම වචනය සොයයි
+resultsContainer.addEventListener('click', function (e) {
+    const link = e.target && e.target.closest ? e.target.closest('.inflection-ref-link') : null;
+    if (!link) return;
+    e.preventDefault();
+    const word = link.getAttribute('data-word');
+    if (!word) return;
+    searchInput.value = word;
+    suggestionsBox.style.display = 'none';
+    performSearch(word, true);
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (err) { window.scrollTo(0, 0); }
+});
 
 // ================================================================
 // Regular-declension fallback generator
@@ -1262,11 +1465,159 @@ window.toggleInflection = function (id, headword) {
         });
 };
 
+// ================================================================
+// ඉංග්‍රීසි වචන index — සිංහල-ඉංග්‍රීසි ශබ්දකෝෂයේ "තේරුම" තුළ ඇති ඉංග්‍රීසි වචන
+// ඉංග්‍රීසියෙන් ටයිප් කළ විට (උදා: dog) suggestions සහ සෙවුම සඳහා යොදා ගනී.
+// ================================================================
+const EN_TOKEN_RE = /[a-z]+(?:['’-][a-z]+)*/g;
+const EN_WORD_RE = /^[a-z]+(?:['’-][a-z]+)*$/;
+const EN_LEADING = new Set(['to', 'a', 'an', 'the']);
+const EN_STOPWORDS = new Set(('a an the of to in on at for and or but is are was were be been being with by from as ' +
+    'it its this that these those which who whom whose what when where how not no nor so than then there their them ' +
+    'they he she his her him we us our you your i me my am do does did have has had can could may might shall should ' +
+    'will would also etc one esp usually often').split(' '));
+
+// dict.id -> { data, size, ready, promise, words: Map(word -> {best, items[]}), sorted: [] }
+// items[] හි අගය = (අයිතම index << 2) | rank   (rank 3 = තනි වචන තේරුම, 2 = තේරුමේ මුල් වචනය, 1 = වෙනත්)
+const englishIndexes = {};
+
+function indexEnglishMeaning(words, itemIdx, meaning) {
+    const text = meaning.replace(/<[^>]*>/g, ' ').replace(/&[a-z#0-9]+;/gi, ' ').toLowerCase();
+    const segments = text.split(/[;,\n\/()\[\]:]|\s\d{1,2}[.)]\s/);
+    for (let sIdx = 0; sIdx < segments.length; sIdx++) {
+        const toks = segments[sIdx].match(EN_TOKEN_RE);
+        if (!toks) continue;
+        let from = 0;
+        while (from < toks.length - 1 && EN_LEADING.has(toks[from])) from++;   // "to run", "a dog"
+        const n = toks.length - from;
+        for (let t = from; t < toks.length; t++) {
+            const w = toks[t];
+            if (w.length < 2) continue;
+            let rank;
+            if (n === 1) rank = 3;
+            else if (EN_STOPWORDS.has(w)) continue;
+            else if (t === from && n <= 4) rank = 2;
+            else rank = 1;
+
+            let rec = words.get(w);
+            if (!rec) { rec = { best: 0, items: [] }; words.set(w, rec); }
+            if (rank > rec.best) rec.best = rank;
+            const items = rec.items;
+            const lastPos = items.length - 1;
+            if (lastPos >= 0 && (items[lastPos] >> 2) === itemIdx) {
+                if ((items[lastPos] & 3) < rank) items[lastPos] = (itemIdx << 2) | rank;
+            } else {
+                items.push((itemIdx << 2) | rank);
+            }
+        }
+    }
+}
+
+async function buildEnglishIndexAsync(st) {
+    const data = st.data;
+    let lastYield = performance.now();
+    for (let i = 0; i < data.length; i++) {
+        const it = data[i];
+        if (it && it.meaning) indexEnglishMeaning(st.words, i, it.meaning);
+        if ((i & 0x1FF) === 0 && performance.now() - lastYield > 12) {
+            await new Promise(r => setTimeout(r, 0));   // ටයිප් කිරීම අවහිර නොවීමට
+            lastYield = performance.now();
+        }
+    }
+    st.sorted = Array.from(st.words.keys()).sort();
+}
+
+// දත්ත සම්පූර්ණයෙන් පූරණය වූ ශබ්දකෝෂයක් සඳහා පමණක් ඇමතිය යුතුයි
+function ensureEnglishIndex(dict) {
+    let st = englishIndexes[dict.id];
+    if (st && st.data === dict.data && st.size === dict.data.length) return st;
+    st = { data: dict.data, size: dict.data.length, ready: false, words: new Map(), sorted: [], promise: null };
+    englishIndexes[dict.id] = st;
+    st.promise = buildEnglishIndexAsync(st).then(() => {
+        st.ready = true;
+        refreshSuggestionsIfTyping();
+    });
+    st.promise.catch(err => { console.error('english index failed:', err); });
+    return st;
+}
+
+function englishHint(st, rec) {
+    const picked = [];
+    for (let r = 3; r >= 1 && picked.length < 2; r--) {
+        for (let k = 0; k < rec.items.length && picked.length < 2; k++) {
+            const v = rec.items[k];
+            if ((v & 3) !== r) continue;
+            const hw = st.data[v >> 2].word;
+            if (hw && picked.indexOf(hw) === -1) picked.push(hw);
+        }
+    }
+    return picked.join(', ');
+}
+
+// ටයිප් කරන ඉංග්‍රීසි අකුරු වලට ගැළපෙන ඉංග්‍රීසි වචන (උදා: "do" -> dog → බල්ලා)
+function getEnglishSuggestions(rawQuery, limit) {
+    if (rawQuery.length < 2 || !EN_WORD_RE.test(rawQuery)) return [];
+    const cands = [];
+    availableDicts.forEach(dict => {
+        if (!dict.enabled || !dict.englishMeanings || !dict._loaded || !dict.data.length) return;
+        const st = ensureEnglishIndex(dict);
+        if (!st.ready) return;
+        const sorted = st.sorted;
+        let lo = 0, hi = sorted.length;
+        while (lo < hi) {
+            const mid = (lo + hi) >> 1;
+            if (sorted[mid] < rawQuery) lo = mid + 1; else hi = mid;
+        }
+        for (let i = lo; i < sorted.length && sorted[i].startsWith(rawQuery); i++) {
+            cands.push({ w: sorted[i], rec: st.words.get(sorted[i]), st });
+        }
+    });
+    cands.sort((a, b) =>
+        ((b.w === rawQuery) - (a.w === rawQuery)) ||
+        (b.rec.best - a.rec.best) ||
+        (a.w.length - b.w.length) ||
+        (a.w < b.w ? -1 : a.w > b.w ? 1 : 0));
+    const seen = new Set();
+    const out = [];
+    for (let i = 0; i < cands.length && out.length < limit; i++) {
+        if (seen.has(cands[i].w)) continue;
+        seen.add(cands[i].w);
+        out.push({ word: cands[i].w, hint: englishHint(cands[i].st, cands[i].rec) });
+    }
+    return out;
+}
+
+// සම්පූර්ණ ඉංග්‍රීසි වචනයක් (උදා: dog) තේරුමේ ඇති ශබ්දකෝෂ අයිතම
+function englishExactMatches(dict, lowerQuery, token, query, exactOnly) {
+    if (!dict._loaded || !dict.data.length || !EN_WORD_RE.test(lowerQuery)) return [];
+    const st = ensureEnglishIndex(dict);
+    if (!st.ready) {
+        // index එක සූදානම් වූ පසු මෙම සෙවුම නැවත ක්‍රියාත්මක කරයි
+        st.promise.then(() => { if (token === searchToken) performSearch(query, exactOnly); }).catch(() => {});
+        return [];
+    }
+    const rec = st.words.get(lowerQuery);
+    if (!rec) return [];
+    const strongOnly = rec.best >= 2;   // හොඳ ගැළපීම් තිබේ නම් අහඹු සඳහන් මඟ හරියි
+    const vals = rec.items.filter(v => !strongOnly || (v & 3) >= 2);
+    vals.sort((a, b) => ((b & 3) - (a & 3)) || ((a >> 2) - (b >> 2)));
+    return vals.slice(0, 40).map(v => st.data[v >> 2]);
+}
+
 // --- Search Input & Suggestions ---
 let searchTimeout;
-searchInput.addEventListener('input', function() {
+
+// වර නැගුණු රූප සඳහා suggestions (උපරිම 3ක්). මූල වචන ලැයිස්තුවේ දැනටමත් ඇති ඒවා මඟ හරියි.
+function getInflectionSuggestions(rawQuery, possibleMatches, headMatchSet) {
+    return findInflectionRefs(rawQuery, possibleMatches)
+        .filter(r => !headMatchSet.has(r.form))
+        .slice(0, 3)
+        .map(r => ({ word: r.form, hint: r.entries.map(e => e.headword).join(', ') }));
+}
+
+function updateSuggestions() {
     clearTimeout(searchTimeout);
-    const rawQuery = this.value.trim().toLowerCase().replace(/[0-9]/g, '').normalize('NFC');
+    const rawQuery = searchInput.value.trim().toLowerCase().replace(/[0-9]/g, '').normalize('NFC');
     const possibleMatches = isSinglishQuery(rawQuery) ? getPossibleMatches(rawQuery) : [];
 
     suggestionsBox.innerHTML = "";
@@ -1289,16 +1640,35 @@ searchInput.addEventListener('input', function() {
             }
         });
 
-        const finalMatches = Array.from(matches).slice(0, 10);
-        if (finalMatches.length > 0) {
-            finalMatches.forEach(word => {
+        // අනුපිළිවෙල: වර නැගුණු රූප (මය්හං → අහං), මූල වචන 3ක්, ඉංග්‍රීසි වචන (dog → බල්ලා), ඉතිරි මූල වචන.
+        // (suggestions box එක උපරිම උසට සීමා වන නිසා, ඉංග්‍රීසි වචන පහළට scroll නොකර පෙනීමට මැදට දමයි)
+        const english = getEnglishSuggestions(rawQuery, 4);
+        const inflSug = getInflectionSuggestions(rawQuery, possibleMatches, matches);
+        const headSug = Array.from(matches).map(w => ({ word: w, hint: '' }));
+        const suggestions = inflSug
+            .concat(headSug.slice(0, 3), english, headSug.slice(3))
+            .slice(0, 10);
+
+        if (suggestions.length > 0) {
+            suggestions.forEach(sug => {
                 const div = document.createElement('div');
                 div.className = 'suggestion-item';
-                div.innerText = word;
+
+                const main = document.createElement('span');
+                main.textContent = sug.word;
+                div.appendChild(main);
+
+                if (sug.hint) {
+                    const hint = document.createElement('span');
+                    hint.className = 'suggestion-hint';
+                    hint.textContent = '→ ' + sug.hint;
+                    div.appendChild(hint);
+                }
+
                 div.onclick = () => {
-                    searchInput.value = word;
+                    searchInput.value = sug.word;
                     suggestionsBox.style.display = "none";
-                    performSearch(word, true);
+                    performSearch(sug.word, true);
                 };
                 suggestionsBox.appendChild(div);
             });
@@ -1307,7 +1677,9 @@ searchInput.addEventListener('input', function() {
             suggestionsBox.style.display = "none";
         }
     }, 150);
-});
+}
+
+searchInput.addEventListener('input', updateSuggestions);
 
 document.addEventListener('click', function(e) {
     if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
@@ -1324,10 +1696,24 @@ searchInput.addEventListener('keypress', (e) => {
 });
 
 // --- Search Logic ---
+let searchToken = 0;
+
 function performSearch(query, exactOnly = false) {
     if (!query) return;
+    const myToken = ++searchToken;
     const lowerQuery = query.toLowerCase().replace(/[0-9]/g, '').trim().normalize('NFC');
     const possibleMatches = isSinglishQuery(lowerQuery) ? getPossibleMatches(lowerQuery) : [];
+
+    // වර නැගීම් index එක තවම පූරණය වී නොමැති නම්, පූරණය වූ පසු මෙම සෙවුම නැවත ක්‍රියාත්මක කරයි
+    if (!inflectionState) {
+        getInflectionIndex()
+            .then(() => { if (myToken === searchToken && inflectionState) performSearch(query, exactOnly); })
+            .catch(() => {});
+    }
+
+    // ටයිප් කළ වචනය වර නැගුණු රූපයක් නම් එහි මූල වචන (cross-reference)
+    const inflRefs = findInflectionRefs(lowerQuery, possibleMatches);
+    const hasInflRefs = inflRefs.length > 0;
 
     resultsContainer.innerHTML = "";
     let hasResults = false;
@@ -1341,7 +1727,16 @@ function performSearch(query, exactOnly = false) {
             return w === lowerQuery || possibleMatches.some(pm => w === pm);
         });
 
-        if (matches.length === 0 && !exactOnly) {
+        // ඉංග්‍රීසි වචනයක් ටයිප් කළ විට: තේරුමේ ඒ වචනය ඇති අයිතම (සිංහල-ඉංග්‍රීසි ශබ්දකෝෂය)
+        if (dict.englishMeanings) {
+            const enItems = englishExactMatches(dict, lowerQuery, myToken, query, exactOnly);
+            if (enItems.length) {
+                const have = new Set(matches);
+                enItems.forEach(it => { if (!have.has(it)) matches.push(it); });
+            }
+        }
+
+        if (matches.length === 0 && !exactOnly && !hasInflRefs) {
             matches = dict.data.filter(item => {
                 if (!item || !item.word) return false;
                 const w = item.word.toLowerCase();
@@ -1349,7 +1744,7 @@ function performSearch(query, exactOnly = false) {
             });
         }
 
-        if (matches.length === 0 && !exactOnly) {
+        if (matches.length === 0 && !exactOnly && !hasInflRefs) {
             matches = dict.data.filter(item => {
                 if (!item || !item.meaning) return false;
                 const m = item.meaning.toLowerCase();
@@ -1424,6 +1819,11 @@ if (dict.id === 'pali') {
             });
         }
     });
+
+    if (hasInflRefs) {
+        inflRefs.forEach(ref => resultsContainer.appendChild(buildInflectionRefCard(ref)));
+        hasResults = true;
+    }
 
     if (!hasResults) {
         resultsContainer.innerHTML = '<div class="no-results">ගැලපෙන වචන කිසිවක් හමු නොවීය.</div>';

@@ -2747,3 +2747,33 @@ body.dark-theme .correction-link:hover {
     background: rgba(179, 136, 255, 0.20);
     border-color: rgba(179, 136, 255, 0.55);
 }
+
+
+/* =========================================================
+   INFLECTED-FORM SUGGESTIONS & CROSS-REFERENCE CARD
+   ========================================================= */
+
+.suggestion-hint {
+    font-size: 14px;
+    font-weight: normal;
+    color: var(--text-secondary);
+    margin-left: 10px;
+    white-space: nowrap;
+}
+
+.suggestion-item:hover .suggestion-hint {
+    font-weight: normal;
+}
+
+.inflection-ref-text {
+    margin-top: 5px;
+    line-height: 1.7;
+}
+
+.inflection-ref-link {
+    color: var(--primary-color);
+    font-weight: bold;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
