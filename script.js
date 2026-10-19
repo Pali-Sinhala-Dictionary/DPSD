@@ -1,7 +1,7 @@
 // සියලු ශබ්දකෝෂ Configuration (Oxford Dictionary ඉවත් කර ඇත)
 let availableDicts = [
     { id: 'pali', name: 'පාලි - සිංහල ශබ්දකෝෂය', path: 'dictionary.zip', enabled: true, data: [], _loaded: false },
-    { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.zip', enabled: true, data: [], _loaded: false, englishMeanings: true }
+    { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.zip', enabled: true, data: [], _loaded: false }
 ];
 
 const searchInput = document.getElementById('searchInput');
@@ -133,7 +133,7 @@ function updateDictLoadUI() {
     if (dictLoadState.anyDataYet && searchInput.disabled) {
         searchInput.disabled = false;
         searchBtn.disabled = false;
-        searchInput.placeholder = "වචනයක් ටයිප් කරන්න...";
+        searchInput.placeholder = "වචනයක් ඇතුළත් කරන්න...";
     }
 
     const allDone = dictLoadState.done === dictLoadState.total;
@@ -162,12 +162,7 @@ function onAllDictsLoaded() {
     updateDictLoadUI();
 
     // Inflections index එක පසුබිමින් warm up කරන්න
-    const warmUpInflections = () => {
-        getInflectionIndex().catch(() => {});
-        availableDicts.forEach(d => {
-            if (d.enabled && d.englishMeanings && d._loaded && d.data.length) ensureEnglishIndex(d);
-        });
-    };
+    const warmUpInflections = () => { getInflectionIndex().catch(() => {}); };
     if ('requestIdleCallback' in window) {
         requestIdleCallback(warmUpInflections);
     } else {
@@ -1465,145 +1460,6 @@ window.toggleInflection = function (id, headword) {
         });
 };
 
-// ================================================================
-// ඉංග්‍රීසි වචන index — සිංහල-ඉංග්‍රීසි ශබ්දකෝෂයේ "තේරුම" තුළ ඇති ඉංග්‍රීසි වචන
-// ඉංග්‍රීසියෙන් ටයිප් කළ විට (උදා: dog) suggestions සහ සෙවුම සඳහා යොදා ගනී.
-// ================================================================
-const EN_TOKEN_RE = /[a-z]+(?:['’-][a-z]+)*/g;
-const EN_WORD_RE = /^[a-z]+(?:['’-][a-z]+)*$/;
-const EN_LEADING = new Set(['to', 'a', 'an', 'the']);
-const EN_STOPWORDS = new Set(('a an the of to in on at for and or but is are was were be been being with by from as ' +
-    'it its this that these those which who whom whose what when where how not no nor so than then there their them ' +
-    'they he she his her him we us our you your i me my am do does did have has had can could may might shall should ' +
-    'will would also etc one esp usually often').split(' '));
-
-// dict.id -> { data, size, ready, promise, words: Map(word -> {best, items[]}), sorted: [] }
-// items[] හි අගය = (අයිතම index << 2) | rank   (rank 3 = තනි වචන තේරුම, 2 = තේරුමේ මුල් වචනය, 1 = වෙනත්)
-const englishIndexes = {};
-
-function indexEnglishMeaning(words, itemIdx, meaning) {
-    const text = meaning.replace(/<[^>]*>/g, ' ').replace(/&[a-z#0-9]+;/gi, ' ').toLowerCase();
-    const segments = text.split(/[;,\n\/()\[\]:]|\s\d{1,2}[.)]\s/);
-    for (let sIdx = 0; sIdx < segments.length; sIdx++) {
-        const toks = segments[sIdx].match(EN_TOKEN_RE);
-        if (!toks) continue;
-        let from = 0;
-        while (from < toks.length - 1 && EN_LEADING.has(toks[from])) from++;   // "to run", "a dog"
-        const n = toks.length - from;
-        for (let t = from; t < toks.length; t++) {
-            const w = toks[t];
-            if (w.length < 2) continue;
-            let rank;
-            if (n === 1) rank = 3;
-            else if (EN_STOPWORDS.has(w)) continue;
-            else if (t === from && n <= 4) rank = 2;
-            else rank = 1;
-
-            let rec = words.get(w);
-            if (!rec) { rec = { best: 0, items: [] }; words.set(w, rec); }
-            if (rank > rec.best) rec.best = rank;
-            const items = rec.items;
-            const lastPos = items.length - 1;
-            if (lastPos >= 0 && (items[lastPos] >> 2) === itemIdx) {
-                if ((items[lastPos] & 3) < rank) items[lastPos] = (itemIdx << 2) | rank;
-            } else {
-                items.push((itemIdx << 2) | rank);
-            }
-        }
-    }
-}
-
-async function buildEnglishIndexAsync(st) {
-    const data = st.data;
-    let lastYield = performance.now();
-    for (let i = 0; i < data.length; i++) {
-        const it = data[i];
-        if (it && it.meaning) indexEnglishMeaning(st.words, i, it.meaning);
-        if ((i & 0x1FF) === 0 && performance.now() - lastYield > 12) {
-            await new Promise(r => setTimeout(r, 0));   // ටයිප් කිරීම අවහිර නොවීමට
-            lastYield = performance.now();
-        }
-    }
-    st.sorted = Array.from(st.words.keys()).sort();
-}
-
-// දත්ත සම්පූර්ණයෙන් පූරණය වූ ශබ්දකෝෂයක් සඳහා පමණක් ඇමතිය යුතුයි
-function ensureEnglishIndex(dict) {
-    let st = englishIndexes[dict.id];
-    if (st && st.data === dict.data && st.size === dict.data.length) return st;
-    st = { data: dict.data, size: dict.data.length, ready: false, words: new Map(), sorted: [], promise: null };
-    englishIndexes[dict.id] = st;
-    st.promise = buildEnglishIndexAsync(st).then(() => {
-        st.ready = true;
-        refreshSuggestionsIfTyping();
-    });
-    st.promise.catch(err => { console.error('english index failed:', err); });
-    return st;
-}
-
-function englishHint(st, rec) {
-    const picked = [];
-    for (let r = 3; r >= 1 && picked.length < 2; r--) {
-        for (let k = 0; k < rec.items.length && picked.length < 2; k++) {
-            const v = rec.items[k];
-            if ((v & 3) !== r) continue;
-            const hw = st.data[v >> 2].word;
-            if (hw && picked.indexOf(hw) === -1) picked.push(hw);
-        }
-    }
-    return picked.join(', ');
-}
-
-// ටයිප් කරන ඉංග්‍රීසි අකුරු වලට ගැළපෙන ඉංග්‍රීසි වචන (උදා: "do" -> dog → බල්ලා)
-function getEnglishSuggestions(rawQuery, limit) {
-    if (rawQuery.length < 2 || !EN_WORD_RE.test(rawQuery)) return [];
-    const cands = [];
-    availableDicts.forEach(dict => {
-        if (!dict.enabled || !dict.englishMeanings || !dict._loaded || !dict.data.length) return;
-        const st = ensureEnglishIndex(dict);
-        if (!st.ready) return;
-        const sorted = st.sorted;
-        let lo = 0, hi = sorted.length;
-        while (lo < hi) {
-            const mid = (lo + hi) >> 1;
-            if (sorted[mid] < rawQuery) lo = mid + 1; else hi = mid;
-        }
-        for (let i = lo; i < sorted.length && sorted[i].startsWith(rawQuery); i++) {
-            cands.push({ w: sorted[i], rec: st.words.get(sorted[i]), st });
-        }
-    });
-    cands.sort((a, b) =>
-        ((b.w === rawQuery) - (a.w === rawQuery)) ||
-        (b.rec.best - a.rec.best) ||
-        (a.w.length - b.w.length) ||
-        (a.w < b.w ? -1 : a.w > b.w ? 1 : 0));
-    const seen = new Set();
-    const out = [];
-    for (let i = 0; i < cands.length && out.length < limit; i++) {
-        if (seen.has(cands[i].w)) continue;
-        seen.add(cands[i].w);
-        out.push({ word: cands[i].w, hint: englishHint(cands[i].st, cands[i].rec) });
-    }
-    return out;
-}
-
-// සම්පූර්ණ ඉංග්‍රීසි වචනයක් (උදා: dog) තේරුමේ ඇති ශබ්දකෝෂ අයිතම
-function englishExactMatches(dict, lowerQuery, token, query, exactOnly) {
-    if (!dict._loaded || !dict.data.length || !EN_WORD_RE.test(lowerQuery)) return [];
-    const st = ensureEnglishIndex(dict);
-    if (!st.ready) {
-        // index එක සූදානම් වූ පසු මෙම සෙවුම නැවත ක්‍රියාත්මක කරයි
-        st.promise.then(() => { if (token === searchToken) performSearch(query, exactOnly); }).catch(() => {});
-        return [];
-    }
-    const rec = st.words.get(lowerQuery);
-    if (!rec) return [];
-    const strongOnly = rec.best >= 2;   // හොඳ ගැළපීම් තිබේ නම් අහඹු සඳහන් මඟ හරියි
-    const vals = rec.items.filter(v => !strongOnly || (v & 3) >= 2);
-    vals.sort((a, b) => ((b & 3) - (a & 3)) || ((a >> 2) - (b >> 2)));
-    return vals.slice(0, 40).map(v => st.data[v >> 2]);
-}
-
 // --- Search Input & Suggestions ---
 let searchTimeout;
 
@@ -1627,26 +1483,45 @@ function updateSuggestions() {
     }
 
     searchTimeout = setTimeout(() => {
-        const matches = new Set();
+        // ඉංග්‍රීසි අකුරින් ටයිප් කළ විට, ඉංග්‍රීසි වචන (උදා: dog) පාලි Singlish ප්‍රතිඵල වලින් පිරී
+        // කපාහැරීම වැළැක්වීමට, ඒවා වෙනම එකතු කර ස්ථාන ඇතුළත් කරයි.
+        const latinQuery = /^[a-z]/.test(rawQuery);
+        const headMatches = new Set();        // පාලි / සිංහල වචන (Singlish හරහා ද)
+        const englishMatches = new Map();     // ඉංග්‍රීසි වචන -> තේරුමේ දිග (නිතර යෙදෙන වචන හඳුනාගැනීමට)
         availableDicts.filter(d => d.enabled).forEach(dict => {
             if (dict.data && Array.isArray(dict.data)) {
                 dict.data.forEach(item => {
                     if (!item || !item.word) return;
                     const w = item.word.toLowerCase();
-                    if (w.startsWith(rawQuery) || possibleMatches.some(pm => w.startsWith(pm))) {
-                        matches.add(item.word);
+                    if (w.startsWith(rawQuery)) {
+                        if (latinQuery) {
+                            const len = (item.meaning || '').length;
+                            if (len > (englishMatches.get(item.word) || -1)) englishMatches.set(item.word, len);
+                        } else {
+                            headMatches.add(item.word);
+                        }
+                    } else if (possibleMatches.length && possibleMatches.some(pm => w.startsWith(pm))) {
+                        headMatches.add(item.word);
                     }
                 });
             }
         });
 
-        // අනුපිළිවෙල: වර නැගුණු රූප (මය්හං → අහං), මූල වචන 3ක්, ඉංග්‍රීසි වචන (dog → බල්ලා), ඉතිරි මූල වචන.
-        // (suggestions box එක උපරිම උසට සීමා වන නිසා, ඉංග්‍රීසි වචන පහළට scroll නොකර පෙනීමට මැදට දමයි)
-        const english = getEnglishSuggestions(rawQuery, 4);
-        const inflSug = getInflectionSuggestions(rawQuery, possibleMatches, matches);
-        const headSug = Array.from(matches).map(w => ({ word: w, hint: '' }));
+        // ඉංග්‍රීසි වචන 4ක් දක්වා: සම්පූර්ණ ගැළපුම මුලින්, ඉන්පසු තේරුම් වැඩි (සාමාන්‍ය) වචන
+        const english = Array.from(englishMatches.entries())
+            .sort((a, b) =>
+                ((b[0].toLowerCase() === rawQuery) - (a[0].toLowerCase() === rawQuery)) ||
+                (b[1] - a[1]) ||
+                (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+            .slice(0, 4)
+            .map(e => ({ word: e[0], hint: '' }));
+
+        // අනුපිළිවෙල: වර නැගුණු රූප (මය්හං → අහං), මූල වචන 2ක්, ඉංග්‍රීසි වචන, ඉතිරි මූල වචන
+        // (suggestions box එක උසට සීමා වන නිසා ඉංග්‍රීසි වචන scroll නොකර පෙනීමට මැදට දමයි)
+        const inflSug = getInflectionSuggestions(rawQuery, possibleMatches, headMatches);
+        const headSug = Array.from(headMatches).map(w => ({ word: w, hint: '' }));
         const suggestions = inflSug
-            .concat(headSug.slice(0, 3), english, headSug.slice(3))
+            .concat(headSug.slice(0, 2), english, headSug.slice(2))
             .slice(0, 10);
 
         if (suggestions.length > 0) {
@@ -1726,15 +1601,6 @@ function performSearch(query, exactOnly = false) {
             const w = item.word.toLowerCase().trim();
             return w === lowerQuery || possibleMatches.some(pm => w === pm);
         });
-
-        // ඉංග්‍රීසි වචනයක් ටයිප් කළ විට: තේරුමේ ඒ වචනය ඇති අයිතම (සිංහල-ඉංග්‍රීසි ශබ්දකෝෂය)
-        if (dict.englishMeanings) {
-            const enItems = englishExactMatches(dict, lowerQuery, myToken, query, exactOnly);
-            if (enItems.length) {
-                const have = new Set(matches);
-                enItems.forEach(it => { if (!have.has(it)) matches.push(it); });
-            }
-        }
 
         if (matches.length === 0 && !exactOnly && !hasInflRefs) {
             matches = dict.data.filter(item => {
