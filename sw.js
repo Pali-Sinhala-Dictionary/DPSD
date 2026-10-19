@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pali-sin-dict-v4.26'; // v4.26: install වේගවත් කිරීම (විශාල zip files පසුබිමින් cache වේ)
+const CACHE_NAME = 'pali-sin-dict-v4.27'; // v4.26: install වේගවත් කිරීම (විශාල zip files පසුබිමින් cache වේ)
 
 // 1) අනිවාර්ය app shell — මේවා නැතිව SW install නොවේ (කුඩා files පමණි)
 const CORE_ASSETS = [
