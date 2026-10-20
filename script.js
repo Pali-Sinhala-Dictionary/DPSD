@@ -19,11 +19,42 @@ const initialMessage = document.getElementById('initialMessage');
     }
 })();
 
+// --- Container zoom = (පරිශීලකයාගේ අකුරු ප්‍රමාණ සැකසුම) × (තිරයට ස්වයංක්‍රීය ගැළපීම) ---
+// පළල 1100px ට වැඩි තිර (landscape tab / පරිගණක) වල අකුරු සහ අංග කුඩා නොපෙනීමට, තිරයේ පළලට
+// සමානුපාතිකව ස්වයංක්‍රීයව විශාල කරයි (උපරිම ×1.8). ප්‍රධාන කොටසේ පළල CSS මගින් තිරයේ
+// සම්පූර්ණ පළලටම ගනී. දුරකථන සහ portrait tab වල (≤1100px) අකුරු ප්‍රමාණයේ වෙනසක් නැත.
+// Zoom panel එකේ 100% යනු "ඒ තිරයට ගැළපෙන ප්‍රමාණය" වේ.
+let currentUserZoom = localStorage.getItem('zoomLevel') || '100';
+
+function getAutoFitScale() {
+    const w = window.innerWidth || document.documentElement.clientWidth || 0;
+    return Math.min(1.8, Math.max(1, w / 1100));
+}
+
+function applyContainerZoom(userPercent) {
+    const target = document.querySelector('.container');
+    if (!target) return;
+    const user = parseFloat(userPercent);
+    const factor = (isNaN(user) ? 100 : user) / 100 * getAutoFitScale();
+    target.style.zoom = (factor * 100).toFixed(1) + '%';
+    // CSS හි min-height ගණනය සඳහා (zoom මගින් 100vh ද ගුණ වන නිසා)
+    target.style.setProperty('--container-zoom', factor.toFixed(3));
+}
+
 // --- Restore saved zoom / text-size preference (runs immediately, before first paint settles) ---
 (function restoreZoom() {
-    const savedZoom = localStorage.getItem('zoomLevel') || '100';
-    const zoomTarget = document.querySelector('.container');
-    if (zoomTarget) zoomTarget.style.zoom = savedZoom + '%';
+    applyContainerZoom(currentUserZoom);
+})();
+
+// තිරයේ ප්‍රමාණය වෙනස් වූ විට (කවුළුව ප්‍රමාණය වෙනස් කිරීම, tab භ්‍රමණය) නැවත ගැළපෙයි
+(function watchScreenSize() {
+    let timer;
+    const refit = () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => applyContainerZoom(currentUserZoom), 120);
+    };
+    window.addEventListener('resize', refit);
+    window.addEventListener('orientationchange', refit);
 })();
 
 // ================================================================
@@ -1741,8 +1772,8 @@ function toggleTheme() {
 
 // --- Zoom / Text Size Functions ---
 function applyZoomPreview(value) {
-    const zoomTarget = document.querySelector('.container');
-    if (zoomTarget) zoomTarget.style.zoom = value + '%';
+    currentUserZoom = String(value);
+    applyContainerZoom(value);
     const label = document.getElementById('zoomValueLabel');
     if (label) label.textContent = value + '%';
 }

@@ -2777,3 +2777,30 @@ body.dark-theme .correction-link:hover {
     text-underline-offset: 3px;
     cursor: pointer;
 }
+
+
+/* =========================================================
+   AUTO-FIT FOR LARGE SCREENS
+   script.js විසින් .container හි zoom (පරිශීලක සැකසුම × තිරයට ගැළපීම) සහ
+   --container-zoom යොදයි. zoom මගින් vh ද ගුණ වන නිසා, min-height එය ඉවත් කර
+   පිටුව තිරයට හරියටම සමාන උසකින් තබයි (හිස් scroll ඉඩක් ඇති නොවීමට).
+   Landscape / විශාල තිර වල ප්‍රධාන කොටස තිරයේ සම්පූර්ණ පළලම ගනී (800px සීමාව ඉවත් කර ඇත).
+   ========================================================= */
+
+.container {
+    min-height: calc((100vh - 60px) / var(--container-zoom, 1));
+}
+
+@media (max-width: 480px) {
+    .container {
+        min-height: calc(100vh / var(--container-zoom, 1));
+    }
+}
+
+/* 800px ට වැඩි තිර: තිරයේ සම්පූර්ණ පළල. අතිවිශාල (ultra-wide) තිර වල පමණක්
+   දෘශ්‍ය පළල 2600px දක්වා සීමා කරයි (zoom ගුණයෙන් බෙදා, එවිට දෘශ්‍ය පළල හරියටම 2600px). */
+@media (min-width: 801px) {
+    .container {
+        max-width: calc(2600px / var(--container-zoom, 1));
+    }
+}
