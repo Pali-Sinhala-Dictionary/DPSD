@@ -248,31 +248,6 @@ body {
     transition: box-shadow 0.3s ease;
 }
 
-/* ✨ Shine Effect — ආලෝකය header එක හරහා ගමන් කරයි */
-.header-card::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -100%;
-    width: 50%;
-    height: 200%;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.10),
-        rgba(255, 255, 255, 0.05),
-        transparent
-    );
-    transform: rotate(25deg);
-    animation: headerShine 7s ease-in-out infinite;
-    pointer-events: none;
-    z-index: 3;
-}
-
-@keyframes headerShine {
-    0%, 55%, 100% { left: -100%; }
-    70%           { left: 150%; }
-}
 
 .header-content {
     position: relative;
@@ -432,15 +407,6 @@ body.dark-theme .header-card {
         inset 0 -1px 0 rgba(0, 0, 0, 0.55);
 }
 
-body.dark-theme .header-card::after {
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 120, 120, 0.14),
-        rgba(255, 150, 120, 0.08),
-        transparent
-    );
-}
 
 body.dark-theme .header-icon {
     background:
@@ -467,7 +433,6 @@ body.dark-theme .top-bar h1 {
         0 2px 6px rgba(0, 0, 0, 0.75),
         0 0 16px rgba(179, 136, 255, 0.45);
 }
-
 
 
 /* =========================================================
@@ -870,7 +835,7 @@ body.dark-theme .top-bar h1 {
 
     position: relative;
 
-    padding: 20px 22px 18px 26px;   /* ← වම් පැත්තට අමතර ඉඩ (accent stripe සඳහා) */
+    padding: 20px 22px 18px 26px;
 
     background:
         linear-gradient(
@@ -899,54 +864,6 @@ body.dark-theme .top-bar h1 {
         box-shadow 0.25s ease;
 }
 
-/* රන්වන් රතු accent stripe එක වම් පසින් */
-.word-card::before {
-
-    content: '';
-
-    position: absolute;
-
-    top: 0;
-    left: 0;
-    bottom: 0;
-
-    width: 4px;
-
-    background:
-        linear-gradient(
-            180deg,
-            #d4af37,
-            #8B0000 60%,
-            #560000
-        );
-
-    border-radius: 18px 0 0 18px;
-}
-
-/* මෘදු රන්වන් ආලෝකය ඉහළ-දකුණු කෙළවරේ */
-.word-card::after {
-
-    content: '';
-
-    position: absolute;
-
-    top: -50px;
-    right: -50px;
-
-    width: 160px;
-    height: 160px;
-
-    border-radius: 50%;
-
-    background:
-        radial-gradient(
-            circle,
-            rgba(212,175,55,0.12),
-            transparent 70%
-        );
-
-    pointer-events: none;
-}
 
 @media (hover: hover) {
 
@@ -959,37 +876,6 @@ body.dark-theme .top-bar h1 {
             0 1px 0 rgba(255,255,255,0.90) inset,
             0 -1px 0 rgba(139,0,0,0.06) inset;
     }
-}
-
-
-/* =========================================================
-   WORD TITLE
-   ========================================================= */
-
-.main-word-title {
-
-    font-size: 26px;
-
-    font-weight: bold;
-
-    color: var(--primary-color);
-
-    margin: 0 0 12px 0;
-
-    padding-bottom: 9px;
-
-    border-bottom:
-        1px solid rgba(212,175,55,0.38);
-
-    display: flex;
-
-    justify-content: space-between;
-
-    align-items: center;
-
-    gap: 10px;
-
-    line-height: 1.25;
 }
 
 
@@ -1043,246 +929,6 @@ body.dark-theme .top-bar h1 {
 
 .meaning-row:last-child {
     border-bottom: none;
-}
-
-
-/* =========================================================
-   WORD HEADER
-   ========================================================= */
-
-.word-header {
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    flex-wrap: wrap;
-
-    row-gap: 6px;
-
-    gap: 8px;
-}
-
-.word-header-left {
-
-    display: flex;
-
-    align-items: center;
-
-    flex-wrap: wrap;
-
-    gap: 8px;
-
-    /* Let the label side take the full row and push the button group
-       onto its own line once ධාතු / පද බෙදීම text runs long, instead of
-       squeezing against the විස්තර / වර නැගීම buttons. */
-    flex: 1 1 100%;
-
-    min-width: 0;
-}
-
-.word-header-right {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 6px;
-
-    flex-shrink: 0;
-
-    margin-left: auto;
-}
-
-
-/* =========================================================
-   WORD TYPE
-   ========================================================= */
-
-.word-type {
-
-    background:
-        rgba(212,175,55,0.13);
-
-    color:
-        #a47400;
-
-    padding:
-        3px 11px;
-
-    border-radius:
-        20px;
-
-    font-size:
-        13px;
-
-    font-weight:
-        bold;
-
-    border:
-        1px solid rgba(212,175,55,0.22);
-}
-
-
-/* =========================================================
-   WORD DIVISION (root + construction, e.g. √gam (gaccha+ti))
-   ========================================================= */
-
-.word-division {
-
-    background:
-        rgba(121,85,72,0.10);
-
-    color:
-        #795548;
-
-    padding:
-        3px 11px;
-
-    border-radius:
-        20px;
-
-    font-size:
-        13px;
-
-    font-weight:
-        bold;
-
-    border:
-        1px solid rgba(121,85,72,0.22);
-}
-
-
-/* =========================================================
-   DETAILS BUTTON
-   ========================================================= */
-
-.details-btn {
-
-    background:
-        rgba(255,255,255,0.58);
-
-    color:
-        var(--blue-color);
-
-    border:
-        1px solid rgba(7,89,165,0.18);
-
-    padding:
-        5px 12px;
-
-    border-radius:
-        20px;
-
-    cursor:
-        pointer;
-
-    font-size:
-        13px;
-
-    font-weight:
-        bold;
-
-    font-family:
-        inherit;
-
-    transition:
-        background 0.2s ease,
-        transform 0.2s ease;
-}
-
-.details-btn:hover {
-
-    background:
-        rgba(7,89,165,0.08);
-
-    transform:
-        translateY(-1px);
-}
-
-
-/* =========================================================
-   DETAILS PANEL
-   ========================================================= */
-
-.details-panel {
-
-    background:
-        rgba(240,244,248,0.72);
-
-    backdrop-filter:
-        blur(10px);
-
-    -webkit-backdrop-filter:
-        blur(10px);
-
-    padding:
-        13px;
-
-    border-radius:
-        12px;
-
-    margin-top:
-        8px;
-
-    display:
-        none;
-
-    border:
-        1px solid rgba(0,0,0,0.06);
-
-    box-shadow:
-        inset 0 1px 3px rgba(0,0,0,0.04);
-}
-
-
-/* =========================================================
-   INFLECTION ("වර නැගීම") BUTTON
-   ========================================================= */
-
-.inflection-btn {
-
-    background:
-        rgba(139,0,0,0.08);
-
-    color:
-        var(--primary-color);
-
-    border:
-        1px solid rgba(139,0,0,0.28);
-
-    padding:
-        5px 12px;
-
-    border-radius:
-        20px;
-
-    cursor:
-        pointer;
-
-    font-size:
-        13px;
-
-    font-weight:
-        bold;
-
-    font-family:
-        inherit;
-
-    transition:
-        background 0.2s ease,
-        transform 0.2s ease;
-}
-
-.inflection-btn:hover {
-
-    background:
-        rgba(139,0,0,0.16);
-
-    transform:
-        translateY(-1px);
 }
 
 
@@ -1392,29 +1038,9 @@ body.dark-theme .inflection-table td:first-child {
 body.dark-theme .inflection-table tr:hover td { background-color: #442424; }
 
 /* =========================================================
-   DESCRIPTIONS
+   NO RESULTS
    ========================================================= */
 
-.proper-noun-desc {
-
-    color:
-        var(--blue-color);
-
-    margin-bottom:
-        5px;
-}
-
-.grammar-desc {
-
-    color:
-        var(--green-color);
-}
-
-.etymology-desc {
-
-    color:
-        var(--purple-color);
-}
 
 .no-results {
 
@@ -1661,9 +1287,6 @@ body.dark-theme .inflection-table tr:hover td { background-color: #442424; }
         translateY(-2px);
 }
 
-.nav-icon {
-    font-size: 20px;
-}
 
 .nav-icon-svg {
     width: 22px;
@@ -1859,19 +1482,6 @@ body.dark-theme .download-card {
 }
 
 
-
-/* =========================================================
-   DARK DETAILS
-   ========================================================= */
-
-body.dark-theme .details-panel {
-
-    background: rgba(15, 23, 42, 0.90);
-
-    border-color: rgba(0, 229, 255, 0.15);
-}
-
-
 /* =========================================================
    DARK SUGGESTIONS
    ========================================================= */
@@ -1947,8 +1557,7 @@ body.dark-theme .nav-item.active .nav-icon-wrapper {
    DARK DICT CONTROLS
    ========================================================= */
 
-body.dark-theme .dict-controls button,
-body.dark-theme .details-btn {
+body.dark-theme .dict-controls button {
 
     background: rgba(30, 36, 54, 0.75);
 
@@ -1957,40 +1566,11 @@ body.dark-theme .details-btn {
     color: #ffffff;
 }
 
-body.dark-theme .dict-controls button:hover,
-body.dark-theme .details-btn:hover {
+body.dark-theme .dict-controls button:hover {
 
     background: rgba(179, 136, 255, 0.15);
 
     border-color: rgba(179, 136, 255, 0.50);
-}
-
-
-/* =========================================================
-   DARK WORD TYPE
-   ========================================================= */
-
-body.dark-theme .word-type {
-
-    background: rgba(179, 136, 255, 0.15);
-
-    color: #DB7070;
-
-    border-color: rgba(179, 136, 255, 0.30);
-}
-
-
-/* =========================================================
-   DARK WORD DIVISION
-   ========================================================= */
-
-body.dark-theme .word-division {
-
-    background: rgba(0, 229, 255, 0.12);
-
-    color: #00e5ff;
-
-    border-color: rgba(0, 229, 255, 0.25);
 }
 
 
@@ -2016,26 +1596,6 @@ body.dark-theme .word-card {
         0 -1px 0 rgba(179, 136, 255, 0.10) inset;
 }
 
-body.dark-theme .word-card::before {
-
-    background:
-        linear-gradient(
-            180deg,
-            #00e5ff,
-            #b388ff 55%,
-            #7c4dff
-        );
-}
-
-body.dark-theme .word-card::after {
-
-    background:
-        radial-gradient(
-            circle,
-            rgba(179, 136, 255, 0.15),
-            transparent 70%
-        );
-}
 
 @media (hover: hover) {
 
@@ -2046,11 +1606,6 @@ body.dark-theme .word-card::after {
             0 0 32px rgba(179, 136, 255, 0.12),
             0 1px 0 rgba(255, 255, 255, 0.07) inset;
     }
-}
-
-body.dark-theme .main-word-title {
-
-    border-bottom-color: rgba(179, 136, 255, 0.28);
 }
 
 
@@ -2282,10 +1837,7 @@ body.dark-theme .main-word-title {
         padding: 16px 16px 14px 20px;
     }
 
-    .main-word-title {
-        font-size:
-            20px;
-    }
+    
 
     .bottom-nav {
         height:
@@ -2522,185 +2074,9 @@ body.dark-theme .splash-loader::after {
     .splash-title     { font-size: 26px !important; }
     .splash-subtitle  { font-size: 11px; letter-spacing: 2px; }
     .splash-loader    { width: 140px; }
-}/* =========================================================
-   PWA INSTALL BANNER
-   ========================================================= */
-
-#pwa-install-banner {
-    position: fixed;
-    bottom: 76px;                /* ✅ Bottom nav (64px) එකට ඉහළින් */
-    left: 50%;
-    transform: translateX(-50%);
-
-    background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
-    color: #fff;
-
-    padding: 14px 14px 14px 16px;
-    border-radius: 18px;
-
-    box-shadow:
-        0 15px 40px rgba(139, 0, 0, 0.35),
-        0 0 40px rgba(212, 175, 55, 0.25),
-        inset 0 1px 2px rgba(255, 255, 255, 0.30);
-
-    border: 1px solid var(--gold-light);
-
-    display: none;
-    align-items: center;
-    gap: 12px;
-
-    z-index: 2500;               /* ✅ Bottom nav (2000) එකට ඉහළින් */
-
-    max-width: calc(100% - 32px);
-    width: 420px;
-
-    animation: pwaBannerSlideUp 0.4s ease-out;
-
-    font-family: 'UN Abhaya', 'Noto Sans Sinhala', sans-serif;
-}
-#pwa-install-banner.show { display: flex; }
-
-body.dark-theme #pwa-install-banner {
-    background: linear-gradient(135deg, #b388ff, #5e35b1);
-    box-shadow:
-        0 15px 40px rgba(94, 53, 177, 0.5),
-        0 0 50px rgba(179, 136, 255, 0.35),
-        inset 0 1px 2px rgba(255, 255, 255, 0.18);
-    border-color: #b388ff;
 }
 
-@keyframes pwaBannerSlideUp {
-    from { transform: translate(-50%, 100px); opacity: 0; }
-    to   { transform: translate(-50%, 0); opacity: 1; }
-}
 
-#pwa-install-banner .pwa-banner-icon {
-    width: 42px;
-    height: 42px;
-    flex-shrink: 0;
-    border-radius: 13px;
-    background: rgba(255, 255, 255, 0.20);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-}
-#pwa-install-banner .pwa-banner-icon svg { width: 22px; height: 22px; }
-
-#pwa-install-banner .pwa-banner-text {
-    flex: 1;
-    min-width: 0;
-}
-#pwa-install-banner .pwa-banner-title {
-    font-size: 13.5px;
-    font-weight: 700;
-    margin: 0 0 3px;
-    color: #fff;
-    line-height: 1.3;
-}
-#pwa-install-banner .pwa-banner-sub {
-    font-size: 11px;
-    margin: 0;
-    color: rgba(255, 255, 255, 0.88);
-    line-height: 1.35;
-}
-
-#pwa-install-banner .pwa-banner-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-}
-#pwa-install-banner button {
-    white-space: nowrap;
-    border: none;
-    cursor: pointer;
-    font-family: inherit;
-}
-#pwa-install-banner .pwa-install-btn {
-    background: #fff;
-    color: var(--primary-color);
-    font-weight: 700;
-    font-size: 13px;
-    padding: 9px 16px;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.20);
-    transition: transform 0.15s ease;
-}
-body.dark-theme #pwa-install-banner .pwa-install-btn { color: #5e35b1; }
-#pwa-install-banner .pwa-install-btn:active { transform: scale(0.95); }
-
-#pwa-install-banner .pwa-dismiss-btn {
-    background: transparent;
-    color: rgba(255, 255, 255, 0.80);
-    font-size: 22px;
-    line-height: 1;
-    padding: 4px 7px;
-    border-radius: 8px;
-}
-#pwa-install-banner .pwa-dismiss-btn:active { background: rgba(255, 255, 255, 0.18); }
-
-/* iOS "Add to Home Screen" instructions popover */
-#pwa-ios-tip {
-    position: fixed;
-    bottom: 170px;               /* ✅ Banner එකට ඉහළින් */
-    left: 50%;
-    transform: translateX(-50%);
-
-    background: var(--card-bg-strong);
-    color: var(--text-color);
-
-    padding: 16px 18px;
-    border-radius: 16px;
-
-    box-shadow: 0 15px 40px var(--shadow-color, rgba(0,0,0,0.25));
-    border: 1px solid var(--border-color);
-
-    max-width: calc(100% - 32px);
-    width: 320px;
-
-    font-size: 13px;
-    line-height: 1.55;
-
-    z-index: 2600;               /* ✅ Banner එකට ඉහළින් */
-
-    display: none;
-    backdrop-filter: blur(10px);
-    font-family: 'UN Abhaya', 'Noto Sans Sinhala', sans-serif;
-}
-#pwa-ios-tip.show { display: block; animation: pwaBannerSlideUp 0.35s ease-out; }
-#pwa-ios-tip strong { color: var(--primary-color); }
-#pwa-ios-tip p { margin: 6px 0 0; }
-#pwa-ios-tip .pwa-share-icon { font-weight: 700; }
-#pwa-ios-tip .pwa-ios-tip-close {
-    position: absolute;
-    top: 8px;
-    right: 10px;
-    background: transparent;
-    border: none;
-    font-size: 20px;
-    line-height: 1;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 4px;
-}
-
-@media (max-width: 420px) {
-    #pwa-install-banner {
-        bottom: 72px;
-        padding: 12px;
-        gap: 10px;
-        width: calc(100% - 24px);
-    }
-    #pwa-install-banner .pwa-banner-title { font-size: 12.5px; }
-    #pwa-install-banner .pwa-banner-sub { font-size: 10px; }
-    #pwa-install-banner .pwa-install-btn { padding: 8px 12px; font-size: 12px; }
-
-    #pwa-ios-tip {
-        bottom: 160px;
-        width: calc(100% - 24px);
-    }
-}
 /* =========================================================
    WORD CARD FOOTER — Correction link (Pali dict only)
    ========================================================= */
@@ -2803,4 +2179,1248 @@ body.dark-theme .correction-link:hover {
     .container {
         max-width: calc(2600px / var(--container-zoom, 1));
     }
+}
+
+
+/* =========================================================
+   WORD CARD v2 — නව තේරුම් කාඩ් එක
+   පසුබිම් රටා (ජ්‍යාමිතික රෝසෙට්, තරු දැල, පහන්, දාගැබ් රේඛාව) inline SVG
+   mask ලෙස යොදා ඇත — අමතර image ගොනු අවශ්‍ය නැත, offline ක්‍රියා කරයි,
+   සහ theme එක අනුව වර්ණ CSS variables මඟින් වෙනස් වේ.
+   ========================================================= */
+
+:root {
+    --wc-svg-rosette-fill: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-200 -200 400 400'%3E%3Cg fill='%23000'%3E%3Cpolygon points='0.0,-70.0 -21.4,-109.9 0.0,-178.0 21.4,-109.9'/%3E%3Cpolygon points='35.0,-60.6 36.5,-105.9 89.0,-154.2 73.5,-84.5'/%3E%3Cpolygon points='60.6,-35.0 84.5,-73.5 154.2,-89.0 105.9,-36.5'/%3E%3Cpolygon points='70.0,0.0 109.9,-21.4 178.0,0.0 109.9,21.4'/%3E%3Cpolygon points='60.6,35.0 105.9,36.5 154.2,89.0 84.5,73.5'/%3E%3Cpolygon points='35.0,60.6 73.5,84.5 89.0,154.2 36.5,105.9'/%3E%3Cpolygon points='0.0,70.0 21.4,109.9 0.0,178.0 -21.4,109.9'/%3E%3Cpolygon points='-35.0,60.6 -36.5,105.9 -89.0,154.2 -73.5,84.5'/%3E%3Cpolygon points='-60.6,35.0 -84.5,73.5 -154.2,89.0 -105.9,36.5'/%3E%3Cpolygon points='-70.0,0.0 -109.9,21.4 -178.0,0.0 -109.9,-21.4'/%3E%3Cpolygon points='-60.6,-35.0 -105.9,-36.5 -154.2,-89.0 -84.5,-73.5'/%3E%3Cpolygon points='-35.0,-60.6 -73.5,-84.5 -89.0,-154.2 -36.5,-105.9'/%3E%3Cpolygon points='6.2,-23.2 5.6,-39.6 14.5,-54.1 15.0,-37.1'/%3E%3Cpolygon points='17.0,-17.0 24.6,-31.5 39.6,-39.6 31.5,-24.6'/%3E%3Cpolygon points='23.2,-6.2 37.1,-15.0 54.1,-14.5 39.6,-5.6'/%3E%3Cpolygon points='23.2,6.2 39.6,5.6 54.1,14.5 37.1,15.0'/%3E%3Cpolygon points='17.0,17.0 31.5,24.6 39.6,39.6 24.6,31.5'/%3E%3Cpolygon points='6.2,23.2 15.0,37.1 14.5,54.1 5.6,39.6'/%3E%3Cpolygon points='-6.2,23.2 -5.6,39.6 -14.5,54.1 -15.0,37.1'/%3E%3Cpolygon points='-17.0,17.0 -24.6,31.5 -39.6,39.6 -31.5,24.6'/%3E%3Cpolygon points='-23.2,6.2 -37.1,15.0 -54.1,14.5 -39.6,5.6'/%3E%3Cpolygon points='-23.2,-6.2 -39.6,-5.6 -54.1,-14.5 -37.1,-15.0'/%3E%3Cpolygon points='-17.0,-17.0 -31.5,-24.6 -39.6,-39.6 -24.6,-31.5'/%3E%3Cpolygon points='-6.2,-23.2 -15.0,-37.1 -14.5,-54.1 -5.6,-39.6'/%3E%3C/g%3E%3C/svg%3E");
+    --wc-svg-rosette-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-200 -200 400 400'%3E%3Cg fill='none' stroke='%23000' stroke-width='3' stroke-linejoin='round'%3E%3Cpolygon points='0.0,-70.0 -21.4,-109.9 0.0,-178.0 21.4,-109.9'/%3E%3Cpolyline points='21.4,-109.9 36.2,-135.2 36.5,-105.9'/%3E%3Cline x1='0.0' y1='-178.0' x2='36.2' y2='-135.2'/%3E%3Cline x1='0.0' y1='-178.0' x2='-36.2' y2='-135.2'/%3E%3Cpolygon points='35.0,-60.6 36.5,-105.9 89.0,-154.2 73.5,-84.5'/%3E%3Cpolyline points='73.5,-84.5 99.0,-99.0 84.5,-73.5'/%3E%3Cline x1='89.0' y1='-154.2' x2='99.0' y2='-99.0'/%3E%3Cline x1='89.0' y1='-154.2' x2='36.2' y2='-135.2'/%3E%3Cpolygon points='60.6,-35.0 84.5,-73.5 154.2,-89.0 105.9,-36.5'/%3E%3Cpolyline points='105.9,-36.5 135.2,-36.2 109.9,-21.4'/%3E%3Cline x1='154.2' y1='-89.0' x2='135.2' y2='-36.2'/%3E%3Cline x1='154.2' y1='-89.0' x2='99.0' y2='-99.0'/%3E%3Cpolygon points='70.0,0.0 109.9,-21.4 178.0,0.0 109.9,21.4'/%3E%3Cpolyline points='109.9,21.4 135.2,36.2 105.9,36.5'/%3E%3Cline x1='178.0' y1='0.0' x2='135.2' y2='36.2'/%3E%3Cline x1='178.0' y1='0.0' x2='135.2' y2='-36.2'/%3E%3Cpolygon points='60.6,35.0 105.9,36.5 154.2,89.0 84.5,73.5'/%3E%3Cpolyline points='84.5,73.5 99.0,99.0 73.5,84.5'/%3E%3Cline x1='154.2' y1='89.0' x2='99.0' y2='99.0'/%3E%3Cline x1='154.2' y1='89.0' x2='135.2' y2='36.2'/%3E%3Cpolygon points='35.0,60.6 73.5,84.5 89.0,154.2 36.5,105.9'/%3E%3Cpolyline points='36.5,105.9 36.2,135.2 21.4,109.9'/%3E%3Cline x1='89.0' y1='154.2' x2='36.2' y2='135.2'/%3E%3Cline x1='89.0' y1='154.2' x2='99.0' y2='99.0'/%3E%3Cpolygon points='0.0,70.0 21.4,109.9 0.0,178.0 -21.4,109.9'/%3E%3Cpolyline points='-21.4,109.9 -36.2,135.2 -36.5,105.9'/%3E%3Cline x1='0.0' y1='178.0' x2='-36.2' y2='135.2'/%3E%3Cline x1='0.0' y1='178.0' x2='36.2' y2='135.2'/%3E%3Cpolygon points='-35.0,60.6 -36.5,105.9 -89.0,154.2 -73.5,84.5'/%3E%3Cpolyline points='-73.5,84.5 -99.0,99.0 -84.5,73.5'/%3E%3Cline x1='-89.0' y1='154.2' x2='-99.0' y2='99.0'/%3E%3Cline x1='-89.0' y1='154.2' x2='-36.2' y2='135.2'/%3E%3Cpolygon points='-60.6,35.0 -84.5,73.5 -154.2,89.0 -105.9,36.5'/%3E%3Cpolyline points='-105.9,36.5 -135.2,36.2 -109.9,21.4'/%3E%3Cline x1='-154.2' y1='89.0' x2='-135.2' y2='36.2'/%3E%3Cline x1='-154.2' y1='89.0' x2='-99.0' y2='99.0'/%3E%3Cpolygon points='-70.0,0.0 -109.9,21.4 -178.0,0.0 -109.9,-21.4'/%3E%3Cpolyline points='-109.9,-21.4 -135.2,-36.2 -105.9,-36.5'/%3E%3Cline x1='-178.0' y1='0.0' x2='-135.2' y2='-36.2'/%3E%3Cline x1='-178.0' y1='0.0' x2='-135.2' y2='36.2'/%3E%3Cpolygon points='-60.6,-35.0 -105.9,-36.5 -154.2,-89.0 -84.5,-73.5'/%3E%3Cpolyline points='-84.5,-73.5 -99.0,-99.0 -73.5,-84.5'/%3E%3Cline x1='-154.2' y1='-89.0' x2='-99.0' y2='-99.0'/%3E%3Cline x1='-154.2' y1='-89.0' x2='-135.2' y2='-36.2'/%3E%3Cpolygon points='-35.0,-60.6 -73.5,-84.5 -89.0,-154.2 -36.5,-105.9'/%3E%3Cpolyline points='-36.5,-105.9 -36.2,-135.2 -21.4,-109.9'/%3E%3Cline x1='-89.0' y1='-154.2' x2='-36.2' y2='-135.2'/%3E%3Cline x1='-89.0' y1='-154.2' x2='-99.0' y2='-99.0'/%3E%3Cpolygon points='0.0,-58.0 29.0,50.2 -50.2,-29.0 58.0,0.0 -50.2,29.0 29.0,-50.2 0.0,58.0 -29.0,-50.2 50.2,29.0 -58.0,0.0 50.2,-29.0 -29.0,50.2'/%3E%3Ccircle r='20'/%3E%3Ccircle r='190'/%3E%3C/g%3E%3C/svg%3E");
+    --wc-svg-lattice: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 56' width='56' height='56'%3E%3Cg fill='none' stroke='%23000' stroke-width='1'%3E%3Cpolygon points='19.0,19.0 37.0,19.0 37.0,37.0 19.0,37.0'/%3E%3Cpolygon points='28.0,15.3 40.7,28.0 28.0,40.7 15.3,28.0'/%3E%3Cline x1='40.7' y1='28.0' x2='56' y2='28.0'/%3E%3Cline x1='0' y1='28.0' x2='15.3' y2='28.0'/%3E%3Cline x1='28.0' y1='0' x2='28.0' y2='15.3'/%3E%3Cline x1='28.0' y1='40.7' x2='28.0' y2='56'/%3E%3Cpolygon points='0.0,-5.0 5.0,0.0 0.0,5.0 -5.0,0.0'/%3E%3Cpolygon points='56.0,-5.0 61.0,0.0 56.0,5.0 51.0,0.0'/%3E%3Cpolygon points='0.0,51.0 5.0,56.0 0.0,61.0 -5.0,56.0'/%3E%3Cpolygon points='56.0,51.0 61.0,56.0 56.0,61.0 51.0,56.0'/%3E%3C/g%3E%3C/svg%3E");
+    --wc-svg-lantern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 170'%3E%3Cg fill='none' stroke='%23000' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'%3E%3Cline x1='30' y1='0' x2='30' y2='62'/%3E%3Ccircle cx='30' cy='66' r='4'/%3E%3Cpath d='M17 84 Q30 66 43 84 Z'/%3E%3Cpath d='M14 84 H46 V88 H14 Z'/%3E%3Cpath d='M16 88 H44 V128 H16 Z'/%3E%3Cpath d='M14 128 H46 V132 H14 Z'/%3E%3Cpath d='M16 132 Q30 156 44 132'/%3E%3Cline x1='30' y1='150' x2='30' y2='160'/%3E%3C/g%3E%3Cg fill='%23000'%3E%3Cpath d='M20 124 V100 Q20 93 24.5 93 Q29 93 29 100 V124 Z'/%3E%3Cpath d='M31 124 V100 Q31 93 35.5 93 Q40 93 40 100 V124 Z'/%3E%3Ccircle cx='30' cy='162' r='2.6'/%3E%3C/g%3E%3C/svg%3E");
+    --wc-svg-skyline: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 140' width='640' height='140'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.6' stroke-linejoin='round'%3E%3Crect x='35.6' y='130.0' width='148.8' height='8.0'/%3E%3Crect x='42.8' y='123.0' width='134.4' height='7.0'/%3E%3Crect x='50.0' y='117.0' width='120.0' height='6.0'/%3E%3Cpath d='M54.8 117.0 C54.8 48.0 165.2 48.0 165.2 117.0'/%3E%3Crect x='99.0' y='49.1' width='22.0' height='16.0'/%3E%3Cline x1='96.0' y1='49.1' x2='124.0' y2='49.1'/%3E%3Cpath d='M103.0 49.1 L110.0 7.1 L117.0 49.1'/%3E%3Cline x1='104.5' y1='40.1' x2='115.5' y2='40.1'/%3E%3Cline x1='106.0' y1='31.1' x2='114.0' y2='31.1'/%3E%3Cline x1='107.5' y1='22.1' x2='112.5' y2='22.1'/%3E%3Ccircle cx='110.0' cy='4.1' r='2.4'/%3E%3Crect x='283.9' y='133.0' width='92.3' height='5.0'/%3E%3Crect x='288.3' y='128.7' width='83.3' height='4.3'/%3E%3Crect x='292.8' y='125.0' width='74.4' height='3.7'/%3E%3Cpath d='M295.8 125.0 C295.8 82.2 364.2 82.2 364.2 125.0'/%3E%3Crect x='323.2' y='82.9' width='13.6' height='9.9'/%3E%3Cline x1='321.3' y1='82.9' x2='338.7' y2='82.9'/%3E%3Cpath d='M325.7 82.9 L330.0 56.8 L334.3 82.9'/%3E%3Cline x1='326.6' y1='77.3' x2='333.4' y2='77.3'/%3E%3Cline x1='327.5' y1='71.7' x2='332.5' y2='71.7'/%3E%3Cline x1='328.4' y1='66.1' x2='331.6' y2='66.1'/%3E%3Ccircle cx='330.0' cy='55.0' r='1.5'/%3E%3Crect x='420.0' y='102.0' width='70.0' height='36.0'/%3E%3Cpath d='M410.0 102.0 L455.0 82.2 L500.0 102.0'/%3E%3Cpath d='M416.0 95.5 L455.0 79.7 L494.0 95.5'/%3E%3Cpath d='M447.0 138.0 V120.0 Q455.0 112.1 463.0 120.0 V138.0'/%3E%3Crect x='499.0' y='131.4' width='122.0' height='6.6'/%3E%3Crect x='504.9' y='125.7' width='110.2' height='5.7'/%3E%3Crect x='510.8' y='120.8' width='98.4' height='4.9'/%3E%3Cpath d='M514.7 120.8 C514.7 64.2 605.3 64.2 605.3 120.8'/%3E%3Crect x='551.0' y='65.1' width='18.0' height='13.1'/%3E%3Cline x1='548.5' y1='65.1' x2='571.5' y2='65.1'/%3E%3Cpath d='M554.3 65.1 L560.0 30.7 L565.7 65.1'/%3E%3Cline x1='555.5' y1='57.7' x2='564.5' y2='57.7'/%3E%3Cline x1='556.7' y1='50.4' x2='563.3' y2='50.4'/%3E%3Cline x1='558.0' y1='43.0' x2='562.0' y2='43.0'/%3E%3Ccircle cx='560.0' cy='28.2' r='2.0'/%3E%3Crect x='200.0' y='112.0' width='48.0' height='26.0'/%3E%3Cpath d='M190.0 112.0 L224.0 97.7 L258.0 112.0'/%3E%3Cpath d='M196.0 107.3 L224.0 95.9 L252.0 107.3'/%3E%3Cpath d='M216.0 138.0 V125.0 Q224.0 119.3 232.0 125.0 V138.0'/%3E%3Cline x1='0' y1='138' x2='640' y2='138'/%3E%3C/g%3E%3C/svg%3E");
+    --wc-svg-library: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 140' width='640' height='140'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Cg%3E%3Crect x='20' y='68' width='16' height='70' rx='1.5'/%3E%3Cline x1='20' y1='76' x2='36' y2='76'/%3E%3Cline x1='20' y1='126' x2='36' y2='126'/%3E%3Crect x='24.0' y='94.6' width='8.0' height='11.2'/%3E%3C/g%3E%3Cg%3E%3Crect x='38' y='56' width='20' height='82' rx='1.5'/%3E%3Cline x1='38' y1='64' x2='58' y2='64'/%3E%3Cline x1='38' y1='126' x2='58' y2='126'/%3E%3Crect x='43.0' y='87.2' width='10.0' height='13.1'/%3E%3C/g%3E%3Cg%3E%3Crect x='60' y='76' width='13' height='62' rx='1.5'/%3E%3Cline x1='60' y1='84' x2='73' y2='84'/%3E%3Cline x1='60' y1='126' x2='73' y2='126'/%3E%3Crect x='63.2' y='99.6' width='6.5' height='9.9'/%3E%3C/g%3E%3Cg%3E%3Crect x='75' y='62' width='18' height='76' rx='1.5'/%3E%3Cline x1='75' y1='70' x2='93' y2='70'/%3E%3Cline x1='75' y1='126' x2='93' y2='126'/%3E%3Crect x='79.5' y='90.9' width='9.0' height='12.2'/%3E%3C/g%3E%3Cg transform='rotate(14 109.0 138)'%3E%3Crect x='101' y='66' width='16' height='72' rx='1.5'/%3E%3Cline x1='101' y1='74' x2='117' y2='74'/%3E%3Cline x1='101' y1='126' x2='117' y2='126'/%3E%3Crect x='105.0' y='93.4' width='8.0' height='11.5'/%3E%3C/g%3E%3Crect x='150' y='126' width='78' height='12' rx='2'/%3E%3Crect x='156' y='115' width='68' height='11' rx='2'/%3E%3Crect x='152' y='105' width='72' height='10' rx='2'/%3E%3Cpath d='M189 101 C176 87 160 87 146 93 L146 105 C160 99 176 99 189 104 Z'/%3E%3Cpath d='M189 101 C202 87 218 87 232 93 L232 105 C218 99 202 99 189 104 Z'/%3E%3Cpath d='M154 94 '/%3E%3Cpath d='M154 94 '/%3E%3Cpath d='M154 94 '/%3E%3Cpath d='M156 96 C166 92 176 93 184 98' /%3E%3Cpath d='M194 98 C202 93 212 92 222 96'/%3E%3Ccircle cx='300' cy='80' r='30'/%3E%3Cellipse cx='300' cy='80' rx='13.5' ry='30'/%3E%3Cline x1='270' y1='80' x2='330' y2='80'/%3E%3Cpath d='M274.2 65.0 H325.8'/%3E%3Cpath d='M274.2 95.0 H325.8'/%3E%3Cpath d='M264 80 A36 36 0 0 0 300 116'/%3E%3Cline x1='300' y1='116' x2='300' y2='132'/%3E%3Cpath d='M282 138 Q300 126 318 138'/%3E%3Cpath d='M388 138 V122 Q388 114 396 114 H412 Q420 114 420 122 V138 Z'/%3E%3Crect x='396' y='108' width='16' height='6'/%3E%3Cpath d='M404 110 L446 34 C452 42 450 64 432 80 C424 86 414 94 404 110 Z'/%3E%3Cpath d='M406 106 L440 46'/%3E%3Cg%3E%3Crect x='470' y='52' width='18' height='86' rx='1.5'/%3E%3Cline x1='470' y1='60' x2='488' y2='60'/%3E%3Cline x1='470' y1='126' x2='488' y2='126'/%3E%3Crect x='474.5' y='84.7' width='9.0' height='13.8'/%3E%3C/g%3E%3Cg%3E%3Crect x='490' y='72' width='14' height='66' rx='1.5'/%3E%3Cline x1='490' y1='80' x2='504' y2='80'/%3E%3Cline x1='490' y1='126' x2='504' y2='126'/%3E%3Crect x='493.5' y='97.1' width='7.0' height='10.6'/%3E%3C/g%3E%3Cg%3E%3Crect x='506' y='60' width='20' height='78' rx='1.5'/%3E%3Cline x1='506' y1='68' x2='526' y2='68'/%3E%3Cline x1='506' y1='126' x2='526' y2='126'/%3E%3Crect x='511.0' y='89.6' width='10.0' height='12.5'/%3E%3C/g%3E%3Cg%3E%3Crect x='528' y='80' width='16' height='58' rx='1.5'/%3E%3Cline x1='528' y1='88' x2='544' y2='88'/%3E%3Cline x1='528' y1='126' x2='544' y2='126'/%3E%3Crect x='532.0' y='102.0' width='8.0' height='9.3'/%3E%3C/g%3E%3Cg transform='rotate(12 561.0 138)'%3E%3Crect x='552' y='66' width='18' height='72' rx='1.5'/%3E%3Cline x1='552' y1='74' x2='570' y2='74'/%3E%3Cline x1='552' y1='126' x2='570' y2='126'/%3E%3Crect x='556.5' y='93.4' width='9.0' height='11.5'/%3E%3C/g%3E%3Cpath d='M606 138 L602 116 H630 L626 138 Z'/%3E%3Cpath d='M616 116 C612 98 600 92 594 94 C600 102 610 108 616 116'/%3E%3Cpath d='M616 116 C620 94 632 86 640 88 C634 98 624 108 616 116'/%3E%3Cpath d='M616 116 V82'/%3E%3Cline x1='0' y1='138' x2='640' y2='138'/%3E%3C/g%3E%3C/svg%3E");
+    --wc-svg-binding: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 26' width='30' height='26'%3E%3Cdefs%3E%3ClinearGradient id='m' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ffffff'/%3E%3Cstop offset='.45' stop-color='%23c9ccd1'/%3E%3Cstop offset='1' stop-color='%237d828a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='15.6' y='9.8' width='5.8' height='6.6' rx='1.6' fill='%234a3a30' opacity='0.78'/%3E%3Cpath d='M16 16.9 H21' stroke='rgba(255,255,255,0.85)' stroke-width='0.9' fill='none'/%3E%3Cg fill='none' stroke-linecap='round' stroke='rgba(0,0,0,0.30)' stroke-width='1.9'%3E%3Cpath d='M18.6 12 C16 7.2 11.6 6.2 7.8 6.8 C3.6 7.5 2.8 12.4 5.4 14.2 C6.8 15.1 8.6 15.3 10.2 15.1'/%3E%3Cg transform='translate(0 2.3)'%3E%3Cpath d='M18.6 12 C16 7.2 11.6 6.2 7.8 6.8 C3.6 7.5 2.8 12.4 5.4 14.2 C6.8 15.1 8.6 15.3 10.2 15.1'/%3E%3C/g%3E%3C/g%3E%3Cg fill='none' stroke-linecap='round' stroke='url(%23m)' stroke-width='1.15'%3E%3Cpath d='M18.6 12 C16 7.2 11.6 6.2 7.8 6.8 C3.6 7.5 2.8 12.4 5.4 14.2 C6.8 15.1 8.6 15.3 10.2 15.1'/%3E%3Cg transform='translate(0 2.3)'%3E%3Cpath d='M18.6 12 C16 7.2 11.6 6.2 7.8 6.8 C3.6 7.5 2.8 12.4 5.4 14.2 C6.8 15.1 8.6 15.3 10.2 15.1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    --wc-svg-binding-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 26' width='30' height='26'%3E%3Cdefs%3E%3ClinearGradient id='m' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ffffff'/%3E%3Cstop offset='.45' stop-color='%23c9ccd1'/%3E%3Cstop offset='1' stop-color='%237d828a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='15.6' y='9.8' width='5.8' height='6.6' rx='1.6' fill='%231a1410' opacity='0.78'/%3E%3Cpath d='M16 16.9 H21' stroke='rgba(255,255,255,0.10)' stroke-width='0.9' fill='none'/%3E%3Cg fill='none' stroke-linecap='round' stroke='rgba(0,0,0,0.30)' stroke-width='1.9'%3E%3Cpath d='M18.6 12 C16 7.2 11.6 6.2 7.8 6.8 C3.6 7.5 2.8 12.4 5.4 14.2 C6.8 15.1 8.6 15.3 10.2 15.1'/%3E%3Cg transform='translate(0 2.3)'%3E%3Cpath d='M18.6 12 C16 7.2 11.6 6.2 7.8 6.8 C3.6 7.5 2.8 12.4 5.4 14.2 C6.8 15.1 8.6 15.3 10.2 15.1'/%3E%3C/g%3E%3C/g%3E%3Cg fill='none' stroke-linecap='round' stroke='url(%23m)' stroke-width='1.15'%3E%3Cpath d='M18.6 12 C16 7.2 11.6 6.2 7.8 6.8 C3.6 7.5 2.8 12.4 5.4 14.2 C6.8 15.1 8.6 15.3 10.2 15.1'/%3E%3Cg transform='translate(0 2.3)'%3E%3Cpath d='M18.6 12 C16 7.2 11.6 6.2 7.8 6.8 C3.6 7.5 2.8 12.4 5.4 14.2 C6.8 15.1 8.6 15.3 10.2 15.1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.word-card.wc-v2 {
+    /* රටා වර්ණ — Light */
+    --cp-line:    rgba(139, 0, 0, 0.13);
+    --cp-fill:    rgba(212, 160, 55, 0.13);
+    --cp-lattice: rgba(139, 0, 0, 0.06);
+    --cp-sky:     rgba(139, 0, 0, 0.12);
+    --cp-lantern: rgba(139, 0, 0, 0.22);
+    --cp-glow:    rgba(255, 196, 92, 0.30);
+
+    /* කොටස් වර්ණ */
+    --wc-meaning:  var(--primary-color);
+    --wc-grammar:  #2e7d32;
+    --wc-proper:   #0759a5;
+    --wc-etym:     #6a1b9a;
+    --wc-sense-bg: rgba(255, 255, 255, 0.36);
+    --wc-sense-bd: rgba(212, 175, 55, 0.34);
+
+    padding: 18px 20px 16px 24px;
+    margin-bottom: 18px;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(255, 236, 200, 0.55), transparent 60%),
+        linear-gradient(160deg, rgba(255, 252, 245, 0.94), rgba(250, 243, 230, 0.86));
+    border: 1px solid rgba(212, 175, 55, 0.32);
+    animation: wcRise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.word-card.wc-v2 > *:not(.card-pattern) {
+    position: relative;
+    z-index: 1;
+}
+
+@keyframes wcRise {
+    from { opacity: 0; transform: translateY(14px) scale(0.985); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* ---------- Background pattern layer ---------- */
+
+.card-pattern {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: inherit;
+}
+
+.wc-alt .card-pattern {
+    transform: scaleX(-1);           /* ඊළඟ කාඩ් එකේ රටාව කැඩපතක් සේ මාරු වේ */
+}
+
+.cp-lattice {
+    position: absolute;
+    inset: 0;
+    background-color: var(--cp-lattice);
+    -webkit-mask: var(--wc-svg-lattice) 0 0 / 46px 46px repeat;
+            mask: var(--wc-svg-lattice) 0 0 / 46px 46px repeat;
+}
+
+.cp-rosette {
+    position: absolute;
+    display: block;
+}
+.cp-rosette i {
+    position: absolute;
+    inset: 0;
+}
+.cp-rosette .cp-fill {
+    background: linear-gradient(135deg, var(--cp-fill), rgba(212, 175, 55, 0.06));
+    -webkit-mask: var(--wc-svg-rosette-fill) center / contain no-repeat;
+            mask: var(--wc-svg-rosette-fill) center / contain no-repeat;
+}
+.cp-rosette .cp-line {
+    background-color: var(--cp-line);
+    -webkit-mask: var(--wc-svg-rosette-line) center / contain no-repeat;
+            mask: var(--wc-svg-rosette-line) center / contain no-repeat;
+}
+
+/* විශාල රෝසෙට් එක — ඉහළ දකුණු කෙළවර (සෙමින් භ්‍රමණය වේ) */
+.cp-rosette--a {
+    width: 330px;
+    height: 330px;
+    top: -150px;
+    right: -130px;
+    animation: wcSpin 320s linear infinite;
+}
+
+/* කුඩා රෝසෙට් එක — වම් පස මැද කෙළවර */
+.cp-rosette--b {
+    width: 210px;
+    height: 210px;
+    top: 34%;
+    left: -120px;
+    opacity: 0.75;
+    animation: wcSpin 420s linear infinite reverse;
+}
+
+@keyframes wcSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* ---------- එල්ලෙන පහන් (සෙමින් පැද්දේ) ---------- */
+
+.cp-lantern {
+    position: absolute;
+    top: 0;
+    width: 30px;
+    height: 86px;
+    transform-origin: 50% 0;
+    animation: wcSway 14s ease-in-out infinite;
+}
+.cp-lantern::before {          /* පහනේ ආලෝක දීප්තිය */
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 62%;
+    width: 78px;
+    height: 78px;
+    margin: -39px 0 0 -39px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--cp-glow), transparent 68%);
+    animation: wcGlow 9s ease-in-out infinite;
+}
+.cp-lantern i {
+    position: absolute;
+    inset: 0;
+    background-color: var(--cp-lantern);
+    -webkit-mask: var(--wc-svg-lantern) center / contain no-repeat;
+            mask: var(--wc-svg-lantern) center / contain no-repeat;
+}
+
+.cp-lantern--a {
+    left: 58%;
+    height: 96px;
+}
+.cp-lantern--b {
+    left: 80%;
+    width: 24px;
+    height: 128px;
+    animation-duration: 18s;
+    animation-delay: -5s;
+    opacity: 0.8;
+}
+
+@keyframes wcSway {
+    0%, 100% { transform: rotate(-2deg); }
+    50%      { transform: rotate(2deg); }
+}
+@keyframes wcGlow {
+    0%, 100% { opacity: 0.55; transform: scale(0.92); }
+    50%      { opacity: 1;    transform: scale(1.08); }
+}
+
+/* ---------- පහළ දාගැබ් / විහාර රේඛාව ---------- */
+
+.cp-skyline {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 92px;
+    background-color: var(--cp-sky);
+    -webkit-mask: var(--wc-svg-skyline) 0 100% / auto 92px repeat-x;
+            mask: var(--wc-svg-skyline) 0 100% / auto 92px repeat-x;
+}
+
+/* සිංහල-ඉංග්‍රීසි ශබ්දකෝෂයේ කාඩ් සඳහා — පොත්, ලෝක ගෝලය, පිහාටු පෑන */
+.wc-sien .cp-skyline {
+    -webkit-mask-image: var(--wc-svg-library);
+            mask-image: var(--wc-svg-library);
+}
+
+/* ---------- කාඩ් එක දිස්වන විට එක් වරක් ආලෝක ඉරක් ගමන් කරයි ---------- */
+
+.cp-sheen {
+    position: absolute;
+    top: -20%;
+    bottom: -20%;
+    left: 0;
+    width: 40%;
+    background: linear-gradient(100deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.0) 20%,
+        rgba(255, 255, 255, 0.55) 50%,
+        rgba(255, 255, 255, 0.0) 80%,
+        transparent 100%);
+    transform: translateX(-160%) skewX(-12deg);
+    animation: wcSheen 1.7s ease-out 0.35s 1 both;
+}
+@keyframes wcSheen {
+    to { transform: translateX(330%) skewX(-12deg); }
+}
+
+/* ---------- පදය සහ "වර නැගීම" බටනය ---------- */
+
+.wc-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.wc-word {
+    margin: 0;
+    min-width: 0;
+    flex: 1 1 auto;
+    font-size: 31px;
+    font-weight: bold;
+    line-height: 1.25;
+    color: var(--primary-color);
+    overflow-wrap: anywhere;
+    background: linear-gradient(120deg, #a91f1f 0%, #8B0000 45%, #5a0000 100%);
+    -webkit-background-clip: text;
+            background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.9));
+}
+
+.wc-head .dict-tag {
+    flex-shrink: 0;
+}
+
+.wc-infl-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px 7px 11px;
+    border-radius: 999px;
+    border: 1px solid rgba(139, 0, 0, 0.30);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(255, 244, 222, 0.85));
+    color: var(--primary-color);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 1.2;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+        0 4px 12px rgba(139, 0, 0, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.25s ease, color 0.25s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+.wc-infl-btn .ib-icon {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+}
+.wc-infl-btn .ib-chev {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.wc-infl-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 7px 18px rgba(139, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+.wc-infl-btn:active {
+    transform: scale(0.95);
+}
+.wc-infl-btn.is-open {
+    color: #fff;
+    border-color: transparent;
+    background: linear-gradient(135deg, #b32424, #8B0000 55%, #5a0000);
+    box-shadow: 0 6px 16px rgba(139, 0, 0, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.wc-infl-btn.is-open .ib-chev {
+    transform: rotate(180deg);
+}
+
+/* පදයට යටින් රන්වන් අලංකාර රේඛාව */
+.wc-divider {
+    position: relative;
+    height: 12px;
+    margin: 8px 0 4px;
+}
+.wc-divider::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    background: linear-gradient(90deg,
+        rgba(212, 175, 55, 0.0),
+        rgba(212, 175, 55, 0.85) 12%,
+        rgba(139, 0, 0, 0.35) 55%,
+        rgba(212, 175, 55, 0.0));
+}
+.wc-divider i {
+    position: absolute;
+    left: 12%;
+    top: 50%;
+    width: 9px;
+    height: 9px;
+    margin: -4.5px 0 0 -4.5px;
+    transform: rotate(45deg);
+    background: linear-gradient(135deg, #f3d675, #b8860b);
+    box-shadow: 0 0 0 3px rgba(255, 250, 238, 0.95), 0 0 10px rgba(212, 175, 55, 0.55);
+}
+
+/* ---------- අර්ථ (Senses) ---------- */
+
+.wc-senses {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 12px;
+}
+
+.wc-sense {
+    border: 1px solid var(--wc-sense-bd);
+    border-radius: 16px;
+    background: var(--wc-sense-bg);
+    -webkit-backdrop-filter: blur(1.5px);
+            backdrop-filter: blur(1.5px);
+    overflow: hidden;
+    box-shadow: 0 4px 14px rgba(90, 50, 20, 0.06);
+    animation: wcRise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: calc(var(--i, 0) * 80ms + 140ms);
+    transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+@media (hover: hover) {
+    .wc-sense:hover {
+        border-color: rgba(212, 175, 55, 0.6);
+        box-shadow: 0 8px 22px rgba(90, 50, 20, 0.10);
+    }
+}
+
+.wc-sense-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: linear-gradient(90deg, rgba(212, 175, 55, 0.20), rgba(212, 175, 55, 0.05) 70%, transparent);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.26);
+}
+
+.wc-num {
+    min-width: 28px;
+    height: 28px;
+    padding: 0 7px;
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: bold;
+    line-height: 1;
+    color: #fff;
+    background:
+        radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.28), transparent 45%),
+        linear-gradient(135deg, #b32424, #8B0000 55%, #560000);
+    box-shadow: 0 3px 8px rgba(139, 0, 0, 0.28);
+}
+
+.wc-type {
+    padding: 2px 12px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #9a6a00;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(212, 175, 55, 0.55);
+}
+
+.wc-sense-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* ---------- තොරතුරු කොටස් ---------- */
+
+.wc-block {
+    --accent: var(--wc-meaning);
+    position: relative;
+    padding: 8px 12px 10px 14px;
+    border-radius: 12px;
+    border-left: 4px solid var(--accent);
+    background: rgba(255, 255, 255, 0.50);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.035);
+}
+.wc-block--meaning {
+    background:
+        linear-gradient(120deg, rgba(139, 0, 0, 0.065), rgba(212, 175, 55, 0.10)),
+        rgba(255, 255, 255, 0.48);
+}
+.wc-block--grammar { --accent: var(--wc-grammar); background: rgba(236, 248, 238, 0.58); }
+.wc-block--proper  { --accent: var(--wc-proper);  background: rgba(234, 244, 253, 0.58); }
+.wc-block--etym    { --accent: var(--wc-etym);    background: rgba(245, 237, 250, 0.58); }
+
+.wc-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: bold;
+    letter-spacing: 0.2px;
+    color: var(--accent);
+    opacity: 0.95;
+    margin-bottom: 2px;
+}
+
+.wc-text {
+    font-size: 19px;
+    line-height: 1.6;
+    color: var(--text-color);
+    overflow-wrap: anywhere;
+}
+.wc-block--meaning .wc-text {
+    font-size: 21px;
+}
+.wc-block--grammar .wc-text,
+.wc-block--proper .wc-text,
+.wc-block--etym .wc-text {
+    font-size: 17px;
+}
+
+/* "|" මඟින් වෙන් කළ අර්ථ අතර කුඩා රන්වන් දියමන්ති ලකුණ */
+.wc-sep {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin: 0 9px 0.22em;
+    vertical-align: middle;
+    transform: rotate(45deg);
+    background: var(--secondary-color, #d4af37);
+    opacity: 0.85;
+}
+
+/* පද බෙදීම */
+
+.wc-division-label {
+    font-weight: bold;
+    color: var(--text-secondary);
+}
+.wc-division-value {
+    font-weight: bold;
+    color: #795548;
+    letter-spacing: 0.2px;
+}
+.wc-root {
+    color: #0b6e8a;
+    padding: 0 4px;
+    border-radius: 6px;
+    background: rgba(11, 110, 138, 0.09);
+}
+
+/* ව්‍යාකරණ විස්තරයේ පියවර */
+.gd-part + .gd-part {
+    margin-top: 3px;
+    padding-top: 3px;
+    border-top: 1px dotted rgba(46, 125, 50, 0.25);
+}
+.gd-steps {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+}
+.gd-steps li {
+    position: relative;
+    padding: 1px 0 3px 22px;
+}
+.gd-steps li::before {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 0.62em;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0.75;
+}
+.gd-steps li:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: calc(0.62em + 9px);
+    bottom: -0.3em;
+    width: 1px;
+    background: linear-gradient(var(--accent), transparent);
+    opacity: 0.45;
+}
+.gd-steps li:last-child {
+    font-weight: bold;
+    color: var(--accent);
+}
+
+/* වර නැගීම් පැනලය කාඩ් එක තුළ */
+.wc-v2 .inflection-panel {
+    margin-top: 12px;
+    animation: wcRise 0.35s ease both;
+}
+
+.wc-v2 .card-footer {
+    margin-top: 14px;
+    border-top-color: rgba(212, 175, 55, 0.35);
+}
+.wc-v2 .correction-link {
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.65);
+    border: 1px solid rgba(139, 0, 0, 0.16);
+}
+
+/* Inflection cross-reference card */
+.wc-v2.inflection-ref-card .meaning-row {
+    margin-top: 8px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--wc-sense-bd);
+    background: var(--wc-sense-bg);
+}
+.wc-v2.inflection-ref-card .meaning-row:last-child {
+    border-bottom: 1px solid var(--wc-sense-bd);
+}
+
+/* ---------- DARK THEME ---------- */
+
+body.dark-theme .word-card.wc-v2 {
+    --cp-line:    rgba(179, 136, 255, 0.17);
+    --cp-fill:    rgba(0, 229, 255, 0.07);
+    --cp-lattice: rgba(179, 136, 255, 0.06);
+    --cp-sky:     rgba(179, 136, 255, 0.14);
+    --cp-lantern: rgba(243, 214, 117, 0.32);
+    --cp-glow:    rgba(255, 196, 92, 0.22);
+
+    --wc-meaning:  #d1b3ff;
+    --wc-grammar:  #69f0ae;
+    --wc-proper:   #4fc3f7;
+    --wc-etym:     #ea80fc;
+    --wc-sense-bg: rgba(26, 31, 50, 0.42);
+    --wc-sense-bd: rgba(179, 136, 255, 0.24);
+
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(179, 136, 255, 0.14), transparent 60%),
+        linear-gradient(160deg, rgba(24, 28, 44, 0.94), rgba(14, 17, 30, 0.90));
+    border-color: rgba(179, 136, 255, 0.24);
+}
+
+body.dark-theme .wc-word {
+    background: linear-gradient(120deg, #e3d0ff 0%, #b388ff 50%, #7fdcff 100%);
+    -webkit-background-clip: text;
+            background-clip: text;
+    filter: drop-shadow(0 0 10px rgba(179, 136, 255, 0.30));
+}
+
+body.dark-theme .cp-sheen {
+    background: linear-gradient(100deg, transparent 20%, rgba(200, 170, 255, 0.16) 50%, transparent 80%);
+}
+
+body.dark-theme .wc-infl-btn {
+    color: #e0ccff;
+    border-color: rgba(179, 136, 255, 0.40);
+    background: linear-gradient(135deg, rgba(40, 46, 70, 0.92), rgba(30, 34, 54, 0.88));
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+body.dark-theme .wc-infl-btn.is-open {
+    color: #fff;
+    background: linear-gradient(135deg, #7c4dff, #b388ff 60%, #5e35b1);
+    border-color: transparent;
+}
+
+body.dark-theme .wc-divider::before {
+    background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.7) 12%, rgba(179, 136, 255, 0.45) 55%, transparent);
+}
+body.dark-theme .wc-divider i {
+    background: linear-gradient(135deg, #7fdcff, #b388ff);
+    box-shadow: 0 0 0 3px rgba(20, 24, 40, 0.95), 0 0 12px rgba(0, 229, 255, 0.55);
+}
+
+body.dark-theme .wc-sense {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+body.dark-theme .wc-sense-head {
+    background: linear-gradient(90deg, rgba(179, 136, 255, 0.18), rgba(179, 136, 255, 0.04) 70%, transparent);
+    border-bottom-color: rgba(179, 136, 255, 0.20);
+}
+body.dark-theme .wc-num {
+    background:
+        radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.25), transparent 45%),
+        linear-gradient(135deg, #9c6bff, #7c4dff 55%, #4a2bb0);
+    box-shadow: 0 3px 10px rgba(124, 77, 255, 0.40);
+}
+body.dark-theme .wc-type {
+    color: #f3d675;
+    background: rgba(243, 214, 117, 0.08);
+    border-color: rgba(243, 214, 117, 0.40);
+}
+
+body.dark-theme .wc-block {
+    background: rgba(255, 255, 255, 0.035);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+body.dark-theme .wc-block--meaning {
+    background: linear-gradient(120deg, rgba(179, 136, 255, 0.12), rgba(0, 229, 255, 0.05));
+}
+body.dark-theme .wc-block--grammar { background: rgba(105, 240, 174, 0.06); }
+body.dark-theme .wc-block--proper  { background: rgba(79, 195, 247, 0.07); }
+body.dark-theme .wc-block--etym    { background: rgba(234, 128, 252, 0.07); }
+
+
+body.dark-theme .wc-division-value { color: #ffcc80; }
+body.dark-theme .wc-root {
+    color: #7fdcff;
+    background: rgba(0, 229, 255, 0.10);
+}
+body.dark-theme .gd-part + .gd-part { border-top-color: rgba(105, 240, 174, 0.22); }
+
+body.dark-theme .wc-v2 .card-footer { border-top-color: rgba(179, 136, 255, 0.22); }
+body.dark-theme .wc-v2 .correction-link { background: rgba(179, 136, 255, 0.10); border-color: rgba(179, 136, 255, 0.30); }
+
+/* ---------- MOBILE ---------- */
+
+@media (max-width: 480px) {
+    .word-card.wc-v2 {
+        padding: 14px 13px 14px 17px;
+        border-radius: 16px;
+    }
+    .wc-word {
+        font-size: 25px;
+    }
+    .wc-infl-btn {
+        font-size: 13px;
+        padding: 6px 10px 6px 9px;
+        gap: 5px;
+    }
+    .wc-infl-btn .ib-icon { width: 15px; height: 15px; }
+    .wc-infl-btn .ib-chev { width: 13px; height: 13px; }
+    .wc-sense-body { padding: 10px; gap: 9px; }
+    .wc-block { padding: 7px 10px 9px 12px; }
+    .wc-text { font-size: 18px; }
+    .wc-block--meaning .wc-text { font-size: 19.5px; }
+    .wc-block--grammar .wc-text,
+    .wc-block--proper .wc-text,
+    .wc-block--etym .wc-text { font-size: 16px; }
+    .cp-rosette--a { width: 250px; height: 250px; top: -115px; right: -105px; }
+    .cp-rosette--b { width: 170px; height: 170px; left: -100px; }
+    .cp-lantern--b { display: none; }
+    .cp-lantern--a { left: 64%; }
+    .cp-skyline { height: 74px; -webkit-mask-size: auto 74px; mask-size: auto 74px; }
+}
+
+/* චලන අඩු කිරීමේ සැකසුම තෝරා ඇත්නම් ස්ථිතික රටාවක් */
+@media (prefers-reduced-motion: reduce) {
+    .cp-rosette, .cp-lantern, .cp-lantern::before { animation: none !important; }
+    .cp-sheen { display: none; }
+}
+
+
+/* =========================================================
+   FIT TO PAGE — විශාල තිර (පළල > 1100px)
+   .container එකට script.js මඟින් දැනටමත් zoom යොදයි. මෙහිදී ප්‍රධාන
+   layout එකේ අනෙක් කොටස් (පහළ nav bar, popups) ද එම --fit අනුපාතයෙන්ම
+   විශාල කර මුළු පිටුවම එකම ප්‍රමාණයට ගැළපේ. දුරකථන / tab වල --fit = 1.
+   ========================================================= */
+
+body {
+    padding-bottom: calc(70px * var(--fit, 1));
+}
+
+.bottom-nav,
+.zoom-panel,
+#fbOverlay #fbCard {
+    zoom: var(--fit, 1);
+}
+
+/* zoom මඟින් vh ද ගුණ වන නිසා popups තිරයෙන් පිටතට නොයෑමට */
+#fbOverlay #fbCard {
+    max-height: calc(92vh / var(--fit, 1));
+}
+
+
+/* =========================================================
+   v12 — Sense head එකේ පද බෙදීම
+   ========================================================= */
+
+.wc-sense-head {
+    flex-wrap: wrap;
+    row-gap: 6px;
+}
+.wc-head-div {
+    margin-left: auto;
+    min-width: 0;
+    text-align: right;
+    font-size: 15.5px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+}
+.wc-head-div .wc-division-label {
+    font-size: 13.5px;
+}
+.wc-sense-body:empty {
+    display: none;
+}
+
+
+/* =========================================================
+   v12 — SEARCH BAR (සෘජුකෝණාස්‍රාකාර, සිහින් දාරය)
+   ========================================================= */
+
+.search-box-container {
+    align-items: stretch;
+}
+.search-input {
+    border-radius: 12px;
+    border: 1.6px solid rgba(62, 39, 35, 0.55);
+    background: #fffdf8;
+    -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+    box-shadow: 0 2px 8px rgba(90, 50, 20, 0.06);
+}
+.search-input:focus {
+    border-color: var(--primary-color);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.10), 0 4px 14px rgba(90, 50, 20, 0.08);
+}
+.search-btn {
+    width: 52px;
+    height: auto;
+    min-height: 48px;
+    border-radius: 12px;
+    border: 1.6px solid #5a0000;
+    background: linear-gradient(160deg, #a91f1f, #8B0000 55%, #5a0000);
+    box-shadow: 0 4px 12px rgba(139, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.suggestions-box {
+    border-radius: 12px;
+}
+
+body.dark-theme .search-input {
+    background: rgba(15, 18, 32, 0.85);
+    border: 1.6px solid rgba(179, 136, 255, 0.55);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+body.dark-theme .search-input:focus {
+    border-color: #b388ff;
+    box-shadow: 0 0 0 3px rgba(179, 136, 255, 0.18);
+}
+body.dark-theme .search-btn {
+    border-color: #4a2bb0;
+    background: linear-gradient(160deg, #9c6bff, #7c4dff 55%, #4a2bb0);
+}
+
+
+/* =========================================================
+   v12 — HEADER: කාඩ් එකට ගැලපෙන මෙරූන්-රන් වර්ණ, දෙපසින් පමණක්
+   චලනය නොවන ජ්‍යාමිතික රටා
+   ========================================================= */
+
+.header-card {
+    background:
+        radial-gradient(ellipse at 50% 120%, rgba(212, 175, 55, 0.22), transparent 60%),
+        radial-gradient(ellipse at 50% -30%, rgba(255, 210, 160, 0.20), transparent 55%),
+        linear-gradient(100deg, #5a0606 0%, #7d0b0b 22%, #8B0000 50%, #7d0b0b 78%, #5a0606 100%);
+    box-shadow:
+        0 10px 26px rgba(90, 0, 0, 0.30),
+        inset 0 1px 0 rgba(255, 225, 160, 0.25),
+        inset 0 -1px 0 rgba(40, 0, 0, 0.45);
+}
+
+.header-card::before {               /* ඉහළ සිහින් රන් රේඛාව */
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2px;
+    z-index: 2;
+    background: linear-gradient(90deg, transparent, rgba(243, 214, 117, 0.75) 20%, rgba(243, 214, 117, 0.75) 80%, transparent);
+}
+
+.hdr-pat {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 34%;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+}
+.hdr-pat--l {
+    left: 0;
+    -webkit-mask-image: linear-gradient(90deg, #000 30%, transparent);
+            mask-image: linear-gradient(90deg, #000 30%, transparent);
+}
+.hdr-pat--r {
+    right: 0;
+    transform: scaleX(-1);
+    -webkit-mask-image: linear-gradient(90deg, #000 30%, transparent);
+            mask-image: linear-gradient(90deg, #000 30%, transparent);
+}
+.hp-lattice {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(243, 214, 117, 0.16);
+    -webkit-mask: var(--wc-svg-lattice) 0 50% / 34px 34px repeat;
+            mask: var(--wc-svg-lattice) 0 50% / 34px 34px repeat;
+}
+.hp-rosette {
+    position: absolute;
+    width: 170px;
+    height: 170px;
+    left: -85px;
+    top: 50%;
+    margin-top: -85px;
+}
+.hp-rosette i {
+    position: absolute;
+    inset: 0;
+}
+.hp-rosette .cp-fill {
+    background-color: rgba(243, 214, 117, 0.16);
+    -webkit-mask: var(--wc-svg-rosette-fill) center / contain no-repeat;
+            mask: var(--wc-svg-rosette-fill) center / contain no-repeat;
+}
+.hp-rosette .cp-line {
+    background-color: rgba(243, 214, 117, 0.42);
+    -webkit-mask: var(--wc-svg-rosette-line) center / contain no-repeat;
+            mask: var(--wc-svg-rosette-line) center / contain no-repeat;
+}
+
+.header-content {
+    z-index: 3;
+}
+.header-icon {
+    background:
+        radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.40), transparent 55%),
+        linear-gradient(135deg, #d9a82e 0%, #a8740c 50%, #6e4a05 100%);
+    border: 2px solid rgba(255, 236, 190, 0.95);
+    box-shadow:
+        0 4px 12px rgba(40, 0, 0, 0.45),
+        0 0 14px rgba(243, 214, 117, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+.top-bar h1 {
+    color: #fff8e6 !important;
+    text-shadow:
+        0 2px 4px rgba(40, 0, 0, 0.55),
+        0 0 16px rgba(243, 214, 117, 0.35);
+}
+
+/* Dark theme header — කාඩ් එකේ තද නිල්-දම් වර්ණයට ගැලපේ */
+body.dark-theme .header-card {
+    background:
+        radial-gradient(ellipse at 50% 120%, rgba(179, 136, 255, 0.22), transparent 60%),
+        linear-gradient(100deg, #0f1222 0%, #1b1838 25%, #241c48 50%, #1b1838 75%, #0f1222 100%);
+    box-shadow:
+        0 10px 28px rgba(0, 0, 0, 0.60),
+        inset 0 1px 0 rgba(200, 170, 255, 0.18),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.55);
+}
+body.dark-theme .header-card::before {
+    background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.55) 20%, rgba(179, 136, 255, 0.55) 80%, transparent);
+}
+body.dark-theme .hp-lattice           { background-color: rgba(179, 136, 255, 0.16); }
+body.dark-theme .hp-rosette .cp-fill  { background-color: rgba(0, 229, 255, 0.10); }
+body.dark-theme .hp-rosette .cp-line  { background-color: rgba(200, 170, 255, 0.40); }
+body.dark-theme .header-icon {
+    background:
+        radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.35), transparent 55%),
+        linear-gradient(135deg, #9c6bff 0%, #7c4dff 50%, #3d2399 100%);
+    border-color: rgba(220, 200, 255, 0.85);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.55), 0 0 16px rgba(179, 136, 255, 0.45);
+}
+body.dark-theme .top-bar h1 {
+    color: #ffffff !important;
+}
+
+@media (max-width: 480px) {
+    .hp-rosette { width: 130px; height: 130px; left: -65px; margin-top: -65px; }
+    .hdr-pat { width: 30%; }
+}
+
+
+/* =========================================================
+   v12 — BOTTOM NAV: ලා රන්වන් පසුබිම, චලනය නොවන රටා
+   ========================================================= */
+
+:root {
+    --ig-1: #c8921a;     /* අයිකන gradient — රන් → මෙරූන් */
+    --ig-2: #a01818;
+    --ig-3: #5a0000;
+}
+body.dark-theme {
+    --ig-1: #00e5ff;
+    --ig-2: #8f7bff;
+    --ig-3: #b388ff;
+}
+
+.bottom-nav {
+    background: linear-gradient(180deg, #fffaf0 0%, #f8edd6 100%);
+    border-top: none;
+    box-shadow: 0 -6px 22px rgba(90, 50, 20, 0.12);
+    overflow: hidden;
+}
+.bottom-nav::before {                /* ඉහළ රන්-මෙරූන් රේඛාව */
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2px;
+    z-index: 2;
+    background: linear-gradient(90deg, #d4af37, #8B0000 50%, #d4af37);
+    opacity: 0.75;
+}
+.nav-pat {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+.np-lattice {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(139, 0, 0, 0.055);
+    -webkit-mask: var(--wc-svg-lattice) 0 50% / 32px 32px repeat;
+            mask: var(--wc-svg-lattice) 0 50% / 32px 32px repeat;
+}
+.np-rosette {
+    position: absolute;
+    top: 50%;
+    width: 150px;
+    height: 150px;
+    margin-top: -75px;
+}
+.np-rosette--l { left: -100px; }
+.np-rosette--r { right: -100px; }
+.np-rosette i {
+    position: absolute;
+    inset: 0;
+}
+.np-rosette .cp-fill {
+    background-color: rgba(212, 160, 55, 0.18);
+    -webkit-mask: var(--wc-svg-rosette-fill) center / contain no-repeat;
+            mask: var(--wc-svg-rosette-fill) center / contain no-repeat;
+}
+.np-rosette .cp-line {
+    background-color: rgba(139, 0, 0, 0.13);
+    -webkit-mask: var(--wc-svg-rosette-line) center / contain no-repeat;
+            mask: var(--wc-svg-rosette-line) center / contain no-repeat;
+}
+.bottom-nav .nav-item {
+    position: relative;
+    z-index: 1;
+}
+.nav-item.active .nav-icon-wrapper {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.28), rgba(139, 0, 0, 0.12));
+    box-shadow: inset 0 0 0 1px rgba(139, 0, 0, 0.16), 0 3px 8px rgba(139, 0, 0, 0.10);
+}
+
+body.dark-theme .bottom-nav {
+    background: linear-gradient(180deg, #181c2e 0%, #10131f 100%);
+    box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.55);
+}
+body.dark-theme .bottom-nav::before {
+    background: linear-gradient(90deg, #00e5ff, #b388ff 50%, #00e5ff);
+    opacity: 0.6;
+}
+body.dark-theme .np-lattice            { background-color: rgba(179, 136, 255, 0.07); }
+body.dark-theme .np-rosette .cp-fill   { background-color: rgba(0, 229, 255, 0.08); }
+body.dark-theme .np-rosette .cp-line   { background-color: rgba(179, 136, 255, 0.20); }
+body.dark-theme .nav-item.active .nav-icon-wrapper {
+    background: linear-gradient(135deg, rgba(179, 136, 255, 0.28), rgba(0, 229, 255, 0.10));
+    box-shadow: inset 0 0 0 1px rgba(179, 136, 255, 0.25);
+}
+
+@media (max-width: 480px) {
+    .np-rosette { width: 120px; height: 120px; margin-top: -60px; }
+    .np-rosette--l { left: -82px; }
+    .np-rosette--r { right: -82px; }
+}
+
+
+/* =========================================================
+   v12 — වර නැගීම් වගු: විශාල අකුරු, කාඩ් එකට ගැලපෙන වර්ණ
+   ========================================================= */
+
+.wc-v2 .inflection-panel {
+    padding: 16px 14px 14px;
+    border-radius: 16px;
+    background:
+        linear-gradient(160deg, rgba(255, 253, 247, 0.96), rgba(250, 242, 226, 0.94));
+    border: 1px solid rgba(212, 175, 55, 0.45);
+    box-shadow: 0 6px 18px rgba(90, 50, 20, 0.08);
+}
+
+.wc-v2 .inflection-pos-title {
+    display: block;
+    width: fit-content;
+    font-size: 20px;
+    color: var(--primary-color);
+    margin: 4px 0 10px;
+    padding: 0 2px 4px;
+    border-bottom: 2px solid #d4af37;
+}
+.wc-v2 .inflection-group-title {
+    display: block;
+    width: fit-content;
+    font-size: 16.5px;
+    color: #7a5200;
+    margin: 12px 0 4px;
+    padding: 2px 14px;
+    border-radius: 999px;
+    background: rgba(212, 175, 55, 0.16);
+    border: 1px solid rgba(212, 175, 55, 0.50);
+}
+
+.wc-v2 .inflection-table-wrapper {
+    margin: 8px 0 12px;
+}
+.wc-v2 .inflection-table {
+    min-width: 0;
+    font-size: 19px;
+    background: rgba(255, 255, 255, 0.85);
+    border-left: 4px solid var(--primary-color);
+    border-top: 1px solid rgba(212, 175, 55, 0.45);
+    border-right: 1px solid rgba(212, 175, 55, 0.45);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.45);
+    box-shadow: 0 4px 14px rgba(90, 50, 20, 0.07);
+}
+.wc-v2 .inflection-table th,
+.wc-v2 .inflection-table td {
+    padding: 9px 10px;
+    line-height: 1.55;
+    color: var(--text-color);
+    border-right-color: rgba(212, 175, 55, 0.28);
+    border-bottom-color: rgba(212, 175, 55, 0.28);
+}
+.wc-v2 .inflection-table tr:first-child th {         /* ඒක වචන / බහු වචන */
+    font-size: 16px;
+    color: #fff8e6;
+    background: linear-gradient(160deg, #a01818, #8B0000 55%, #6a0000);
+    border-bottom-color: rgba(212, 175, 55, 0.6);
+}
+.wc-v2 .inflection-table tr:first-child th.inflection-corner {
+    background: linear-gradient(160deg, #8B0000, #5a0000);
+}
+.wc-v2 .inflection-table tr:not(:first-child) th,
+.wc-v2 .inflection-table td:first-child {           /* විභක්ති නම් */
+    font-size: 16px;
+    color: var(--primary-color);
+    background: rgba(212, 175, 55, 0.12);
+    text-align: left;
+}
+.wc-v2 .inflection-table td {
+    font-weight: normal;
+}
+.wc-v2 .inflection-table tr:nth-child(odd) td {
+    background: rgba(250, 243, 228, 0.55);
+}
+.wc-v2 .inflection-table tr:hover td {
+    background: rgba(212, 175, 55, 0.14);
+}
+.wc-v2 .inflection-loading,
+.wc-v2 .inflection-empty {
+    font-size: 17px;
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 8px 0;
+}
+
+body.dark-theme .wc-v2 .inflection-panel {
+    background: linear-gradient(160deg, rgba(26, 30, 48, 0.96), rgba(18, 21, 36, 0.94));
+    border-color: rgba(179, 136, 255, 0.30);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+}
+body.dark-theme .wc-v2 .inflection-pos-title {
+    color: #d1b3ff;
+    border-bottom-color: #7fdcff;
+}
+body.dark-theme .wc-v2 .inflection-group-title {
+    color: #f3d675;
+    background: rgba(243, 214, 117, 0.08);
+    border-color: rgba(243, 214, 117, 0.35);
+}
+body.dark-theme .wc-v2 .inflection-table {
+    background: rgba(20, 24, 40, 0.85);
+    border-left-color: #b388ff;
+    border-top-color: rgba(179, 136, 255, 0.25);
+    border-right-color: rgba(179, 136, 255, 0.25);
+    border-bottom-color: rgba(179, 136, 255, 0.25);
+}
+body.dark-theme .wc-v2 .inflection-table th,
+body.dark-theme .wc-v2 .inflection-table td {
+    color: #f1ecff;
+    border-right-color: rgba(179, 136, 255, 0.16);
+    border-bottom-color: rgba(179, 136, 255, 0.16);
+}
+body.dark-theme .wc-v2 .inflection-table tr:first-child th {
+    color: #ffffff;
+    background: linear-gradient(160deg, #7c4dff, #5e35b1);
+}
+body.dark-theme .wc-v2 .inflection-table tr:first-child th.inflection-corner {
+    background: linear-gradient(160deg, #5e35b1, #3d2399);
+}
+body.dark-theme .wc-v2 .inflection-table tr:not(:first-child) th,
+body.dark-theme .wc-v2 .inflection-table td:first-child {
+    color: #d1b3ff;
+    background: rgba(179, 136, 255, 0.10);
+}
+body.dark-theme .wc-v2 .inflection-table tr:nth-child(odd) td {
+    background: rgba(255, 255, 255, 0.025);
+}
+body.dark-theme .wc-v2 .inflection-table tr:hover td {
+    background: rgba(179, 136, 255, 0.12);
+}
+
+@media (max-width: 480px) {
+    .wc-v2 .inflection-panel { padding: 12px 8px 10px; }
+    .wc-v2 .inflection-table { font-size: 18px; }
+    .wc-v2 .inflection-table th,
+    .wc-v2 .inflection-table td { padding: 8px 7px; }
+    .wc-v2 .inflection-table tr:not(:first-child) th,
+    .wc-v2 .inflection-table td:first-child,
+    .wc-v2 .inflection-table tr:first-child th { font-size: 15px; }
+}
+
+
+/* =========================================================
+   v13 — වම් පසින් සිදුරු විද දඟර (spiral) බැඳීම
+   කාඩ් එකේ වම් රන්-රතු තීරුව සහ ඉහළ-දකුණු දීප්තිය වෙනුවට
+   කුඩා සිදුරු පේළියක් හා ඒ හරහා යන සිහින් ලෝහ දඟර
+   ========================================================= */
+
+.word-card.wc-v2 {
+    overflow: visible;                 /* දඟර කාඩ් දාරයෙන් පිටතට එන නිසා */
+    padding-left: 30px;
+}
+
+.word-card.wc-v2::before,
+body.dark-theme .word-card.wc-v2::before {
+    content: '';
+    position: absolute;
+    left: -10px;
+    top: 16px;
+    bottom: 16px;
+    width: 30px;
+    border-radius: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: var(--wc-svg-binding) 0 0 / 30px 26px;
+    background-repeat: no-repeat space;
+}
+body.dark-theme .word-card.wc-v2::before {
+    background-image: var(--wc-svg-binding-dark);
+}
+
+@media (max-width: 480px) {
+    .word-card.wc-v2 {
+        padding-left: 25px;
+    }
+    .word-card.wc-v2::before,
+    body.dark-theme .word-card.wc-v2::before {
+        left: -9px;
+        width: 27px;
+        background-size: 27px 23.4px;
+    }
+}
+
+
+/* =========================================================
+   v13 — Pinch zoom අතරතුර පෙන්වන ප්‍රතිශත ලේබලය
+   ========================================================= */
+
+#zoomToast {
+    position: fixed;
+    top: 18%;
+    left: 50%;
+    z-index: 5000;
+    padding: 8px 20px;
+    border-radius: 999px;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    color: #fff8e6;
+    background: linear-gradient(160deg, rgba(160, 24, 24, 0.94), rgba(90, 0, 0, 0.94));
+    border: 1px solid rgba(243, 214, 117, 0.6);
+    box-shadow: 0 8px 22px rgba(60, 0, 0, 0.30);
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -6px) scale(0.96);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    zoom: var(--fit, 1);
+}
+#zoomToast.show {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+}
+body.dark-theme #zoomToast {
+    color: #ffffff;
+    background: linear-gradient(160deg, rgba(124, 77, 255, 0.95), rgba(74, 43, 176, 0.95));
+    border-color: rgba(200, 170, 255, 0.6);
+}
+
+/* දිගු වචනයක් සහ "වර නැගීම" බටනය එකම පේළියට නොගැළපෙන විට බටනය පහළ පේළියට යයි
+   (විශාලනය වැඩි කළ විට පදය අකුරෙන් අකුර කැඩීම වළක්වයි) */
+.wc-head {
+    flex-wrap: wrap;
+    row-gap: 8px;
+}
+.wc-head .wc-infl-btn,
+.wc-head .dict-tag {
+    margin-left: auto;
+}
+
+/* Pinch zoom අතරතුර (transform preview) තිරය පැත්තට scroll නොවීමට */
+html.is-zoom-preview,
+html.is-zoom-preview body {
+    overflow-x: hidden;
+}
+html.is-zoom-preview .container {
+    pointer-events: none;
 }

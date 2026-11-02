@@ -39,6 +39,10 @@ function applyContainerZoom(userPercent) {
     target.style.zoom = (factor * 100).toFixed(1) + '%';
     // CSS හි min-height ගණනය සඳහා (zoom මගින් 100vh ද ගුණ වන නිසා)
     target.style.setProperty('--container-zoom', factor.toFixed(3));
+    // Fit to page: පහළ nav bar, zoom panel, install banner, feedback card වැනි
+    // ප්‍රධාන layout එකේ අනෙක් කොටස් ද එම ගැළපීමේ අනුපාතයෙන්ම විශාල වේ
+    // (පරිශීලක අකුරු සැකසුම ඒවාට අදාළ නොවේ).
+    document.documentElement.style.setProperty('--fit', getAutoFitScale().toFixed(3));
 }
 
 // --- Restore saved zoom / text-size preference (runs immediately, before first paint settles) ---
@@ -959,8 +963,11 @@ function findInflectionRefs(query, possibleMatches) {
 function buildInflectionRefCard(ref) {
     const paliDict = availableDicts.find(d => d.id === 'pali');
     const card = document.createElement('div');
-    card.className = 'word-card inflection-ref-card';
-    card.innerHTML = `<div class="main-word-title">${escapeHtml(ref.form)} <span class="dict-tag">${escapeHtml(paliDict ? paliDict.name : 'පාලි')}</span></div>`;
+    card.className = 'word-card wc-v2 inflection-ref-card';
+    card.innerHTML = CARD_PATTERN_HTML +
+        `<div class="wc-head"><h2 class="wc-word">${escapeHtml(ref.form)}</h2>` +
+        `<span class="dict-tag">${escapeHtml(paliDict ? paliDict.name : 'පාලි')}</span></div>` +
+        `<div class="wc-divider" aria-hidden="true"><i></i></div>`;
 
     ref.entries.forEach(entry => {
         const hw = escapeHtml(entry.headword);
@@ -1601,6 +1608,134 @@ searchInput.addEventListener('keypress', (e) => {
     }
 });
 
+// ================================================================
+// WORD CARD (v2) — තේරුම් කාඩ් එක
+// පදය + දකුණු පැත්තේ "වර නැගීම" බටනය, අර්ථ අංක අනුව වෙන් කළ කොටස්
+// (සිංහල තේරුම · පද බෙදීම · ව්‍යාකරණ විස්තරය · සංඥා නාම · නිරුක්තිය),
+// යටින් යන්තම් පෙනෙන ජ්‍යාමිතික රටා / පහන් / දාගැබ් පසුබිම.
+// ================================================================
+const CARD_PATTERN_HTML =
+    '<div class="card-pattern" aria-hidden="true">' +
+        '<span class="cp-lattice"></span>' +
+        '<span class="cp-rosette cp-rosette--a"><i class="cp-fill"></i><i class="cp-line"></i></span>' +
+        '<span class="cp-rosette cp-rosette--b"><i class="cp-fill"></i><i class="cp-line"></i></span>' +
+        '<span class="cp-lantern cp-lantern--a"><i></i></span>' +
+        '<span class="cp-lantern cp-lantern--b"><i></i></span>' +
+        '<span class="cp-skyline"></span>' +
+        '<span class="cp-sheen"></span>' +
+    '</div>';
+
+const WC_ICON_TABLE = '<svg class="ib-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9.5h17M9.5 9.5v10M15 9.5v10" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+const WC_ICON_CHEVRON = '<svg class="ib-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+// පද බෙදීමේ ධාතුව (√...) වෙනම වර්ණයකින් පෙන්වයි
+function formatWordDivision(text) {
+    return escapeHtml(text).replace(/√[^\s()+>,]+/g, m => `<span class="wc-root">${m}</span>`);
+}
+
+// පද බෙදීමේ ධාතුව පමණක් ඇත්නම් (උදා: "√නර්") — "ධාතුව" ලෙස පෙන්වයි
+function isRootOnly(text) {
+    return /^\s*√[^\s()+>,]+\s*$/.test(String(text));
+}
+
+// ව්‍යාකරණ විස්තරය: පේළි කිහිපයක් ඇත්නම් (පද සෑදීමේ පියවර) පියවර ලැයිස්තුවක් ලෙස,
+// " | " මඟින් වෙන් කළ කොටස් වෙන වෙනම පේළි ලෙස පෙන්වයි.
+function formatGrammarDesc(text) {
+    const lines = String(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return '';
+    if (lines.length === 1) {
+        const parts = lines[0].split(/\s+\|\s+/).filter(Boolean);
+        if (parts.length > 1) {
+            return parts.map(p => `<div class="gd-part">${escapeHtml(p)}</div>`).join('');
+        }
+        return `<div class="gd-text">${escapeHtml(lines[0])}</div>`;
+    }
+    return `<div class="gd-text">${escapeHtml(lines[0])}</div>` +
+        `<ol class="gd-steps">${lines.slice(1).map(l => `<li>${escapeHtml(l)}</li>`).join('')}</ol>`;
+}
+
+function buildWcBlock(kind, label, bodyHtml, extraHead) {
+    return `<div class="wc-block wc-block--${kind}">` +
+        `<div class="wc-label"><span>${label}</span>${extraHead || ''}</div>` +
+        `<div class="wc-text">${bodyHtml}</div></div>`;
+}
+
+function buildSenseHTML(item, idx, total, isPali, mainWord) {
+    const showNum = total > 1;
+    const divHtml = item.wordDivision
+        ? `<span class="wc-head-div"><span class="wc-division-label">${isRootOnly(item.wordDivision) ? 'ධාතුව' : 'පද බෙදීම'}:</span> ` +
+          `<span class="wc-division-value">${formatWordDivision(item.wordDivision)}</span></span>`
+        : '';
+    const head = (showNum || item.type || divHtml)
+        ? `<div class="wc-sense-head">` +
+              (showNum ? `<span class="wc-num">${idx + 1}</span>` : '') +
+              (item.type ? `<span class="wc-type">${escapeHtml(item.type)}</span>` : '') +
+              divHtml +
+          `</div>`
+        : '';
+
+    let body = '';
+    if (item.meaning) {
+        const meaningHtml = escapeHtml(item.meaning).replace(/\s*\|\s*/g, '<span class="wc-sep" aria-hidden="true"></span>');
+        body += buildWcBlock('meaning', isPali ? 'සිංහල තේරුම' : 'තේරුම', meaningHtml);
+    }
+    if (item.grammarDesc) body += buildWcBlock('grammar', 'ව්‍යාකරණ විස්තරය', formatGrammarDesc(item.grammarDesc));
+    if (item.properNoun)  body += buildWcBlock('proper', 'සංඥා නාම විස්තරය', escapeHtml(item.properNoun));
+    if (item.etymology)   body += buildWcBlock('etym', 'නිරුක්තිය', escapeHtml(item.etymology));
+
+    return `<div class="wc-sense" style="--i:${Math.min(idx, 8)}">${head}<div class="wc-sense-body">${body}</div></div>`;
+}
+
+function buildWordCard(dict, mainWord, items, cardIdx) {
+    const isPali = dict.id === 'pali';
+    const card = document.createElement('div');
+    card.className = 'word-card wc-v2' + (isPali ? '' : ' wc-sien') + (cardIdx % 2 ? ' wc-alt' : '');
+
+    const safeWord = escapeHtml(mainWord);
+    const panelId = `${dict.id}-${items[0].id}`;
+    const rightSide = isPali
+        ? `<button type="button" class="wc-infl-btn" data-infl-id="${escapeHtml(panelId)}" data-headword="${safeWord}" aria-expanded="false">` +
+              `${WC_ICON_TABLE}<span>වර නැගීම</span>${WC_ICON_CHEVRON}</button>`
+        : `<span class="dict-tag">${escapeHtml(dict.name)}</span>`;
+
+    let html = CARD_PATTERN_HTML +
+        `<div class="wc-head"><h2 class="wc-word">${safeWord}</h2>${rightSide}</div>` +
+        `<div class="wc-divider" aria-hidden="true"><i></i></div>`;
+
+    if (isPali) html += `<div id="inflection-${escapeHtml(panelId)}" class="inflection-panel"></div>`;
+
+    html += `<div class="wc-senses">${items.map((item, i) => buildSenseHTML(item, i, items.length, isPali, mainWord)).join('')}</div>`;
+
+    if (isPali) {
+        html += `<div class="card-footer"><a class="correction-link" href="#" data-feedback data-feedback-word="${safeWord}">` +
+                `<svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-edit"></use></svg> වැරදි නිවැරදි කරන්න</a></div>`;
+    }
+
+    card.innerHTML = html;
+    return card;
+}
+
+// වර නැගීම බටනය (event delegation)
+resultsContainer.addEventListener('click', function (e) {
+    const target = e.target && e.target.closest ? e.target : null;
+    if (!target) return;
+
+    const inflBtn = target.closest('.wc-infl-btn');
+    if (inflBtn) {
+        const id = inflBtn.getAttribute('data-infl-id');
+        window.toggleInflection(id, inflBtn.getAttribute('data-headword'));
+        const panel = document.getElementById(`inflection-${id}`);
+        const open = !!(panel && panel.classList.contains('open'));
+        inflBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        inflBtn.classList.toggle('is-open', open);
+        if (open && panel) {
+            setTimeout(() => {
+                try { panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (err) { /* ignore */ }
+            }, 60);
+        }
+    }
+});
+
 // --- Search Logic ---
 let searchToken = 0;
 
@@ -1657,61 +1792,8 @@ function performSearch(query, exactOnly = false) {
                 groupedByWord[item.word].push(item);
             });
 
-            Object.keys(groupedByWord).forEach(mainWord => {
-                const items = groupedByWord[mainWord];
-                const card = document.createElement('div');
-                card.className = 'word-card';
-                card.innerHTML = `<div class="main-word-title">${mainWord} <span class="dict-tag">${dict.name}</span></div>`;
-
-                items.forEach(item => {
-                    const row = document.createElement('div');
-                    row.className = 'meaning-row';
-                    let detailsBtnHtml = (item.properNoun || item.grammarDesc || item.etymology) ? `<button class="details-btn" onclick="toggleDetails('${dict.id}-${item.id}')">විස්තර <svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-info"></use></svg></button>` : '';
-                    const safeHeadword = mainWord.replace(/'/g, "\\'");
-                    let inflectionBtnHtml = (dict.id === 'pali') ? `<button class="inflection-btn" onclick="toggleInflection('${dict.id}-${item.id}', '${safeHeadword}')">වර නැගීම</button>` : '';
-
-                    row.innerHTML = `
-                        <div class="word-header">
-                            <div class="word-header-left">
-                                ${item.type ? `<span class="word-type">${item.type}</span>` : ''}
-                                ${item.wordDivision ? `<span class="word-division">${item.wordDivision}</span>` : ''}
-                            </div>
-                            <div class="word-header-right">
-                                ${detailsBtnHtml}
-                                ${inflectionBtnHtml}
-                            </div>
-                        </div>
-                        <div style="margin-top:5px;">${item.meaning}</div>
-                        <div id="details-${dict.id}-${item.id}" class="details-panel">
-                            ${item.properNoun ? `<div class="proper-noun-desc">සංඥානාම: ${item.properNoun}</div>` : ''}
-                            ${item.grammarDesc ? `<div class="grammar-desc">ව්‍යාකරණ: ${item.grammarDesc}</div>` : ''}
-                            ${item.etymology ? `<div class="etymology-desc">නිරුක්තිය: ${item.etymology}</div>` : ''}
-                        </div>
-                        ${inflectionBtnHtml ? `<div id="inflection-${dict.id}-${item.id}" class="inflection-panel"></div>` : ''}
-                    `;
-                    card.appendChild(row);
-                });
-                items.forEach(item => {
-    const row = document.createElement('div');
-    row.className = 'meaning-row';
-    // ... (පවතින කේතය)
-    card.appendChild(row);
-});
-
-// ✅ අලුතින් එක් කළ කොටස — පාලි ශබ්දකෝෂයට පමණක්
-if (dict.id === 'pali') {
-    const footer = document.createElement('div');
-    footer.className = 'card-footer';
-    footer.innerHTML = `<a class="correction-link"
-        href="#"
-        data-feedback
-        data-feedback-word="${mainWord.replace(/"/g, '&quot;')}">
-        <svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-edit"></use></svg>
-        වැරදි නිවැරදි කරන්න
-    </a>`;
-    card.appendChild(footer);
-}
-
+            Object.keys(groupedByWord).forEach((mainWord, cardIdx) => {
+                const card = buildWordCard(dict, mainWord, groupedByWord[mainWord], cardIdx);
                 resultsContainer.appendChild(card);
             });
         }
@@ -1797,6 +1879,210 @@ window.closeZoomPanel = function (e) {
     if (overlay) overlay.classList.remove('active');
 };
 
+// ================================================================
+// Pinch zoom (ඇඟිලි දෙකෙන් විශාල/කුඩා කිරීම) සහ double tap (සාමාන්‍ය ප්‍රමාණයට)
+// සුමට ලෙස ක්‍රියා කිරීමට: ඇඟිලි චලනය වන අතරතුර පිටුව නැවත සකස් (re-layout) නොකර
+// GPU transform (scale) එකක් පමණක් යොදයි; ඇඟිලි ඉවත් කළ පසු එක් වරක් පමණක් සැබෑ
+// zoom අගය යොදා, ඇඟිලි තිබූ තැනම අන්තර්ගතය රැඳී සිටින සේ scroll එක ගළපයි.
+// අගය zoom panel එකේ slider / ප්‍රතිශතයටද එසැණින් යෙදී, සුරැකේ.
+// පරිගණකයේ Ctrl + mouse wheel / trackpad pinch ද ක්‍රියා කරයි.
+// ================================================================
+(function setupGestureZoom() {
+    const MIN = 50, MAX = 200, STEP = 5;
+    const clampRaw = v => Math.min(MAX, Math.max(MIN, v));
+    const snap = v => Math.round(clampRaw(v) / STEP) * STEP;
+    const getZoom = () => parseFloat(currentUserZoom) || 100;
+    const root = document.documentElement;
+
+    let toast = null;
+    function showZoomToast(v) {
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'zoomToast';
+            toast.setAttribute('aria-live', 'polite');
+            document.body.appendChild(toast);
+        }
+        toast.textContent = v + '%';
+        toast.classList.add('show');
+        clearTimeout(toast._t);
+        toast._t = setTimeout(() => toast.classList.remove('show'), 900);
+    }
+
+    function syncPanel(v) {
+        const label = document.getElementById('zoomValueLabel');
+        if (label) label.textContent = v + '%';
+        const slider = document.getElementById('zoomSlider');
+        if (slider) slider.value = v;
+    }
+
+    // ---------- Transform preview (gesture අතරතුර) ----------
+    let pv = null;
+
+    function beginPreview(cx, cy) {
+        const box = document.querySelector('.container');
+        if (!box) return null;
+        const r = box.getBoundingClientRect();
+        const f = (getZoom() / 100) * getAutoFitScale();     // .container හි වත්මන් zoom ගුණකය
+
+        // ඇඟිලි යට ඇති අංගය — අවසානයේ එය එම තැනටම ගෙන ඒමට
+        let anchor = document.elementFromPoint(cx, cy);
+        if (anchor && !box.contains(anchor)) anchor = null;
+        let frac = 0;
+        if (anchor) {
+            const ar = anchor.getBoundingClientRect();
+            frac = ar.height ? (cy - ar.top) / ar.height : 0;
+        }
+
+        box.style.transformOrigin = `${(cx - r.left) / f}px ${(cy - r.top) / f}px`;
+        box.style.willChange = 'transform';
+        root.classList.add('is-zoom-preview');
+        pv = { box, f, z0: getZoom(), z: getZoom(), cx0: cx, cy0: cy, cx, cy, anchor, frac, raf: 0 };
+        return pv;
+    }
+
+    function renderPreview() {
+        if (!pv) return;
+        pv.raf = 0;
+        const s = pv.z / pv.z0;
+        const dx = (pv.cx - pv.cx0) / pv.f;
+        const dy = (pv.cy - pv.cy0) / pv.f;
+        pv.box.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${s})`;
+        const v = snap(pv.z);
+        syncPanel(v);
+        showZoomToast(v);
+    }
+
+    function updatePreview(z, cx, cy) {
+        if (!pv) return;
+        pv.z = clampRaw(z);
+        pv.cx = cx;
+        pv.cy = cy;
+        if (!pv.raf) pv.raf = requestAnimationFrame(renderPreview);
+    }
+
+    function commitPreview() {
+        if (!pv) return;
+        const { box, anchor, frac, cy } = pv;
+        if (pv.raf) cancelAnimationFrame(pv.raf);
+        const v = snap(pv.z);
+        pv = null;
+
+        box.style.transition = '';
+        box.style.transform = '';
+        box.style.transformOrigin = '';
+        box.style.willChange = '';
+        root.classList.remove('is-zoom-preview');
+
+        if (v !== getZoom()) applyZoomPreview(v);          // සැබෑ zoom — එක් වරක් පමණි
+        syncPanel(v);
+        saveZoom(v);
+        showZoomToast(v);
+
+        if (anchor && anchor.isConnected) {
+            const ar = anchor.getBoundingClientRect();
+            window.scrollBy(0, ar.top + frac * ar.height - cy);
+        }
+    }
+
+    // Double tap: 100% දක්වා සුමට animation එකකින් පසු commit කරයි
+    function animateTo(z, cx, cy) {
+        if (pv || !beginPreview(cx, cy)) return;
+        const box = pv.box;
+        box.style.transition = 'transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)';
+        pv.z = clampRaw(z);
+        requestAnimationFrame(() => {
+            renderPreview();
+            setTimeout(commitPreview, 240);
+        });
+    }
+
+    // ---------- Touch ----------
+    const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    const mid = t => [(t[0].clientX + t[1].clientX) / 2, (t[0].clientY + t[1].clientY) / 2];
+    let pinch = null;
+    let pinchEndedAt = 0;
+    let tapStart = null;
+    let lastTap = null;
+
+    document.addEventListener('touchstart', e => {
+        if (e.touches.length === 2) {
+            if (pv) commitPreview();
+            const [cx, cy] = mid(e.touches);
+            if (beginPreview(cx, cy)) pinch = { d0: dist(e.touches) || 1 };
+            tapStart = null;
+            lastTap = null;
+        } else if (e.touches.length === 1 && !pinch) {
+            const t = e.touches[0];
+            tapStart = { x: t.clientX, y: t.clientY, time: Date.now() };
+        } else {
+            tapStart = null;
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchmove', e => {
+        if (pinch && pv && e.touches.length === 2) {
+            e.preventDefault();
+            const [cx, cy] = mid(e.touches);
+            updatePreview(pv.z0 * (dist(e.touches) / pinch.d0), cx, cy);
+            return;
+        }
+        if (tapStart && e.touches.length === 1) {
+            const t = e.touches[0];
+            if (Math.hypot(t.clientX - tapStart.x, t.clientY - tapStart.y) > 10) tapStart = null;
+        }
+    }, { passive: false });
+
+    document.addEventListener('touchend', e => {
+        if (pinch) {
+            if (e.touches.length < 2) {
+                pinch = null;
+                pinchEndedAt = Date.now();
+                commitPreview();
+            }
+            return;
+        }
+
+        // ---- Double tap → 100% ----
+        if (!tapStart || e.touches.length || e.changedTouches.length !== 1) { tapStart = null; return; }
+        const t = e.changedTouches[0];
+        const now = Date.now();
+        const isTap = (now - tapStart.time) < 280 && (now - pinchEndedAt) > 400;
+        tapStart = null;
+        if (!isTap) { lastTap = null; return; }
+
+        const target = t.target && t.target.closest ? t.target : null;
+        if (target && target.closest('input, textarea, select, button, a, label, .zoom-panel, .suggestions-box, #fbOverlay, .nav-item, .inflection-table-wrapper')) {
+            lastTap = null;
+            return;
+        }
+
+        if (lastTap && (now - lastTap.time) < 320 &&
+            Math.hypot(t.clientX - lastTap.x, t.clientY - lastTap.y) < 32) {
+            lastTap = null;
+            e.preventDefault();
+            if (getZoom() !== 100) animateTo(100, t.clientX, t.clientY);
+        } else {
+            lastTap = { x: t.clientX, y: t.clientY, time: now };
+        }
+    }, { passive: false });
+
+    document.addEventListener('touchcancel', () => {
+        if (pinch) { pinch = null; commitPreview(); }
+        tapStart = null;
+    });
+
+    // ---------- පරිගණකය: Ctrl + wheel (trackpad pinch ද මෙලෙසම එයි) ----------
+    let wheelCommit = 0;
+    document.addEventListener('wheel', e => {
+        if (!e.ctrlKey) return;
+        e.preventDefault();
+        if (!pv && !beginPreview(e.clientX, e.clientY)) return;
+        updatePreview(pv.z * Math.exp(-e.deltaY * 0.01), pv.cx0, pv.cy0);
+        clearTimeout(wheelCommit);
+        wheelCommit = setTimeout(commitPreview, 260);
+    }, { passive: false });
+})();
+
 function renderDictSelector() {
     const container = document.getElementById('dictList');
     if(!container) return;
@@ -1880,203 +2166,3 @@ if ('serviceWorker' in navigator) {
         window.location.reload();
     });
 }
-// =========================================================
-// PWA Install Banner (Android / Desktop / iOS)
-// =========================================================
-(function () {
-    const INSTALLED_KEY  = 'pwaInstalled';
-    const DISMISS_KEY    = 'pwaInstallDismissedSession';
-
-    // ✅ beforeinstallprompt event එක හැකි තරම් කලින් අල්ලා ගැනීම.
-    //    (index.html <head> හි දැමූ කුඩා script එකෙන් අල්ලා ගත් event එකත් මෙහිදී ගනී)
-    let deferredPrompt = window.__pwaDeferredPrompt || null;
-    let bannerShown    = false;
-    let onPromptReady  = null;   // banner init වූ පසු set වේ
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        window.__pwaDeferredPrompt = e;
-        // මෙම event එක එන්නේ app එක install කර නැති විට පමණි — පැරණි 'installed' ලකුණ ඉවත් කරයි
-        try { localStorage.removeItem(INSTALLED_KEY); } catch (err) {}
-        if (onPromptReady) onPromptReady();
-    });
-
-    window.addEventListener('appinstalled', () => {
-        deferredPrompt = null;
-        window.__pwaDeferredPrompt = null;
-        try { localStorage.setItem(INSTALLED_KEY, '1'); } catch (err) {}
-        const b = document.getElementById('pwa-install-banner');
-        if (b) b.classList.remove('show');
-    });
-
-    function isStandalone() {
-        return window.matchMedia('(display-mode: standalone)').matches ||
-            window.navigator.standalone === true ||
-            document.referrer.startsWith('android-app://');
-    }
-
-    function isIOS() {
-        const ua = window.navigator.userAgent;
-        const iOSDevice   = /iPad|iPhone|iPod/.test(ua);
-        const iPadOS13Up  = ua.includes('Macintosh') && 'ontouchend' in document;
-        return iOSDevice || iPadOS13Up;
-    }
-
-    // Installed ද යන්න පරීක්ෂා කරයි (standalone හෝ කලින් install කර ඇත්නම්)
-    function isInstalled() {
-        if (isStandalone()) return true;
-        try { return localStorage.getItem(INSTALLED_KEY) === '1'; }
-        catch (e) { return false; }
-    }
-
-    function markInstalled() {
-        try { localStorage.setItem(INSTALLED_KEY, '1'); } catch (e) {}
-    }
-
-    // Session එක තුළ dismiss කර ඇත්නම් පමණක් නැවත නොපෙන්වයි
-    function wasDismissedThisSession() {
-        try { return sessionStorage.getItem(DISMISS_KEY) === '1'; }
-        catch (e) { return false; }
-    }
-
-    function markDismissedThisSession() {
-        try { sessionStorage.setItem(DISMISS_KEY, '1'); } catch (e) {}
-    }
-
-    function initInstallBanner() {
-        if (isInstalled()) return;              // ✅ install කර ඇත්නම් කවදාවත් නොපෙන්වයි
-        if (wasDismissedThisSession()) return;  // ✅ මෙම session එකේ dismiss කර ඇත්නම් නොපෙන්වයි
-
-        const banner      = document.getElementById('pwa-install-banner');
-        const iosTip      = document.getElementById('pwa-ios-tip');
-        const installBtn  = document.getElementById('pwaInstallBtn');
-        const dismissBtn  = document.getElementById('pwaDismissBtn');
-        const iosTipClose = document.getElementById('pwaIosTipClose');
-        const subText     = document.getElementById('pwaBannerSub');
-        if (!banner) return;
-
-        const defaultSubText = subText ? subText.textContent : '';
-        let manualHintShown  = false;
-
-        function showBanner() {
-            if (isInstalled() || bannerShown) return;
-            bannerShown = true;
-            banner.classList.add('show');
-        }
-
-        function hideBanner() {
-            banner.classList.remove('show');
-            if (iosTip) iosTip.classList.remove('show');
-        }
-
-        function hideBannerAndRemember() {
-            hideBanner();
-            markDismissedThisSession();
-        }
-
-        // Browser එකේ install prompt එක තවම නැති විට banner එක නොනැවතී
-        // අතින් install කරන ආකාරය පෙන්වයි (පෙර: නිකම්ම banner එක නැති වී යයි)
-        function showManualHint() {
-            manualHintShown = true;
-            if (subText) {
-                subText.textContent =
-                    'Chrome මෙනුව (⋮) විවෘත කර "Install app" හෝ "Add to Home screen" තෝරන්න';
-            }
-        }
-
-        // Prompt එක පසුව ලැබුණොත් සාමාන්‍ය පණිවිඩය නැවත පෙන්වයි
-        onPromptReady = () => {
-            if (manualHintShown && subText) subText.textContent = defaultSubText;
-            manualHintShown = false;
-        };
-
-        // ✅ Splash එක hide වූ වහාම banner එක show කරයි
-        function scheduleStartupShow() {
-            const splash = document.getElementById('splashScreen');
-
-            if (splash && !splash.classList.contains('hide')) {
-                const observer = new MutationObserver(() => {
-                    if (splash.classList.contains('hide')) {
-                        observer.disconnect();
-                        setTimeout(showBanner, 700);
-                    }
-                });
-                observer.observe(splash, { attributes: true, attributeFilter: ['class'] });
-
-                // Safety fallback — splash එක හසු නොවුනොත්
-                setTimeout(() => {
-                    if (!bannerShown && !isInstalled()) {
-                        observer.disconnect();
-                        showBanner();
-                    }
-                }, 6500);
-            } else {
-                setTimeout(showBanner, 700);
-            }
-        }
-
-        if (isIOS()) {
-            // iOS — beforeinstallprompt නොමැති නිසා manual instructions
-            if (subText) subText.textContent =
-                'Home Screen එකට එක් කර, App එකක් ලෙසම භාවිතා කරන්න';
-            if (installBtn) installBtn.textContent = 'Install';
-
-            if (installBtn) {
-                installBtn.addEventListener('click', () => {
-                    if (iosTip) iosTip.classList.add('show');
-                });
-            }
-            if (iosTipClose) {
-                iosTipClose.addEventListener('click', hideBannerAndRemember);
-            }
-
-            scheduleStartupShow();
-        } else {
-            // Android / Desktop Chrome, Edge, etc.
-            if (installBtn) {
-                installBtn.addEventListener('click', async () => {
-                    if (!deferredPrompt) {
-                        // Prompt එක තවම නැත — banner එක තබාගෙන උපදෙස් පෙන්වන්න
-                        showManualHint();
-                        return;
-                    }
-
-                    // ⚠️ prompt() ක්ලික් එකේදීම (await එකකට පෙර) කැඳවිය යුතුය
-                    const promptEvent = deferredPrompt;
-                    deferredPrompt = null;
-                    window.__pwaDeferredPrompt = null;
-
-                    let choice = null;
-                    try {
-                        await promptEvent.prompt();
-                        choice = await promptEvent.userChoice;
-                    } catch (err) {
-                        console.warn('Install prompt failed:', err);
-                    }
-
-                    if (choice && choice.outcome === 'accepted') {
-                        markInstalled();   // ✅ install වූ පසු නැවත නොපෙන්වයි
-                        hideBannerAndRemember();
-                    } else if (choice) {
-                        hideBannerAndRemember();   // පරිශීලකයා cancel කළා
-                    } else {
-                        showManualHint();          // prompt() අසාර්ථක විය
-                    }
-                });
-            }
-
-            scheduleStartupShow();
-        }
-
-        if (dismissBtn) {
-            dismissBtn.addEventListener('click', hideBannerAndRemember);
-        }
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initInstallBanner);
-    } else {
-        initInstallBanner();
-    }
-})();

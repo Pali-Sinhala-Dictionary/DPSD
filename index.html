@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="icon" href="data:,">
     <link rel="apple-touch-icon" href="icon-192x192.png?v=2">
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json?v=1">
     <meta name="google" content="notranslate">
     <meta name="theme-color" content="#8B0000">
 
@@ -30,7 +30,7 @@
       gtag('config', 'G-MYL09BJLR5');
     </script>
 
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=16">
 
     <style>
         .feedback-link-btn{
@@ -202,9 +202,9 @@
 <svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false">
   <defs>
     <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00c3ff"/>
-      <stop offset="55%" stop-color="#3b6cf4"/>
-      <stop offset="100%" stop-color="#8a2be2"/>
+      <stop offset="0%" style="stop-color:var(--ig-1,#c8921a)"/>
+      <stop offset="55%" style="stop-color:var(--ig-2,#a01818)"/>
+      <stop offset="100%" style="stop-color:var(--ig-3,#5a0000)"/>
     </linearGradient>
   </defs>
 
@@ -287,6 +287,8 @@
 <div class="container">
     <div class="top-bar">
     <div class="header-card">
+        <div class="hdr-pat hdr-pat--l" aria-hidden="true"><span class="hp-lattice"></span><span class="hp-rosette"><i class="cp-fill"></i><i class="cp-line"></i></span></div>
+        <div class="hdr-pat hdr-pat--r" aria-hidden="true"><span class="hp-lattice"></span><span class="hp-rosette"><i class="cp-fill"></i><i class="cp-line"></i></span></div>
         <div class="header-content">
             <div class="header-icon">
                 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -383,6 +385,7 @@
 
 <!-- Bottom Navigation Bar -->
 <div class="bottom-nav">
+    <div class="nav-pat" aria-hidden="true"><span class="np-lattice"></span><span class="np-rosette np-rosette--l"><i class="cp-fill"></i><i class="cp-line"></i></span><span class="np-rosette np-rosette--r"><i class="cp-fill"></i><i class="cp-line"></i></span></div>
     <div class="nav-item active" id="nav-home" onclick="switchTab('home', 'පාලි සිංහල ශබ්දකෝෂය')" title="සොයන්න">
         <div class="nav-icon-wrapper"><svg class="nav-icon-svg" viewBox="0 0 24 24"><use href="#icon-search"></use></svg></div>
     </div>
@@ -417,28 +420,6 @@
             <span class="zoom-edge-label">200%</span>
         </div>
     </div>
-</div>
-
-<!-- PWA Install Banner -->
-<div id="pwa-install-banner" role="dialog" aria-label="Install App">
-    <div class="pwa-banner-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
-    </div>
-    <div class="pwa-banner-text">
-        <p class="pwa-banner-title">ශබ්දකෝෂය ඔබේ දුරකථනයට එක් කරගන්න</p>
-        <p class="pwa-banner-sub" id="pwaBannerSub">Chrome browser මගින් offline සඳහා Install කරන්න</p>
-    </div>
-    <div class="pwa-banner-actions">
-        <button type="button" class="pwa-install-btn" id="pwaInstallBtn">Install</button>
-        <button type="button" class="pwa-dismiss-btn" id="pwaDismissBtn" aria-label="close">&times;</button>
-    </div>
-</div>
-
-<!-- iOS "Add to Home Screen" instructions popover -->
-<div id="pwa-ios-tip" role="dialog" aria-label="iOS Install Instructions">
-    <button type="button" class="pwa-ios-tip-close" id="pwaIosTipClose" aria-label="close">&times;</button>
-    <strong>iPhone / iPad වල Install කරගන්නා ආකාරය:</strong>
-    <p>Safari පහළ පෙන්වන Share <span class="pwa-share-icon">⎋</span> බටනය click කර, පහළට scroll කර <b>"Add to Home Screen"</b> තෝරන්න.</p>
 </div>
 
 <script src="fflate.min.js"></script>
