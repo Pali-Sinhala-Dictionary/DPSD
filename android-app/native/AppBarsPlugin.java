@@ -54,7 +54,7 @@ public class AppBarsPlugin extends Plugin {
             int h = statusBarHeight(a, decor);
             decor.setBackground(bars(top, bottom, h));
             View content = a.findViewById(android.R.id.content);
-            if (content != null) content.setBackground(bars(top, bottom, h));
+            if (content != null) content.setBackgroundColor(page);   // Capacitor තීරු සඳහා padding යොදන්නේ decor එකට; content එක ඒ ඇතුළේ
             if (Build.VERSION.SDK_INT < 35) {
                 w.setStatusBarColor(top);
                 w.setNavigationBarColor(bottom);
