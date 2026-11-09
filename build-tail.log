@@ -1,0 +1,45 @@
+
+added 2 packages in 3s
+
+> dpsd-desktop@1.0.0 prepare-www
+> node ../android-app/scripts/prepare-www.mjs www
+
+www ready: 12 items copied from C:\bc
+
+> dpsd-desktop@1.0.0 set-version
+> node scripts/set-version.mjs
+
+version set: 1.0.0
+        Info Looking up installed tauri packages to check mismatched versions...
+[1m[92m    Updating[0m crates.io index
+[1m[92m     Locking[0m 445 packages to highest compatible versions
+[1m[92m      Adding[0m generic-array v0.14.7 [1m[93m(available: v0.14.9)[0m
+[1m[92m      Adding[0m toml v0.8.2 [1m[93m(available: v0.8.23)[0m
+[1m[92m      Adding[0m toml_datetime v0.6.3 [1m[93m(available: v0.6.11)[0m
+[1m[92m      Adding[0m toml_edit v0.20.2 [1m[93m(available: v0.20.7)[0m
+[1m[92m   Compiling[0m pali-sinhala-dictionary v1.0.0 (C:\bc\desktop-app\src-tauri)
+[1m[92m    Finished[0m `release` profile [optimized] target(s) in 1m 57s
+       Built application at: C:\bc\desktop-app\src-tauri\target\release\pali-sinhala-dictionary.exe
+        Info Patching C:\bc\desktop-app\src-tauri\target\release\pali-sinhala-dictionary.exe with bundle type information: nsis
+        Info Verifying NSIS package
+ Downloading https://github.com/tauri-apps/binary-releases/releases/download/nsis-3.13/nsis-3.13.zip
+        Info validating hash
+        Info extracting NSIS
+ Downloading https://github.com/tauri-apps/nsis-tauri-utils/releases/download/nsis_tauri_utils-v0.5.3/nsis_tauri_utils.dll
+        Info validating hash
+        Info Target: x64
+ Downloading https://go.microsoft.com/fwlink/p/?LinkId=2124703
+     Running makensis to produce C:\bc\desktop-app\src-tauri\target\release\bundle\nsis\Pali Sinhala Dictionary_1.0.0_x64-setup.exe
+        Info Patching C:\bc\desktop-app\src-tauri\target\release\pali-sinhala-dictionary.exe with bundle type information: msi
+        Info Verifying wix package
+ Downloading https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip
+        Info validating hash
+        Info extracting WIX
+        Info Target: x64
+ Downloading https://go.microsoft.com/fwlink/p/?LinkId=2124703
+     Running candle for "C:\\bc\\desktop-app\\src-tauri\\target\\release\\wix\\x64\\main.wxs"
+     Running light to produce C:\bc\desktop-app\src-tauri\target\release\bundle\msi\Pali Sinhala Dictionary_1.0.0_x64_en-US.msi
+    Finished 2 bundles at:
+        C:\bc\desktop-app\src-tauri\target\release\bundle\nsis\Pali Sinhala Dictionary_1.0.0_x64-setup.exe (12.37 MiB)
+        C:\bc\desktop-app\src-tauri\target\release\bundle\msi\Pali Sinhala Dictionary_1.0.0_x64_en-US.msi (12.93 MiB)
+
