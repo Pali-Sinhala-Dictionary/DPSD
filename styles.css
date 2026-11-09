@@ -7,6 +7,7 @@
     font-family: 'UN Abhaya';
     src: url('AbhayaLibre-Regular.ttf') format('truetype');
     font-weight: normal;
+    font-display: swap;
 }
 
 
@@ -155,8 +156,6 @@ body {
 .container {
 
     width: 100%;
-
-    max-width: 800px;
 
     min-height: calc(100vh - 60px);
 
@@ -2160,7 +2159,6 @@ body.dark-theme .correction-link:hover {
    script.js විසින් .container හි zoom (පරිශීලක සැකසුම × තිරයට ගැළපීම) සහ
    --container-zoom යොදයි. zoom මගින් vh ද ගුණ වන නිසා, min-height එය ඉවත් කර
    පිටුව තිරයට හරියටම සමාන උසකින් තබයි (හිස් scroll ඉඩක් ඇති නොවීමට).
-   Landscape / විශාල තිර වල ප්‍රධාන කොටස තිරයේ සම්පූර්ණ පළලම ගනී (800px සීමාව ඉවත් කර ඇත).
    ========================================================= */
 
 .container {
@@ -2173,12 +2171,13 @@ body.dark-theme .correction-link:hover {
     }
 }
 
-/* 800px ට වැඩි තිර: තිරයේ සම්පූර්ණ පළල. අතිවිශාල (ultra-wide) තිර වල පමණක්
-   දෘශ්‍ය පළල 2600px දක්වා සීමා කරයි (zoom ගුණයෙන් බෙදා, එවිට දෘශ්‍ය පළල හරියටම 2600px). */
-@media (min-width: 801px) {
-    .container {
-        max-width: calc(2600px / var(--container-zoom, 1));
-    }
+/* Fit to screen: ඕනෑම තිරයක (දුරකථන, portrait / landscape tab, පරිගණක) සහ ඕනෑම
+   විශාලන අගයක (50%–200%) ප්‍රධාන කොටස තිරයේ සම්පූර්ණ පළලම ගනී — දෙපසින් හිස් ඉඩ නොමැත.
+   අතිවිශාල (ultra-wide) තිර වල පමණක් දෘශ්‍ය පළල 2600px දක්වා සීමා කරයි
+   (zoom ගුණයෙන් බෙදා, එවිට දෘශ්‍ය පළල හරියටම 2600px). */
+.container {
+    width: 100%;
+    max-width: calc(2600px / var(--container-zoom, 1));
 }
 
 
@@ -3423,4 +3422,87 @@ html.is-zoom-preview body {
 }
 html.is-zoom-preview .container {
     pointer-events: none;
+}
+
+
+/* =========================================================
+   v18 — දත්ත පූරණ ප්‍රගති තීරුව (නිල්, සැබෑ ප්‍රතිශතය අනුව පිරේ)
+   ========================================================= */
+
+.no-results.is-loading {
+    font-style: normal;
+    padding: 26px 8px;
+}
+.inflection-loading {
+    padding: 10px 4px;
+}
+
+.load-progress {
+    width: min(100%, 420px);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+.lp-pct {
+    min-height: 1.3em;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: 0.5px;
+    color: #1565c0;
+    font-variant-numeric: tabular-nums;
+}
+.lp-track {
+    position: relative;
+    width: 100%;
+    height: 12px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(21, 101, 192, 0.12);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+.lp-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #1565c0, #1e88e5 60%, #42a5f5);
+    box-shadow: 0 0 10px rgba(30, 136, 229, 0.45);
+    transition: width 0.3s ease-out;
+}
+.lp-fill::after {                       /* පිරෙන කොටස මත සියුම් දිලිසීම */
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+    background-size: 60% 100%;
+    background-repeat: no-repeat;
+    animation: lpShine 1.4s linear infinite;
+}
+@keyframes lpShine {
+    from { background-position: -60% 0; }
+    to   { background-position: 160% 0; }
+}
+
+/* මුළු ප්‍රමාණය තවම නොදන්නා විට — කෙටි තීරුවක් වමේ සිට දකුණට ගමන් කරයි */
+.load-progress.is-indeterminate .lp-fill {
+    width: 35%;
+    transition: none;
+    animation: lpSlide 1.2s ease-in-out infinite;
+}
+@keyframes lpSlide {
+    0%   { left: -35%; }
+    100% { left: 100%; }
+}
+
+body.dark-theme .lp-pct { color: #64b5f6; }
+body.dark-theme .lp-track { background: rgba(100, 181, 246, 0.14); }
+body.dark-theme .lp-fill {
+    background: linear-gradient(90deg, #1e88e5, #42a5f5 60%, #90caf9);
+    box-shadow: 0 0 12px rgba(66, 165, 245, 0.55);
 }

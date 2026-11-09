@@ -30,7 +30,8 @@
       gtag('config', 'G-MYL09BJLR5');
     </script>
 
-    <link rel="stylesheet" href="styles.css?v=16">
+    <link rel="preload" href="AbhayaLibre-Regular.ttf" as="font" type="font/ttf" crossorigin>
+    <link rel="stylesheet" href="styles.css?v=19">
 
     <style>
         .feedback-link-btn{
@@ -138,6 +139,15 @@
   var container = document.getElementById('splashLetters');
   if (!splash || !container) return;
 
+  // දෙවන වරක සිට කෙටි splash එකක් පමණි (වැටෙන අකුරු animation එක පළමු විවෘත කිරීමේදී පමණක්).
+  var returning = false;
+  try { returning = localStorage.getItem('splashSeen') === '1'; } catch (e) {}
+  if (returning) {
+    splash.style.transition = 'opacity 0.25s ease, visibility 0.25s ease';
+    var sc = splash.querySelector('.splash-content');
+    if (sc) sc.style.animationDuration = '0.3s';
+  }
+
   var sinhalaLetters = ['අ','ආ','ඇ','ඉ','ඊ','උ','එ','ඒ','ඔ','ඕ','ක','ඛ','ග','ඝ','ච','ජ','ඤ','ට','ඩ','ණ','ත','ථ','ද','ධ','න','ප','ඵ','බ','භ','ම','ය','ර','ල','ව','ශ','ෂ','ස','හ','ළ','ෆ','ං','ඃ'];
   var englishLetters = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','k','m','n','o','p','r','s','t','u','v','w','y'];
   var allLetters = sinhalaLetters.concat(englishLetters);
@@ -149,7 +159,7 @@
 
   var isSinRe = /[\u0D80-\u0DFF]/;
   var rand = function(a, b) { return a + Math.random() * (b - a); };
-  var COUNT = 65;
+  var COUNT = returning ? 0 : 65;
   var frag = document.createDocumentFragment();
 
   for (var i = 0; i < COUNT; i++) {
@@ -174,8 +184,8 @@
     splash.classList.add('ready');
   });
 
-  var MIN_SHOW_MS = 3000;
-  var MAX_SHOW_MS = 4500;
+  var MIN_SHOW_MS = returning ? 450 : 1500;
+  var MAX_SHOW_MS = returning ? 2500 : 4500;
   var startTime = Date.now();
   var hidden = false;
   var hideRequested = false;
@@ -184,7 +194,8 @@
     if (hidden) return;
     hidden = true;
     splash.classList.add('hide');
-    setTimeout(function() { splash.style.display = 'none'; }, 800);
+    try { localStorage.setItem('splashSeen', '1'); } catch (e) {}
+    setTimeout(function() { splash.style.display = 'none'; }, returning ? 300 : 800);
   }
 
   window.__hideSplash = function() {
@@ -319,7 +330,7 @@
     <div id="tab-home" class="tab-view active">
         <div style="position: relative; margin-top: 2rem;">
             <div class="search-box-container">
-                <input type="text" id="searchInput" class="search-input" placeholder="දත්ත පූරණය වෙමින් පවතී..." autocomplete="off" disabled>
+                <input type="text" id="searchInput" class="search-input" placeholder="වචනයක් ඇතුළත් කරන්න..." autocomplete="off" disabled>
                 <button id="searchBtn" class="search-btn" title="සොයන්න" disabled>
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
                         <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
@@ -329,7 +340,7 @@
             <div id="suggestionsBox" class="suggestions-box"></div>
         </div>
         <div id="resultsContainer" class="results-container">
-            <div id="initialMessage" class="no-results" style="color: var(--text-color);">දත්ත පූරණය වෙමින් පවතී...</div>
+            <div id="initialMessage" class="no-results is-loading" style="color: var(--text-color);"><div class="load-progress is-indeterminate" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="lp-pct"></div><div class="lp-track"><div class="lp-fill"></div></div></div></div>
         </div>
     </div>
 

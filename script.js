@@ -1,7 +1,7 @@
 // සියලු ශබ්දකෝෂ Configuration (Oxford Dictionary ඉවත් කර ඇත)
 let availableDicts = [
-    { id: 'pali', name: 'පාලි - සිංහල ශබ්දකෝෂය', path: 'dictionary.zip', enabled: true, data: [], _loaded: false },
-    { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.zip', enabled: true, data: [], _loaded: false }
+    { id: 'pali', name: 'පාලි - සිංහල ශබ්දකෝෂය', path: 'dictionary.zip', dataVersion: 1, enabled: true, data: [], _loaded: false },
+    { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.zip', dataVersion: 1, enabled: true, data: [], _loaded: false }
 ];
 
 const searchInput = document.getElementById('searchInput');
@@ -10,32 +10,6 @@ const suggestionsBox = document.getElementById('suggestionsBox');
 const resultsContainer = document.getElementById('resultsContainer');
 const initialMessage = document.getElementById('initialMessage');
 
-// --- Android (Capacitor) / Windows (Tauri) ඇප් එක ඇතුළේ පමණක් — වෙබ් අඩවියට කිසිදු බලපෑමක් නැත ---
-function isNativeApp() {
-    try { return !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()); } catch (e) { return false; }
-}
-function isDesktopApp() { return !!(window.__TAURI__ && window.__TAURI__.core); }
-// Android ඇප් එක: ඉහළ තීරුව ශීර්ෂයේ වර්ණයට, පහළ තීරුව පහළ මෙනුවේ වර්ණයට (ආලෝක / අඳුරු තේමාව අනුව)
-function syncAppBars() {
-    if (!isNativeApp()) return;
-    const AB = Capacitor.Plugins && Capacitor.Plugins.AppBars; if (!AB) return;
-    const dark = document.body.classList.contains('dark-theme');
-    const c = dark ? { top: '#211B40', bottom: '#141725', page: '#090909', lightTopIcons: true, lightBottomIcons: true }
-                   : { top: '#861410', bottom: '#F9EFDB', page: '#F5F1EA', lightTopIcons: true, lightBottomIcons: false };
-    try { AB.setColors(c).catch(function () {}); } catch (e) {}
-}
-// Windows ඇප් එක: බාහිර සබැඳි (වෙබ් අඩවි, mailto) පරිගණකයේ browser එකේ විවෘත කරයි
-if (isDesktopApp()) {
-    document.addEventListener('click', function (e) {
-        const a = e.target.closest ? e.target.closest('a[href]') : null; if (!a) return;
-        const href = a.href || '';
-        if (/^(https?:|mailto:)/i.test(href) && !href.startsWith(location.origin)) {
-            e.preventDefault(); e.stopImmediatePropagation();
-            window.__TAURI__.core.invoke('open_url', { url: href }).catch(function (err) { console.error('open_url:', err); });
-        }
-    }, true);
-}
-
 // --- Restore saved theme preference (runs immediately, before first paint settles) ---
 (function restoreTheme() {
     if (localStorage.getItem('theme') === 'dark') {
@@ -43,7 +17,6 @@ if (isDesktopApp()) {
         const icon = document.getElementById('themeIcon');
         if (icon) icon.setAttribute('href', '#icon-sun');
     }
-    syncAppBars();
 })();
 
 // --- Container zoom = (පරිශීලකයාගේ අකුරු ප්‍රමාණ සැකසුම) × (තිරයට ස්වයංක්‍රීය ගැළපීම) ---
@@ -125,62 +98,280 @@ function loadAllActiveDicts() {
     });
 }
 
+// ================================================================
+// IndexedDB cache — parse කළ ශබ්දකෝෂ දත්ත
+// ----------------------------------------------------------------
+// පළමු වරට zip → CSV → parse කළ පසු ප්‍රතිඵලය මෙහි සුරකී. ඊළඟ විවෘත කිරීම් වලදී
+// zip බාගැනීම / unzip / CSV parse යන සියල්ල මඟහැර කෙලින්ම කියවයි.
+//
+// ⚠ ශබ්දකෝෂ ගොනුව (dictionary.zip, sinhala_english.zip) වෙනස් කරන සෑම විටම
+//   availableDicts හි අදාළ dataVersion අගය වැඩි කරන්න (නැතහොත් පරණ දත්ත පෙන්වයි).
+// ⚠ buildItemFromRow() / detectHeaderMap() වෙනස් කළ විට PARSER_VERSION වැඩි කරන්න.
+// ================================================================
+const DictCache = (function () {
+    const DB_NAME = 'dict-parsed-cache';
+    const DB_VERSION = 1;
+    const CHUNKS = 'chunks';          // key: `${dictId}|${version}|${n}`  → JSON string (පේළි CHUNK_ROWS ක්)
+    const META = 'meta';              // key: dictId → { version, chunks, count, bytes, complete }
+    const CHUNK_ROWS = 3000;
+    const PARSER_VERSION = 1;
+
+    let dbPromise = null;
+    const saving = new Set();
+    let persistAsked = false;
+
+    const versionOf = (dict) => PARSER_VERSION + '.' + dict.dataVersion;
+    const chunkKey = (id, ver, n) => id + '|' + ver + '|' + n;
+
+    const reqP = (req) => new Promise((resolve, reject) => {
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error || new Error('IndexedDB request failed'));
+    });
+    const txDone = (tx) => new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error || new Error('IndexedDB transaction failed'));
+        tx.onabort = () => reject(tx.error || new Error('IndexedDB transaction aborted'));
+    });
+    const yieldToMain = () => new Promise(r => setTimeout(r, 0));
+    const whenIdle = () => new Promise(resolve => {
+        if ('requestIdleCallback' in window) requestIdleCallback(() => resolve(), { timeout: 3000 });
+        else setTimeout(resolve, 60);
+    });
+
+    function open() {
+        if (dbPromise) return dbPromise;
+        dbPromise = new Promise((resolve, reject) => {
+            if (typeof indexedDB === 'undefined' || !indexedDB) {
+                reject(new Error('IndexedDB unavailable'));
+                return;
+            }
+            let req;
+            try { req = indexedDB.open(DB_NAME, DB_VERSION); }
+            catch (e) { reject(e); return; }
+            req.onupgradeneeded = () => {
+                const db = req.result;
+                if (!db.objectStoreNames.contains(CHUNKS)) db.createObjectStore(CHUNKS);
+                if (!db.objectStoreNames.contains(META)) db.createObjectStore(META);
+            };
+            req.onsuccess = () => {
+                const db = req.result;
+                db.onversionchange = () => { db.close(); dbPromise = null; };
+                resolve(db);
+            };
+            req.onerror = () => reject(req.error || new Error('IndexedDB open failed'));
+            req.onblocked = () => reject(new Error('IndexedDB open blocked'));
+        });
+        dbPromise.catch(() => { dbPromise = null; });
+        return dbPromise;
+    }
+
+    // cache එකෙන් කියවා onBatch(items) මඟින් කොටස් වශයෙන් ලබා දෙයි.
+    // true  = cache hit (සම්පූර්ණයෙන් කියවා අවසන්)
+    // false = cache miss (නැත / version නොගැළපේ) — network එකෙන් පූරණය කළ යුතුයි
+    // throw = cache දූෂිතයි / කියවීම අසාර්ථකයි
+    async function load(dict, onBatch, isCurrent) {
+        if (!dict.dataVersion) return false;
+        const db = await open();
+        const ver = versionOf(dict);
+
+        const meta = await reqP(db.transaction(META, 'readonly').objectStore(META).get(dict.id));
+        if (!meta || meta.version !== ver || meta.complete !== true || !(meta.chunks > 0)) return false;
+
+        const getChunk = (n) => {
+            const p = reqP(db.transaction(CHUNKS, 'readonly').objectStore(CHUNKS).get(chunkKey(dict.id, ver, n)));
+            p.catch(() => {});   // early-exit වූ විට unhandled rejection නොපෙන්වීමට
+            return p;
+        };
+
+        let total = 0;
+        let next = getChunk(0);
+        for (let n = 0; n < meta.chunks; n++) {
+            const json = await next;
+            next = (n + 1 < meta.chunks) ? getChunk(n + 1) : null;   // ඊළඟ chunk එක කලින් ඉල්ලයි
+            if (isCurrent && !isCurrent()) return true;              // වෙනත් පූරණයක් මෙය ප්‍රතිස්ථාපනය කර ඇත
+            if (typeof json !== 'string') throw new Error('cache chunk ' + n + ' missing');
+            const items = JSON.parse(json);
+            if (!Array.isArray(items)) throw new Error('cache chunk ' + n + ' invalid');
+            onBatch(items);
+            total += items.length;
+            await yieldToMain();    // UI එකට හුස්ම ගැනීමට (ටයිප් කිරීම කොටන්නේ නැත)
+        }
+        if (total !== meta.count) throw new Error('cache row count mismatch (' + total + ' ≠ ' + meta.count + ')');
+        return true;
+    }
+
+    // සම්පූර්ණයෙන් පූරණය වූ dict.data cache එකට ලියයි (පසුබිමේ, idle වේලාවල).
+    // meta එක ලියන්නේ සියලු chunk ලියා අවසන් වූ පසු පමණයි — අතරමඟ නතර වුවහොත් cache එක භාවිත නොවේ.
+    async function save(dict) {
+        const data = dict.data;
+        const total = data.length;
+        if (!total || !dict.dataVersion) return false;
+        const db = await open();
+        const ver = versionOf(dict);
+
+        {   // පරණ / අර්ධ දත්ත ඉවත් කිරීම
+            const tx = db.transaction([CHUNKS, META], 'readwrite');
+            tx.objectStore(META).delete(dict.id);
+            tx.objectStore(CHUNKS).delete(IDBKeyRange.bound(dict.id + '|', dict.id + '|\uffff'));
+            await txDone(tx);
+        }
+
+        let chunks = 0, bytes = 0;
+        for (let start = 0; start < total; start += CHUNK_ROWS) {
+            await whenIdle();
+            if (dict.data !== data || data.length !== total) return false;   // මැද දී දත්ත වෙනස් විය
+            const json = JSON.stringify(data.slice(start, start + CHUNK_ROWS));
+            const tx = db.transaction(CHUNKS, 'readwrite');
+            tx.objectStore(CHUNKS).put(json, chunkKey(dict.id, ver, chunks));
+            await txDone(tx);
+            chunks++;
+            bytes += json.length;
+        }
+
+        const tx = db.transaction(META, 'readwrite');
+        tx.objectStore(META).put({
+            version: ver, chunks, count: total, bytes, complete: true, savedAt: Date.now()
+        }, dict.id);
+        await txDone(tx);
+        return true;
+    }
+
+    async function clear(dictId) {
+        try {
+            const db = await open();
+            const tx = db.transaction([CHUNKS, META], 'readwrite');
+            tx.objectStore(META).delete(dictId);
+            tx.objectStore(CHUNKS).delete(IDBKeyRange.bound(dictId + '|', dictId + '|\uffff'));
+            await txDone(tx);
+        } catch (e) { /* cache නොමැති නම් කිසිවක් කළ යුතු නැත */ }
+    }
+
+    // install කළ app (PWA / TWA) වලදී පමණක් — browser එකට දත්ත ස්වයංක්‍රීයව මැකීම වළක්වන්න.
+    function requestPersistence() {
+        if (persistAsked) return;
+        persistAsked = true;
+        try {
+            const mm = (q) => window.matchMedia && window.matchMedia(q).matches;
+            const installed = mm('(display-mode: standalone)') || mm('(display-mode: fullscreen)') ||
+                              mm('(display-mode: minimal-ui)') || window.navigator.standalone === true;
+            if (installed && navigator.storage && navigator.storage.persist) {
+                navigator.storage.persist().catch(() => {});
+            }
+        } catch (e) { /* නොසලකන්න */ }
+    }
+
+    function saveLater(dict) {
+        if (!dict.dataVersion || !dict.data || !dict.data.length) return;
+        if (saving.has(dict.id)) return;
+        saving.add(dict.id);
+        save(dict)
+            .then(ok => { if (ok) requestPersistence(); })
+            .catch(err => {
+                console.warn('Dictionary cache write failed:', err);
+                return clear(dict.id);
+            })
+            .finally(() => saving.delete(dict.id));
+    }
+
+    return { load, saveLater, clear };
+})();
+
 function startDictLoad(dict) {
+    // මෙම පූරණයේ ටෝකනය: ශබ්දකෝෂ ඉක්මනින් ටොගල් කළ විට පැරණි පූරණයක ප්‍රතිඵල
+    // එකම array එකට දෙවරක් එකතු වීම (duplicate ප්‍රතිඵල) වළක්වයි.
+    const token = dict._loadToken = (dict._loadToken || 0) + 1;
+    const isCurrent = () => dict._loadToken === token;
+    let fromCache = false;
+
     const finishOne = () => {
+        if (!isCurrent()) return;
         dict._loaded = true;
         dictLoadState.done++;
         updateDictLoadUI();
         if (dictLoadState.done === dictLoadState.total) onAllDictsLoaded();
+        // network එකෙන් ලැබුණු දත්ත පමණක් පසුබිමේදී cache එකට සුරකී
+        if (!fromCache) DictCache.saveLater(dict);
+    };
+
+    // cache එකෙන් සහ streaming loader එකෙන් ලැබෙන කොටස් දෙකටම පොදු
+    const pushBatch = (items) => {
+        if (!isCurrent()) return;
+        for (let i = 0; i < items.length; i++) dict.data.push(items[i]);
+        if (!dictLoadState.anyDataYet && dict.data.length > 0) {
+            dictLoadState.anyDataYet = true;
+        }
+        updateDictLoadUI();
+    };
+
+    // බාගත වූ bytes ප්‍රමාණය (ප්‍රගති තීරුව සඳහා)
+    const reportProgress = (loaded, total) => {
+        if (!isCurrent()) return;
+        const prevLoaded = dict._progressLoaded || 0;
+        const prevTotal = dict._progressTotal || 0;
+        dictLoadState.bytesLoaded += loaded - prevLoaded;
+        dictLoadState.bytesTotal  += total  - prevTotal;
+        dict._progressLoaded = loaded;
+        dict._progressTotal = total;
+        updateDictLoadUI();
     };
 
     const usePlainFetch = () => {
         fetchCSV(dict.path, (data) => {
+            if (!isCurrent()) return;
             dict.data = data || [];
             if (dict.data.length > 0) dictLoadState.anyDataYet = true;
             finishOne();
-        });
+        }, reportProgress);
     };
 
-    if (!/\.zip(\?.*)?$/i.test(dict.path)) {
-        usePlainFetch();
-        return;
-    }
+    const loadFromNetwork = () => {
+        if (!isCurrent()) return;
 
-    let fellBack = false;
-    const fallback = () => {
-        if (fellBack) return;
-        fellBack = true;
-        dict.data = [];
-        usePlainFetch();
-    };
-
-    const handle = fetchZippedCSVStreaming(dict.path, {
-        onBatch: (items) => {
-            for (let i = 0; i < items.length; i++) dict.data.push(items[i]);
-            if (!dictLoadState.anyDataYet && dict.data.length > 0) {
-                dictLoadState.anyDataYet = true;
-            }
-            updateDictLoadUI();
-        },
-        onProgress: (loaded, total) => {
-            const prevLoaded = dict._progressLoaded || 0;
-            const prevTotal = dict._progressTotal || 0;
-            dictLoadState.bytesLoaded += loaded - prevLoaded;
-            dictLoadState.bytesTotal  += total  - prevTotal;
-            dict._progressLoaded = loaded;
-            dict._progressTotal = total;
-            updateDictLoadUI();
-        },
-        onDone: finishOne,
-        onUnsupported: fallback,
-        onError: (err) => {
-            console.warn('Streaming failed for ' + dict.path + ':', err);
-            dictLoadState.failedPaths.push(dict.path);
-            fallback();
+        if (!/\.zip(\?.*)?$/i.test(dict.path)) {
+            usePlainFetch();
+            return;
         }
-    });
 
-    if (handle === null) fallback();
+        let fellBack = false;
+        const fallback = () => {
+            if (fellBack) return;
+            fellBack = true;
+            dict.data = [];
+            usePlainFetch();
+        };
+
+        const handle = fetchZippedCSVStreaming(dict.path, {
+            onBatch: pushBatch,
+            onProgress: reportProgress,
+            onDone: finishOne,
+            onUnsupported: fallback,
+            onError: (err) => {
+                console.warn('Streaming failed for ' + dict.path + ':', err);
+                dictLoadState.failedPaths.push(dict.path);
+                fallback();
+            }
+        });
+
+        if (handle === null) fallback();
+    };
+
+    // 1) parse කළ දත්ත IndexedDB හි තිබේ නම් එය කෙලින්ම භාවිත කරන්න (ක්ෂණික)
+    // 2) නැතිනම් / අසාර්ථක නම් කලින් පරිදිම zip බාගෙන parse කරන්න
+    DictCache.load(dict, pushBatch, isCurrent).then(hit => {
+        if (!isCurrent()) return;
+        if (hit) {
+            fromCache = true;
+            finishOne();
+        } else {
+            loadFromNetwork();
+        }
+    }).catch(err => {
+        if (!isCurrent()) return;
+        console.warn('Dictionary cache unavailable, loading from network:', err);
+        dict.data = [];
+        DictCache.clear(dict.id);
+        loadFromNetwork();
+    });
 }
 
 function updateDictLoadUI() {
@@ -199,24 +390,63 @@ function updateDictLoadUI() {
     }
 
     const allDone = dictLoadState.done === dictLoadState.total;
-    const pct = dictLoadState.bytesTotal > 0
-        ? Math.floor((dictLoadState.bytesLoaded / dictLoadState.bytesTotal) * 100)
-        : null;
 
     if (allDone) {
         if (dictLoadState.failedPaths.length > 0 && !dictLoadState.anyDataYet) {
             searchInput.disabled = true;
             searchInput.placeholder = "දත්ත පූරණය අසාර්ථකයි";
-            initialMessage.innerText = "පූරණය කළ නොහැකි විය: " +
-                dictLoadState.failedPaths.join(', ') +
-                " — file එක නිවැරදි ස්ථානයේ තියෙනවද බලන්න.";
+            initialMessage.innerText = "පූරණය කළ නොහැකි විය: ";
         } else {
-            initialMessage.innerText = "වචනයක් ඇතුළත් කර සොයන්න.";
+            // තීරුව 100% දක්වා පිරී, මොහොතකින් සෙවුම් පණිවිඩයට මාරු වේ
+            renderLoadProgress(initialMessage, 100);
+            setTimeout(() => {
+                initialMessage.classList.remove('is-loading');
+                initialMessage.innerText = "සිංහල වචනයකට අදාළ පාළි වචනය සෙවීම සඳහා සම්පූර්ණ සිංහල වචනය ඇතුලත් කර සෙවුම් බොත්තම ඔබන්න.";
+            }, 450);
         }
-    } else if (dictLoadState.anyDataYet) {
-        initialMessage.innerText = pct !== null
-            ? `දත්ත පූරණය වෙමින්... ${pct}% — දැන් සෙවිය හැක.`
-            : "දත්ත පූරණය වෙමින්... — දැන් සෙවිය හැක.";
+    } else {
+        renderLoadProgress(initialMessage, computeDictLoadPct());
+    }
+}
+
+// සියලු ශබ්දකෝෂ වල එකතු බාගත ප්‍රතිශතය. කිසියම් ශබ්දකෝෂයක මුළු ප්‍රමාණය තවම
+// නොදන්නේ නම් null (එවිට තීරුව "අවිනිශ්චිත" චලනයක් පෙන්වයි).
+function computeDictLoadPct() {
+    if (!dictLoadState) return null;
+    let loaded = 0, total = 0;
+    for (const d of dictLoadState.activeDicts) {
+        const t = d._progressTotal || 0;
+        if (t > 0) { loaded += d._loaded ? t : (d._progressLoaded || 0); total += t; }
+        else if (!d._loaded) return null;
+    }
+    return total > 0 ? (loaded / total) * 100 : null;
+}
+
+// නිල් ප්‍රගති තීරුව + ප්‍රතිශතය (වචන නොමැතිව). pct = null → අවිනිශ්චිත චලනය
+function renderLoadProgress(el, pct) {
+    if (!el) return;
+    el.classList.add('is-loading');
+    let box = el.querySelector('.load-progress');
+    if (!box) {
+        el.innerHTML = '<div class="load-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">' +
+            '<div class="lp-pct"></div><div class="lp-track"><div class="lp-fill"></div></div></div>';
+        box = el.querySelector('.load-progress');
+    }
+    const known = typeof pct === 'number' && isFinite(pct);
+    box.classList.toggle('is-indeterminate', !known);
+    const fill = box.querySelector('.lp-fill');
+    const label = box.querySelector('.lp-pct');
+    if (known) {
+        const v = Math.max(0, Math.min(100, Math.floor(pct)));
+        // තීරුව ආපසු නොයෑමට (ශබ්දකෝෂ කිහිපයක මුළු ප්‍රමාණය එකතු වන විට)
+        const prev = parseInt(box.getAttribute('aria-valuenow') || '0', 10);
+        const shown = Math.max(prev, v);
+        box.setAttribute('aria-valuenow', String(shown));
+        label.textContent = shown + '%';
+        fill.style.width = shown + '%';
+    } else {
+        label.textContent = '';
+        fill.style.width = '';
     }
 }
 
@@ -233,13 +463,14 @@ function onAllDictsLoaded() {
 }
 
 // --- Legacy non-streaming loader (used as fallback + for non-zip paths) ---
-function fetchCSV(path, callback) {
+function fetchCSV(path, callback, onProgress) {
     if (/\.zip(\?.*)?$/i.test(path)) {
-        fetchZippedCSV(path, callback);
+        fetchZippedCSV(path, callback, onProgress);
         return;
     }
     const xhr = new XMLHttpRequest();
     xhr.open("GET", path, true);
+    if (onProgress) xhr.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded, e.total); };
     xhr.overrideMimeType('text/plain; charset=utf-8');
     xhr.onload = function () {
         if (xhr.status === 200 || xhr.status === 0) {
@@ -255,7 +486,8 @@ function fetchCSV(path, callback) {
 // ================================================================
 // Native ZIP reader
 // ================================================================
-function unzipFirstEntry(arrayBuffer) {
+// zip ගොනුවේ පළමු entry එකේ (සම්පීඩිත) දත්ත සොයා ගනී — unzipFirstEntry සහ sliced reader දෙකටම පොදුයි
+function locateFirstZipEntry(arrayBuffer) {
     const view = new DataView(arrayBuffer);
     const bytes = new Uint8Array(arrayBuffer);
     const len = bytes.length;
@@ -282,16 +514,68 @@ function unzipFirstEntry(arrayBuffer) {
     const lExtraLen = view.getUint16(localHeaderOffset + 28, true);
     const dataStart = localHeaderOffset + 30 + lNameLen + lExtraLen;
     const compData = bytes.slice(dataStart, dataStart + compSize);
+    return { method, compData };
+}
 
+function unzipFirstEntry(arrayBuffer) {
+    const { method, compData } = locateFirstZipEntry(arrayBuffer);
     if (method === 0) return compData;
     if (method === 8) return fflate.inflateSync(compData);
     throw new Error('unsupported zip compression method: ' + method);
 }
 
-function fetchZippedCSV(path, callback) {
+// ================================================================
+// Time-sliced unzip + UTF-8 decode (විශාල ගොනු සඳහා)
+// ----------------------------------------------------------------
+// fflate.inflateSync සහ TextDecoder.decode එකවර විශාල ගොනුවක් (inflections.zip → 64MB)
+// සඳහා main thread එක තත්පර කිහිපයක් අවහිර කරයි. මෙය කුඩා කොටස් වශයෙන් කර,
+// සෑම ~sliceBudgetMs කට වරක් UI එකට (ටයිප් කිරීමට / scroll කිරීමට) අවස්ථාව දෙයි.
+// ප්‍රතිඵලය unzipFirstEntry + TextDecoder.decode සමඟ හරියටම සමානයි.
+// ================================================================
+async function unzipFirstEntryToTextSliced(arrayBuffer, sliceBudgetMs) {
+    const budget = sliceBudgetMs || 8;
+    const { method, compData } = locateFirstZipEntry(arrayBuffer);
+    if (compData.length === 0) return '';
+
+    const decoder = new TextDecoder('utf-8');
+    const parts = [];
+    let lastYield = performance.now();
+    const maybeYield = async () => {
+        if (performance.now() - lastYield >= budget) {
+            await new Promise(r => setTimeout(r, 0));
+            lastYield = performance.now();
+        }
+    };
+
+    if (method === 0) {
+        const STEP = 1 << 20;
+        for (let off = 0; off < compData.length; off += STEP) {
+            parts.push(decoder.decode(compData.subarray(off, off + STEP), { stream: true }));
+            await maybeYield();
+        }
+    } else if (method === 8) {
+        if (typeof fflate.Inflate !== 'function') throw new Error('fflate.Inflate unavailable');
+        const inflater = new fflate.Inflate((chunk) => {
+            if (chunk && chunk.length) parts.push(decoder.decode(chunk, { stream: true }));
+        });
+        const STEP = 32 * 1024;     // සම්පීඩිත bytes 32KB ≈ අසම්පීඩිත ~0.5MB
+        for (let off = 0; off < compData.length; off += STEP) {
+            const end = Math.min(off + STEP, compData.length);
+            inflater.push(compData.subarray(off, end), end === compData.length);
+            await maybeYield();
+        }
+    } else {
+        throw new Error('unsupported zip compression method: ' + method);
+    }
+    parts.push(decoder.decode());   // අවසාන අසම්පූර්ණ bytes flush
+    return parts.join('');
+}
+
+function fetchZippedCSV(path, callback, onProgress) {
     const xhr = new XMLHttpRequest();
     xhr.open('GET', path, true);
     xhr.responseType = 'arraybuffer';
+    if (onProgress) xhr.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded, e.total); };
     xhr.onload = function () {
         if (xhr.status !== 200 && xhr.status !== 0) {
             console.error('Zipped CSV load failed:', path, 'HTTP ' + xhr.status);
@@ -393,6 +677,9 @@ function fetchZippedCSVStreaming(path, handlers) {
                 };
                 file.start();
             });
+            // ✅ Deflate (compression type 8) සඳහා decompressor එක ලියාපදිංචි කරයි —
+            //    මෙය නොමැතිව streaming අසාර්ථක වී, ප්‍රගතියක් නොපෙන්වන පැරණි ක්‍රමයට වැටුණි.
+            if (fflate.UnzipInflate) unzipper.register(fflate.UnzipInflate);
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -793,6 +1080,8 @@ function lazyInflectionLookup(state, headword) {
 }
 
 let inflectionIndexPromise = null;
+let inflLoadPct = 0;                         // වර නැගීම් ගොනුවේ බාගත ප්‍රතිශතය
+const inflProgressListeners = new Set();
 let inflectionState = null;   // index පූරණය වූ පසු { text, index, formIndex }
 
 function getInflectionIndex() {
@@ -802,14 +1091,24 @@ function getInflectionIndex() {
         const xhr = new XMLHttpRequest();
         xhr.open('GET', INFLECTION_DATA_PATH, true);
         xhr.responseType = 'arraybuffer';
+        xhr.onprogress = (e) => {
+            inflLoadPct = e.lengthComputable ? (e.loaded / e.total) * 100 : null;
+            inflProgressListeners.forEach(fn => fn(inflLoadPct));
+        };
         xhr.onload = async () => {
             if (xhr.status !== 200 && xhr.status !== 0) {
                 reject(new Error('HTTP ' + xhr.status));
                 return;
             }
             try {
-                const bytes = unzipFirstEntry(xhr.response);
-                const text = new TextDecoder('utf-8').decode(bytes);
+                // unzip + decode කුඩා කොටස් වශයෙන් (UI කොටන්නේ නැත); අසාර්ථක නම් පරණ ක්‍රමයට
+                let text;
+                try {
+                    text = await unzipFirstEntryToTextSliced(xhr.response);
+                } catch (slicedErr) {
+                    console.warn('Sliced unzip failed, using synchronous path:', slicedErr);
+                    text = new TextDecoder('utf-8').decode(unzipFirstEntry(xhr.response));
+                }
                 const built = await buildLazyInflectionIndex(text);
                 const state = { text, index: built.index, formIndex: built.formIndex };
                 inflectionState = state;
@@ -1512,8 +1811,13 @@ window.toggleInflection = function (id, headword) {
     panel.classList.add('open');
     if (panel.dataset.loaded === '1') return;
 
-    panel.innerHTML = '<div class="inflection-loading">වර නැගීම් දත්ත පූරණය වෙමින්...</div>';
+    panel.innerHTML = '<div class="inflection-loading"></div>';
+    const holder = panel.firstChild;
+    const onProg = (p) => renderLoadProgress(holder, p);
+    onProg(inflLoadPct);
+    inflProgressListeners.add(onProg);
     getInflectionIndex()
+        .finally(() => inflProgressListeners.delete(onProg))
         .then(state => {
             const rows = lazyInflectionLookup(state, headword);
             panel.innerHTML = buildInflectionTablesHTML(rows, headword);
@@ -1775,7 +2079,19 @@ function performSearch(query, exactOnly = false) {
     // වර නැගීම් index එක තවම පූරණය වී නොමැති නම්, පූරණය වූ පසු මෙම සෙවුම නැවත ක්‍රියාත්මක කරයි
     if (!inflectionState) {
         getInflectionIndex()
-            .then(() => { if (myToken === searchToken && inflectionState) performSearch(query, exactOnly); })
+            .then(() => {
+                if (myToken !== searchToken || !inflectionState) return;
+                // නැවත සෙවීමේදී විවෘතව තිබූ වර නැගීම් පැනල නැවත විවෘත කරයි
+                const openIds = Array.from(document.querySelectorAll('.inflection-panel.open'))
+                    .map(el => el.id.replace(/^inflection-/, ''));
+                const y = window.scrollY;
+                performSearch(query, exactOnly);
+                openIds.forEach(id => {
+                    const btn = document.querySelector(`.wc-infl-btn[data-infl-id="${CSS.escape(id)}"]`);
+                    if (btn) btn.click();
+                });
+                window.scrollTo(0, y);
+            })
             .catch(() => {});
     }
 
@@ -1877,7 +2193,6 @@ function toggleTheme() {
     const isDark = document.body.classList.contains('dark-theme');
     document.getElementById('themeIcon').setAttribute('href', isDark ? '#icon-sun' : '#icon-moon');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    syncAppBars();
 }
 
 // --- Zoom / Text Size Functions ---
@@ -2171,8 +2486,8 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Service Worker Registration — Android / Windows ඇප් එකේ ගොනු ඇප් එක ඇතුළේම ඇති නිසා අවශ්‍ය නැත
-if ('serviceWorker' in navigator && !isNativeApp() && !isDesktopApp()) {
+// Service Worker Registration
+if ('serviceWorker' in navigator) {
     // ✅ පළමු වරට install වන විට (කලින් controller නැති විට) page එක reload නොකරන්න.
     //    එසේ නොකළොත් reload වීමෙන් beforeinstallprompt event එක සහ banner එක නැති වී යයි.
     const hadController = !!navigator.serviceWorker.controller;
