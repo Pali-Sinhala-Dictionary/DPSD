@@ -82,6 +82,32 @@ jobs:
             C:/bc/desktop-app/src-tauri/target/release/bundle/msi/*.msi
           if-no-files-found: error
 
+      # GitHub Releases: installer ගොනු (සෘජු බාගත කිරීම). Android release එක "Latest" ලෙස තබා ගැනීමට මෙය Latest නොකරයි.
+      - name: Prepare release files
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          mkdir -p /c/rel
+          cp /c/bc/desktop-app/src-tauri/target/release/bundle/nsis/*.exe "/c/rel/Pali-Sinhala-Dictionary-Setup.exe"
+          cp /c/bc/desktop-app/src-tauri/target/release/bundle/msi/*.msi "/c/rel/Pali-Sinhala-Dictionary.msi"
+
+      - name: Publish GitHub Release
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: windows-v${{ env.APP_VERSION }}
+          target_commitish: ${{ github.sha }}
+          name: Windows ${{ env.APP_VERSION }}
+          body: |
+            පාලි-සිංහල ශබ්දකෝෂය — Windows ${{ env.APP_VERSION }} (offline)
+            • Pali-Sinhala-Dictionary-Setup.exe — install කිරීමේදී "මට පමණක්" (Administrator අවශ්‍ය නැත) හෝ "සියලු පරිශීලකයින්ට" තෝරන්න.
+            • Pali-Sinhala-Dictionary.msi — Administrator ලවා සියලු පරිශීලකයින්ට.
+            "Windows protected your PC" පෙන්වුවහොත්: More info → Run anyway.
+          files: |
+            C:/rel/Pali-Sinhala-Dictionary-Setup.exe
+            C:/rel/Pali-Sinhala-Dictionary.msi
+          make_latest: false
+          overwrite_files: true
+
       - name: Save build log
         if: always()
         env:

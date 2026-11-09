@@ -5,6 +5,7 @@
 #  • version code: දැනට ඇති ඇප් එකේ අවසාන අගයට වඩා වැඩි පූර්ණ සංඛ්‍යාවක් (උදා: 6, 7, 8 …)
 #  • version name: පරිශීලකයින්ට පෙනෙන අනුවාදය (උදා: 2.0.0)
 #  • ප්‍රතිඵලය: එම run එකේ "Artifacts" යටතේ  dpsd-android-…  (APK + AAB)
+#    + GitHub Releases හි zip නොකළ APK එක: …/releases/latest/download/Pali-Sinhala-Dictionary.apk
 #  • Repo Settings → Secrets and variables → Actions හි පහත 4 ඇත්නම් Play Store එකට යැවිය හැකි
 #    release (signed) build එකක්; නැත්නම් පරීක්ෂණ සඳහා debug APK එකක් පමණි:
 #      ANDROID_KEYSTORE_BASE64   ANDROID_KEYSTORE_PASSWORD   ANDROID_KEY_ALIAS   ANDROID_KEY_PASSWORD
@@ -109,6 +110,29 @@ jobs:
             android-app/android/app/build/outputs/apk/**/*.apk
             android-app/android/app/build/outputs/bundle/**/*.aab
           if-no-files-found: error
+
+      # GitHub Releases: zip නොකළ APK එක (සෘජු බාගත කිරීම). සෑම නව version එකක්ම "Latest" ලෙස සලකුණු වේ:
+      #   https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/latest/download/Pali-Sinhala-Dictionary.apk
+      - name: Prepare release file
+        if: github.event_name == 'workflow_dispatch' && env.KS_FILE != ''
+        run: |
+          mkdir -p release
+          cp android-app/android/app/build/outputs/apk/release/app-release.apk release/Pali-Sinhala-Dictionary.apk
+
+      - name: Publish GitHub Release
+        if: github.event_name == 'workflow_dispatch' && env.KS_FILE != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-v${{ inputs.version_name }}
+          target_commitish: ${{ github.sha }}
+          name: Android ${{ inputs.version_name }} (version code ${{ inputs.version_code }})
+          body: |
+            පාලි-සිංහල ශබ්දකෝෂය — Android ${{ inputs.version_name }} (version code ${{ inputs.version_code }})
+            Offline — ශබ්දකෝෂ ගොනු සියල්ල ඇප් එක ඇතුළේම ඇත.
+            📥 Pali-Sinhala-Dictionary.apk බාගෙන install කරන්න (පැරණි version එක ඇත්නම් update වේ).
+          files: release/Pali-Sinhala-Dictionary.apk
+          make_latest: true
+          overwrite_files: true
 
       # ගැටලු විසඳීම සඳහා: build log එකේ අග කොටස ci-logs branch එකට (මුරපද ඉවත් කර)
       - name: Save build log
