@@ -1,0 +1,100 @@
+# =====================================================================
+#  Pali-Sinhala Dictionary (ශබ්දකෝෂය) — offline Windows app (Tauri) build
+#  අවශ්‍ය විට පමණක්:  GitHub → Actions → "Windows build" → Run workflow → version (උදා: 1.0.0) → Run workflow
+#  ප්‍රතිඵලය: එම run එකේ "Artifacts" යටතේ  dpsd-windows-…
+#    • Pali Sinhala Dictionary_x.y.z_x64-setup.exe  — install කිරීමේදී තෝරාගත හැක:
+#        "මට පමණක්" (Administrator අවසර අවශ්‍ය නැත)  හෝ  "සියලු පරිශීලකයින්ට" (Administrator)
+#    • Pali Sinhala Dictionary_x.y.z_x64_en-US.msi   — සියලු පරිශීලකයින්ට (Administrator / IT deployment)
+# =====================================================================
+name: Windows build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (උදා: 1.0.0  — උපරිම 255.255.65535)'
+        required: true
+        default: '1.0.0'
+  push:
+    branches: [apps]   # සංවර්ධනය සඳහා පමණි
+
+permissions:
+  contents: write   # build log එක ci-logs-desktop branch එකට යැවීමට පමණි
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      APP_VERSION: ${{ inputs.version || '1.0.0' }}
+    steps:
+      # repo එක C:\bc වෙත clone කරයි (Windows හි කෙටි, ආරක්ෂිත මාර්ගයක්)
+      - id: co
+        working-directory: C:\
+        run: |
+          git init -q /c/bc && cd /c/bc
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          git fetch -q --depth 1 origin "$GITHUB_SHA" && git checkout -q FETCH_HEAD
+          git log --oneline -1
+
+      - id: node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - id: rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - id: cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: C:/bc/desktop-app/src-tauri
+
+      - id: npm
+        name: Install Tauri CLI
+        working-directory: C:/bc/desktop-app
+        run: npm install --no-audit --no-fund 2>&1 | tee -a ../build.log
+
+      - id: www
+        name: Copy web files into the app + set version
+        working-directory: C:/bc/desktop-app
+        run: |
+          npm run prepare-www 2>&1 | tee -a ../build.log
+          npm run set-version 2>&1 | tee -a ../build.log
+
+      - id: tauri
+        name: Build installer (.exe + .msi)
+        working-directory: C:/bc/desktop-app
+        run: npx tauri build 2>&1 | tee -a ../build.log
+
+      - id: art
+        uses: actions/upload-artifact@v4
+        with:
+          name: dpsd-windows-v${{ env.APP_VERSION }}
+          path: |
+            C:/bc/desktop-app/src-tauri/target/release/bundle/nsis/*.exe
+            C:/bc/desktop-app/src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: error
+
+      - name: Save build log
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATUS: ${{ job.status }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/ci" /c/bc && cd /c/bc && touch build.log
+          tail -c 150000 build.log > "$RUNNER_TEMP/ci/build-tail.log"
+          find desktop-app/src-tauri/target/release/bundle -name '*.exe' -exec cp {} "$RUNNER_TEMP/ci/" \; 2>/dev/null || true
+          echo '${{ toJSON(steps) }}' > "$RUNNER_TEMP/ci/steps.json"
+          echo "run=${{ github.run_number }} version=$APP_VERSION status=$STATUS sha=${{ github.sha }} ref=${{ github.ref_name }}" > "$RUNNER_TEMP/ci/status.txt"
+          cd "$RUNNER_TEMP/ci"
+          git init -q && git checkout -q -b ci-logs-desktop
+          git -c user.name=github-actions -c user.email=actions@github.com add -A
+          git -c user.name=github-actions -c user.email=actions@github.com commit -qm "windows build log run ${{ github.run_number }} ($STATUS)"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-logs-desktop

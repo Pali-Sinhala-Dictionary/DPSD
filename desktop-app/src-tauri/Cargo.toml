@@ -1,0 +1,19 @@
+[package]
+name = "pali-sinhala-dictionary"
+version = "1.0.0"
+description = "පාලි-සිංහල ශබ්දකෝෂය — Pali-Sinhala Dictionary"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

@@ -1,0 +1,8 @@
+{
+  "appId": "com.pali_sinhala_dictionary.twa",
+  "appName": "ශබ්දකෝෂය",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  }
+}

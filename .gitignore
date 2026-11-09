@@ -1,0 +1,7 @@
+android-app/node_modules/
+android-app/www/
+android-app/android/
+desktop-app/node_modules/
+desktop-app/www/
+desktop-app/src-tauri/target/
+desktop-app/src-tauri/gen/

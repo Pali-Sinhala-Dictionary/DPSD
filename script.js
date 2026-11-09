@@ -10,6 +10,32 @@ const suggestionsBox = document.getElementById('suggestionsBox');
 const resultsContainer = document.getElementById('resultsContainer');
 const initialMessage = document.getElementById('initialMessage');
 
+// --- Android (Capacitor) / Windows (Tauri) ඇප් එක ඇතුළේ පමණක් — වෙබ් අඩවියට කිසිදු බලපෑමක් නැත ---
+function isNativeApp() {
+    try { return !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()); } catch (e) { return false; }
+}
+function isDesktopApp() { return !!(window.__TAURI__ && window.__TAURI__.core); }
+// Android ඇප් එක: ඉහළ තීරුව ශීර්ෂයේ වර්ණයට, පහළ තීරුව පහළ මෙනුවේ වර්ණයට (ආලෝක / අඳුරු තේමාව අනුව)
+function syncAppBars() {
+    if (!isNativeApp()) return;
+    const AB = Capacitor.Plugins && Capacitor.Plugins.AppBars; if (!AB) return;
+    const dark = document.body.classList.contains('dark-theme');
+    const c = dark ? { top: '#211B40', bottom: '#141725', page: '#090909', lightTopIcons: true, lightBottomIcons: true }
+                   : { top: '#861410', bottom: '#F9EFDB', page: '#F5F1EA', lightTopIcons: true, lightBottomIcons: false };
+    try { AB.setColors(c).catch(function () {}); } catch (e) {}
+}
+// Windows ඇප් එක: බාහිර සබැඳි (වෙබ් අඩවි, mailto) පරිගණකයේ browser එකේ විවෘත කරයි
+if (isDesktopApp()) {
+    document.addEventListener('click', function (e) {
+        const a = e.target.closest ? e.target.closest('a[href]') : null; if (!a) return;
+        const href = a.href || '';
+        if (/^(https?:|mailto:)/i.test(href) && !href.startsWith(location.origin)) {
+            e.preventDefault(); e.stopImmediatePropagation();
+            window.__TAURI__.core.invoke('open_url', { url: href }).catch(function (err) { console.error('open_url:', err); });
+        }
+    }, true);
+}
+
 // --- Restore saved theme preference (runs immediately, before first paint settles) ---
 (function restoreTheme() {
     if (localStorage.getItem('theme') === 'dark') {
@@ -17,6 +43,7 @@ const initialMessage = document.getElementById('initialMessage');
         const icon = document.getElementById('themeIcon');
         if (icon) icon.setAttribute('href', '#icon-sun');
     }
+    syncAppBars();
 })();
 
 // --- Container zoom = (පරිශීලකයාගේ අකුරු ප්‍රමාණ සැකසුම) × (තිරයට ස්වයංක්‍රීය ගැළපීම) ---
@@ -1850,6 +1877,7 @@ function toggleTheme() {
     const isDark = document.body.classList.contains('dark-theme');
     document.getElementById('themeIcon').setAttribute('href', isDark ? '#icon-sun' : '#icon-moon');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    syncAppBars();
 }
 
 // --- Zoom / Text Size Functions ---
@@ -2143,8 +2171,8 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Service Worker Registration
-if ('serviceWorker' in navigator) {
+// Service Worker Registration — Android / Windows ඇප් එකේ ගොනු ඇප් එක ඇතුළේම ඇති නිසා අවශ්‍ය නැත
+if ('serviceWorker' in navigator && !isNativeApp() && !isDesktopApp()) {
     // ✅ පළමු වරට install වන විට (කලින් controller නැති විට) page එක reload නොකරන්න.
     //    එසේ නොකළොත් reload වීමෙන් beforeinstallprompt event එක සහ banner එක නැති වී යයි.
     const hadController = !!navigator.serviceWorker.controller;

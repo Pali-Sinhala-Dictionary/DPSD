@@ -1,0 +1,132 @@
+# =====================================================================
+#  Pali-Sinhala Dictionary (ශබ්දකෝෂය) — offline Android app (Capacitor) build
+#  ස්වයංක්‍රීයව ධාවනය නොවේ — අවශ්‍ය විට පමණක්:
+#    GitHub → Actions → "Android build" → Run workflow → version code / name ඇතුළත් කර → Run workflow
+#  • version code: දැනට ඇති ඇප් එකේ අවසාන අගයට වඩා වැඩි පූර්ණ සංඛ්‍යාවක් (උදා: 6, 7, 8 …)
+#  • version name: පරිශීලකයින්ට පෙනෙන අනුවාදය (උදා: 2.0.0)
+#  • ප්‍රතිඵලය: එම run එකේ "Artifacts" යටතේ  dpsd-android-…  (APK + AAB)
+#  • Repo Settings → Secrets and variables → Actions හි පහත 4 ඇත්නම් Play Store එකට යැවිය හැකි
+#    release (signed) build එකක්; නැත්නම් පරීක්ෂණ සඳහා debug APK එකක් පමණි:
+#      ANDROID_KEYSTORE_BASE64   ANDROID_KEYSTORE_PASSWORD   ANDROID_KEY_ALIAS   ANDROID_KEY_PASSWORD
+# =====================================================================
+name: Android build
+
+on:
+  push:
+    branches: [apps]   # සංවර්ධනය සඳහා පමණි
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: 'Version code (දැනට ඇති ඇප් එකේ අවසාන අගයට වඩා වැඩි අංකයක්, උදා: 6)'
+        required: true
+      version_name:
+        description: 'Version name (උදා: 2.0.0)'
+        required: true
+        default: '2.0.0'
+
+permissions:
+  contents: write   # build log එක ci-logs branch එකට යැවීමට පමණි
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      KS_KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-36 build-tools;36.0.0 platform-tools'
+
+      - name: Install Capacitor
+        working-directory: android-app
+        run: npm install --no-audit --no-fund 2>&1 | tee -a ../build.log
+
+      - name: Copy web files into the app
+        working-directory: android-app
+        run: npm run prepare-www 2>&1 | tee -a ../build.log
+
+      - name: Create Android project
+        working-directory: android-app
+        run: |
+          npx cap add android 2>&1 | tee -a ../build.log
+          npx cap sync android 2>&1 | tee -a ../build.log
+
+      - name: Signing key
+        run: |
+          if [ -n "$KS_B64" ] && [ -n "$KS_PASS" ] && [ -n "$KS_ALIAS" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            echo "KS_FILE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+            [ -n "$KS_KEY_PASS" ] || echo "KS_KEY_PASS=$KS_PASS" >> "$GITHUB_ENV"
+            echo "Signing: release keystore found" | tee -a build.log
+          else
+            echo "Signing: secrets not set → debug build only" | tee -a build.log
+          fi
+
+      - name: Apply app settings (icons, permissions, version, signing)
+        working-directory: android-app
+        env:
+          VERSION_CODE: ${{ inputs.version_code || '1' }}
+          VERSION_NAME: ${{ inputs.version_name || '2.0.0-dev' }}
+        run: |
+          if ! [[ "$VERSION_CODE" =~ ^[0-9]+$ ]] || [ "$VERSION_CODE" -lt 1 ]; then
+            echo "Version code must be a whole number, e.g. 6 (got: '$VERSION_CODE')" | tee -a ../build.log; exit 1
+          fi
+          npm run patch-android 2>&1 | tee -a ../build.log
+
+      - name: Build
+        working-directory: android-app/android
+        run: |
+          chmod +x gradlew
+          if [ -n "$KS_FILE" ]; then
+            ./gradlew --no-daemon assembleRelease bundleRelease 2>&1 | tee -a ../../build.log
+          else
+            ./gradlew --no-daemon assembleDebug 2>&1 | tee -a ../../build.log
+          fi
+          rm -f "$RUNNER_TEMP/release.keystore"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dpsd-android-v${{ inputs.version_name || 'dev' }}-code${{ inputs.version_code || github.run_number }}
+          path: |
+            android-app/android/app/build/outputs/apk/**/*.apk
+            android-app/android/app/build/outputs/bundle/**/*.aab
+          if-no-files-found: error
+
+      # ගැටලු විසඳීම සඳහා: build log එකේ අග කොටස ci-logs branch එකට (මුරපද ඉවත් කර)
+      - name: Save build log
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATUS: ${{ job.status }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/ci" && touch build.log
+          for v in "$KS_PASS" "$KS_KEY_PASS" "$KS_B64"; do
+            [ -n "$v" ] && V="$v" perl -pi -e 's/\Q$ENV{V}\E/***/g' build.log || true
+          done
+          tail -c 120000 build.log > "$RUNNER_TEMP/ci/build-tail.log"
+          find android-app/android/app/build/outputs/apk -name '*.apk' -exec cp {} "$RUNNER_TEMP/ci/" \; 2>/dev/null || true
+          cp android-app/node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/plugin/SystemBars.java "$RUNNER_TEMP/ci/" 2>/dev/null || true
+          echo "run=${{ github.run_number }} version=${{ inputs.version_name }}(${{ inputs.version_code }}) status=$STATUS sha=${{ github.sha }} ref=${{ github.ref_name }}" > "$RUNNER_TEMP/ci/status.txt"
+          cd "$RUNNER_TEMP/ci"
+          git init -q && git checkout -q -b ci-logs
+          git -c user.name=github-actions -c user.email=actions@github.com add -A
+          git -c user.name=github-actions -c user.email=actions@github.com commit -qm "build log run ${{ github.run_number }} ($STATUS)"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-logs

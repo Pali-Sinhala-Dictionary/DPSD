@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Main window: core features only (files are saved by the app's own save_file command)",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
