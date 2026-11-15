@@ -9,8 +9,12 @@
 (function () {
   'use strict';
 
-  // Code.gs Web App URL
-  var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwcw4JImC4CxDf1pp9cWTr4xi4jMnWz_GwV3JG0GQAaf_xpBmiH9gKBFz2OPseSXBPhHg/exec';
+  // යෝජනා ලැබෙන ඊමේල් ලිපිනය (FormSubmit.co හරහා යැවේ)
+  var FEEDBACK_EMAIL = 'bhamarawali@gmail.com';
+  // FormSubmit විසින් එවන "random string" එක ලැබුණු පසු FEEDBACK_EMAIL වෙනුවට එය මෙහි දැමිය හැක
+  // (එවිට ඊමේල් ලිපිනය කේතයේ නොපෙනේ). උදා: var FORM_ID = 'a1b2c3d4e5...';
+  var FORM_ID = '';
+  var SEND_URL = 'https://formsubmit.co/ajax/' + (FORM_ID || FEEDBACK_EMAIL);
 
   var CSS = '\
 #fbOverlay{--mint-card:#FFFFFF;--mint-deep:#1E8F6C;--mint-mid:#34B88A;--mint-soft:#DCF4E8;--mint-line:#C7ECDA;--ink:#17332A;--ink-soft:#56736A;--fb-input:#F8FDFB;--fb-ph:#9FB7AE;\
@@ -47,6 +51,11 @@ border:1.5px solid var(--mint-line);border-radius:12px;padding:11px 13px;outline
 #fbSubmit{width:100%;margin-top:24px;border:none;cursor:pointer;background:linear-gradient(180deg,var(--mint-mid),var(--mint-deep));color:#fff;\
 font-family:inherit;font-weight:700;font-size:16px;padding:14px 18px;border-radius:13px;box-shadow:0 12px 24px -10px rgba(30,143,108,.55);}\
 #fbSubmit:disabled{opacity:.7;cursor:default;}\
+#fbError{display:none;margin:12px 0 0;padding:10px 12px;border-radius:10px;background:#FDECEA;color:#A8321F;font-size:13.5px;line-height:1.55;text-align:center;}\
+#fbError.show{display:block;}\
+body.dark-theme #fbError{background:#3A1E1A;color:#F3B4A8;}\
+#fbMailLink{display:none;margin:10px auto 0;padding:10px 14px;border-radius:12px;border:1.5px solid var(--mint-mid);color:var(--mint-deep);background:var(--mint-soft);text-align:center;text-decoration:none;font-size:14px;font-weight:600;}\
+#fbMailLink.show{display:block;}\
 #fbCard .fb-hint{text-align:center;font-size:12.5px;color:var(--ink-soft);margin:12px 0 0;line-height:1.55;}\
 #fbSuccess{display:none;text-align:center;padding:34px 8px 20px;}\
 #fbCard.done #fbForm{display:none;}\
@@ -82,12 +91,14 @@ font-family:inherit;font-weight:700;font-size:16px;padding:14px 18px;border-radi
     <label for="fbMail">ඔබේ ඊමේල් ලිපිනය</label>\
     <input type="email" id="fbMail" placeholder="you@example.com" autocomplete="email">\
     <button type="submit" id="fbSubmit">යොමු කරන්න</button>\
+    <p id="fbError" role="alert"></p>\
+    <a id="fbMailLink" href="#">ඊමේල් app එකෙන් යවන්න</a>\
     <p class="fb-hint">ඉදිරිපත් කරන තොරතුරු ත්‍රිපිටක අටුවා ටීකා වලට ගැලපේ නම් ශබ්දකෝෂ සංශෝධන කටයුතු සඳහා භාවිතා කෙරේ.</p>\
   </form>\
   <div id="fbSuccess">\
     <div class="fb-check"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 12.5l5 5L20 6.5" stroke="#1E8F6C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>\
     <h3>නිවන් පිණිසම වේවා!!!</h3>\
-    <p>ඔබේ යෝජනාව සාර්ථකව ලැබුණි. පරීක්ෂා කිරීමෙන් අනතුරුව අවශ්‍ය සංශෝධන සිදු කරනු ලැබේ.</p>\
+    <p id="fbSuccessMsg"></p>\
     <button type="button" id="fbAgain">තවත් යෝජනාවක්</button>\
     <button type="button" id="fbDone">වසන්න</button>\
   </div>\
@@ -132,6 +143,7 @@ font-family:inherit;font-weight:700;font-size:16px;padding:14px 18px;border-radi
     card.classList.remove('done');
     submitBtn.disabled = false;
     submitBtn.textContent = 'යොමු කරන්න';
+    showError('');
     $('fbPali').value = word || '';
   }
 
@@ -147,7 +159,14 @@ font-family:inherit;font-weight:700;font-size:16px;padding:14px 18px;border-radi
     document.body.style.overflow = 'hidden';
     overlay.classList.add('show');
     card.scrollTop = 0;
-    if (!pushed) { history.pushState({ fb: 1 }, ''); pushed = true; }
+    if (!pushed) {
+      // වත්මන් tab state එක රඳවා ගනී — එසේ නොකළහොත් card එක වසනවිට tab එක 'home' වෙත පනී
+      var st = {};
+      try { if (history.state && typeof history.state === 'object') for (var k in history.state) st[k] = history.state[k]; } catch (e) {}
+      st.fb = 1;
+      history.pushState(st, '');
+      pushed = true;
+    }
     setTimeout(function () { (word ? $('fbErr') : $('fbPali')).focus(); }, 60);
   }
 
@@ -157,8 +176,126 @@ font-family:inherit;font-weight:700;font-size:16px;padding:14px 18px;border-radi
     if (pushed) { pushed = false; history.back(); }
   }
 
+  var MSG_SENT    = 'ඔබේ යෝජනාව සාර්ථකව ලැබුණි. පරීක්ෂා කිරීමෙන් අනතුරුව අවශ්‍ය සංශෝධන සිදු කරනු ලැබේ.';
+  var MSG_OFFLINE = 'දැනට අන්තර්ජාල සම්බන්ධතාවයක් නොමැති නිසා ඔබේ යෝජනාව මෙම උපාංගයේ සුරැකිණි. සම්බන්ධ වූ වහාම එය ස්වයංක්‍රීයව යැවේ.';
+  var MSG_RETRY   = 'මේ මොහොතේ සේවාදායකය හා සම්බන්ධ විය නොහැකි විය. ඔබේ යෝජනාව මෙම උපාංගයේ සුරැකිණි; ඊළඟ වර ශබ්දකෝෂය විවෘත කරනවිට එය ස්වයංක්‍රීයව නැවත යැවේ.';
+  var QUEUE_KEY = 'fbPendingV1';
+  var SEND_TIMEOUT_MS = 40000;   // Apps Script පළමු ඉල්ලීමට තත්පර කිහිපයක් ගත විය හැක
+  var flushing = false;
+
+  function loadQueue() {
+    try { var q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); return Array.isArray(q) ? q : []; }
+    catch (e) { return []; }
+  }
+  function saveQueue(q) {
+    try {
+      if (q.length) localStorage.setItem(QUEUE_KEY, JSON.stringify(q.slice(-30)));
+      else localStorage.removeItem(QUEUE_KEY);
+    } catch (e) {}
+  }
+  function makeId() {
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  }
+
+  // ඊමේල් එකේ පෙනෙන ආකාරයට දත්ත සකසයි
+  function toMailFields(p) {
+    var f = {
+      _subject: 'ශබ්දකෝෂ යෝජනාව' + (p.paliWord ? ': ' + p.paliWord : ''),
+      _template: 'table',
+      _captcha: 'false',
+      'Pali word': p.paliWord || '-',
+      'Error': p.errorDesc || '-',
+      'Correction': p.correction || '-',
+      'New word': p.newWord || '-',
+      'Comments': p.comments || '-',
+      'Sent at': p.sentAt || new Date().toString()
+    };
+    // "email" නමින් යැවූ විට ඊමේල් එකට Reply කිරීමෙන් කෙලින්ම යෝජකයාට පිළිතුරු දිය හැක
+    if (p.email) f.email = p.email;
+    return f;
+  }
+
+  // ඊමේල් app එක හරහා යැවීමට (සේවාව අසාර්ථක වූ විට විකල්පය)
+  function mailtoHref(p) {
+    var f = toMailFields(p);
+    var lines = ['Pali word', 'Error', 'Correction', 'New word', 'Comments']
+      .map(function (k) { return k + ': ' + f[k]; });
+    if (p.email) lines.push('Email: ' + p.email);
+    return 'mailto:' + FEEDBACK_EMAIL +
+      '?subject=' + encodeURIComponent(f._subject) +
+      '&body=' + encodeURIComponent(lines.join('\n'));
+  }
+
+  // FormSubmit වෙත යවා, ඊමේල් එක යැවූ බව තහවුරු කරගනී.
+  //   resolve → සාර්ථකයි
+  //   reject  → { kind: 'network' } (පසුව නැවත යැවිය හැක)
+  //             { kind: 'activation' } (පළමු වරට — ඊමේල් ලිපිනය තහවුරු කළ යුතුයි)
+  //             { kind: 'server', message }
+  function post(payload) {
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, SEND_TIMEOUT_MS) : null;
+    var opts = {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(toMailFields(payload))
+    };
+    if (ctrl) opts.signal = ctrl.signal;
+    return fetch(SEND_URL, opts).then(function (res) {
+      return res.text();
+    }, function () {
+      throw { kind: 'network' };
+    }).then(function (text) {
+      if (timer) clearTimeout(timer);
+      var data = null;
+      try { data = JSON.parse(text); } catch (e) {}
+      if (data && String(data.success) === 'true') return true;
+      var msg = (data && data.message) || '';
+      if (/activat/i.test(msg)) throw { kind: 'activation', message: msg };
+      throw { kind: 'server', message: msg || 'unexpected-response' };
+    }, function (err) {
+      if (timer) clearTimeout(timer);
+      throw (err && err.kind) ? err : { kind: 'network' };
+    });
+  }
+
+  // සුරැකි (නොයැවුණු) යෝජනා එකින් එක යවයි
+  function flushQueue() {
+    if (flushing || (navigator.onLine === false)) return;
+    if (!loadQueue().length) return;
+    flushing = true;
+    (function next() {
+      var cur = loadQueue();
+      if (!cur.length) { flushing = false; return; }
+      post(cur[0]).then(function () {
+        var rest = loadQueue(); rest.shift(); saveQueue(rest);
+        next();
+      }, function () { flushing = false; });   // පසුව නැවත උත්සාහ කරයි
+    })();
+  }
+
+  function showDone(msg) {
+    $('fbSuccessMsg').textContent = msg;
+    card.classList.add('done');
+    card.scrollTop = 0;
+  }
+
+  function showError(msg, payload) {
+    var el = $('fbError');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.classList.toggle('show', !!msg);
+    var link = $('fbMailLink');
+    if (link) {
+      link.classList.toggle('show', !!(msg && payload));
+      if (payload) link.href = mailtoHref(payload);
+    }
+  }
+
   function onSubmit(e) {
     e.preventDefault();
+    if (submitBtn.disabled) return;
+    showError('');
     var payload = {
       paliWord: $('fbPali').value.trim(),
       errorDesc: $('fbErr').value.trim(),
@@ -173,24 +310,40 @@ font-family:inherit;font-weight:700;font-size:16px;padding:14px 18px;border-radi
                     payload.newWord || payload.comments || payload.email;
     if (!anyFilled) { $('fbCom').focus(); return; }
 
+    // පෝලිමේ ඇති යෝජනා හඳුනාගැනීමට
+    payload.id = makeId();
+    payload.sentAt = new Date().toString();
+
     submitBtn.disabled = true;
     submitBtn.textContent = 'යොමු කරමින්...';
 
-    // Apps Script → no-cors (response කියවිය නොහැක, නමුත් Sheet එකට row එක එකතු වේ)
-    fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    }).then(function () {
-      card.classList.add('done');
-      card.scrollTop = 0;
-    }).catch(function () {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'යොමු කරන්න';
-      alert('යැවීමේදී දෝෂයක් ඇති විය. නැවත උත්සාහ කරන්න.');
+    function queueIt(msg) {
+      var q = loadQueue(); q.push(payload); saveQueue(q);
+      showDone(msg);
+    }
+
+    if (navigator.onLine === false) { queueIt(MSG_OFFLINE); return; }
+
+    post(payload).then(function () {
+      showDone(MSG_SENT);
+      flushQueue();            // කලින් නොයැවුණු ඒවා තිබේනම් ඒවාද යවයි
+    }, function (err) {
+      if (err.kind === 'network') {
+        queueIt(navigator.onLine === false ? MSG_OFFLINE : MSG_RETRY);
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'යොමු කරන්න';
+        showError(err.kind === 'activation'
+          ? 'යෝජනා ලැබීමේ සේවාව තවමත් සක්‍රිය කර නැත. කරුණාකර පහත බොත්තමෙන් ඊමේල් මඟින් යවන්න.'
+          : 'යැවීමේදී දෝෂයක් ඇති විය. නැවත උත්සාහ කරන්න, නැතහොත් පහත බොත්තමෙන් ඊමේල් මඟින් යවන්න.', payload);
+        if (window.console) console.warn('[feedback] send error:', err.kind, err.message);
+      }
     });
   }
+
+  window.addEventListener('online', flushQueue);
+  if (document.readyState === 'complete') setTimeout(flushQueue, 3000);
+  else window.addEventListener('load', function () { setTimeout(flushQueue, 3000); });
 
   // [data-feedback] element එකක් click කළවිට (dynamic cards සඳහාද ක්‍රියා කරයි)
   document.addEventListener('click', function (e) {

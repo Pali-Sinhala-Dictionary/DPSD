@@ -1,7 +1,7 @@
 // සියලු ශබ්දකෝෂ Configuration (Oxford Dictionary ඉවත් කර ඇත)
 let availableDicts = [
-    { id: 'pali', name: 'පාලි - සිංහල ශබ්දකෝෂය', path: 'dictionary.zip', dataVersion: 1, enabled: true, data: [], _loaded: false },
-    { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.zip', dataVersion: 1, enabled: true, data: [], _loaded: false }
+    { id: 'pali', name: 'පාලි - සිංහල ශබ්දකෝෂය', path: 'dictionary.zip', enabled: true, data: [], _loaded: false },
+    { id: 'sien', name: 'සිංහල - ඉංග්‍රීසි ශබ්දකෝෂය', path: 'sinhala_english.zip', enabled: true, data: [], _loaded: false }
 ];
 
 const searchInput = document.getElementById('searchInput');
@@ -104,8 +104,9 @@ function loadAllActiveDicts() {
 // පළමු වරට zip → CSV → parse කළ පසු ප්‍රතිඵලය මෙහි සුරකී. ඊළඟ විවෘත කිරීම් වලදී
 // zip බාගැනීම / unzip / CSV parse යන සියල්ල මඟහැර කෙලින්ම කියවයි.
 //
-// ⚠ ශබ්දකෝෂ ගොනුව (dictionary.zip, sinhala_english.zip) වෙනස් කරන සෑම විටම
-//   availableDicts හි අදාළ dataVersion අගය වැඩි කරන්න (නැතහොත් පරණ දත්ත පෙන්වයි).
+// ශබ්දකෝෂ ගොනුව (dictionary.zip, sinhala_english.zip) වෙනස් වූ බව ස්වයංක්‍රීයව හඳුනාගනී:
+//   zip ගොනුවේ ETag / Last-Modified / ප්‍රමාණය (dataFingerprint) වෙනස් වූ විට cache එක
+//   නැවත ගොඩනඟයි. ඔබට කළ යුත්තේ sw.js හි DATA_FILES අංකය වැඩි කිරීම පමණයි.
 // ⚠ buildItemFromRow() / detectHeaderMap() වෙනස් කළ විට PARSER_VERSION වැඩි කරන්න.
 // ================================================================
 const DictCache = (function () {
@@ -120,7 +121,7 @@ const DictCache = (function () {
     const saving = new Set();
     let persistAsked = false;
 
-    const versionOf = (dict) => PARSER_VERSION + '.' + dict.dataVersion;
+    const versionOf = (dict) => PARSER_VERSION + '.' + (dict._fp || 'unknown');
     const chunkKey = (id, ver, n) => id + '|' + ver + '|' + n;
 
     const reqP = (req) => new Promise((resolve, reject) => {
@@ -170,12 +171,12 @@ const DictCache = (function () {
     // false = cache miss (නැත / version නොගැළපේ) — network එකෙන් පූරණය කළ යුතුයි
     // throw = cache දූෂිතයි / කියවීම අසාර්ථකයි
     async function load(dict, onBatch, isCurrent) {
-        if (!dict.dataVersion) return false;
         const db = await open();
-        const ver = versionOf(dict);
-
         const meta = await reqP(db.transaction(META, 'readonly').objectStore(META).get(dict.id));
-        if (!meta || meta.version !== ver || meta.complete !== true || !(meta.chunks > 0)) return false;
+        if (!meta || meta.complete !== true || !(meta.chunks > 0)) return false;
+        // fingerprint එක ලබාගත නොහැකි වූ විට (offline, SW නැත) සුරැකි දත්තම භාවිත කරයි
+        const ver = dict._fp ? versionOf(dict) : meta.version;
+        if (meta.version !== ver || String(meta.version).split('.')[0] !== String(PARSER_VERSION)) return false;
 
         const getChunk = (n) => {
             const p = reqP(db.transaction(CHUNKS, 'readonly').objectStore(CHUNKS).get(chunkKey(dict.id, ver, n)));
@@ -205,7 +206,7 @@ const DictCache = (function () {
     async function save(dict) {
         const data = dict.data;
         const total = data.length;
-        if (!total || !dict.dataVersion) return false;
+        if (!total) return false;
         const db = await open();
         const ver = versionOf(dict);
 
@@ -261,7 +262,7 @@ const DictCache = (function () {
     }
 
     function saveLater(dict) {
-        if (!dict.dataVersion || !dict.data || !dict.data.length) return;
+        if (!dict.data || !dict.data.length) return;
         if (saving.has(dict.id)) return;
         saving.add(dict.id);
         save(dict)
@@ -275,6 +276,33 @@ const DictCache = (function () {
 
     return { load, saveLater, clear };
 })();
+
+// zip ගොනුවේ "අනන්‍යතාවය" (ETag / Last-Modified / ප්‍රමාණය).
+// SW පාලනය කරන විට GET — SW cache එකේ ඇති, ඇත්තටම parse කරන ගොනුවේම headers ලැබේ
+// (body එක කියවන්නේ නැත, එබැවින් ක්ෂණිකයි). SW නැත්නම් HEAD.
+// ලබාගත නොහැකි නම් null.
+async function dataFingerprint(path) {
+    let timer = null;
+    try {
+        const controlled = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+        const opts = { method: controlled ? 'GET' : 'HEAD' };
+        if (typeof AbortController !== 'undefined') {
+            const ctrl = new AbortController();
+            opts.signal = ctrl.signal;
+            timer = setTimeout(() => ctrl.abort(), 4000);
+        }
+        const res = await fetch(path, opts);
+        if (res.body && res.body.cancel) res.body.cancel().catch(() => {});
+        if (!res.ok) return null;
+        const h = res.headers;
+        const fp = [h.get('etag'), h.get('last-modified'), h.get('content-length')].filter(Boolean).join('|');
+        return fp || null;
+    } catch (e) {
+        return null;
+    } finally {
+        if (timer) clearTimeout(timer);
+    }
+}
 
 function startDictLoad(dict) {
     // මෙම පූරණයේ ටෝකනය: ශබ්දකෝෂ ඉක්මනින් ටොගල් කළ විට පැරණි පූරණයක ප්‍රතිඵල
@@ -357,7 +385,11 @@ function startDictLoad(dict) {
 
     // 1) parse කළ දත්ත IndexedDB හි තිබේ නම් එය කෙලින්ම භාවිත කරන්න (ක්ෂණික)
     // 2) නැතිනම් / අසාර්ථක නම් කලින් පරිදිම zip බාගෙන parse කරන්න
-    DictCache.load(dict, pushBatch, isCurrent).then(hit => {
+    dataFingerprint(dict.path).then(fp => {
+        dict._fp = fp;
+        if (!isCurrent()) return false;
+        return DictCache.load(dict, pushBatch, isCurrent);
+    }).then(hit => {
         if (!isCurrent()) return;
         if (hit) {
             fromCache = true;
@@ -1022,7 +1054,7 @@ function getPossibleMatches(input) {
     return helper(input).slice(0, 300);
 }
 
-const INFLECTION_DATA_PATH = 'inflections.zip?v=1';
+const INFLECTION_DATA_PATH = 'inflections.zip';
 
 // Async: කුඩා කොටස් වශයෙන් ක්‍රියාත්මක වන අතර සෑම ~12ms කට වරක් main thread එකට
 // නිදහස් වේ. එමගින් දත්ත පූරණය වන අතරතුරත් ටයිප් කිරීම ක්ෂණිකව සිදු වේ.
@@ -1985,6 +2017,87 @@ function formatGrammarDesc(text) {
         `<ol class="gd-steps">${lines.slice(1).map(l => `<li>${escapeHtml(l)}</li>`).join('')}</ol>`;
 }
 
+function parseEtymLine(line) {
+    let rest = line, source = '';
+    const src = rest.match(/\s*\[([^\[\]]+)\]\s*$/);
+    if (src) { source = src[1].trim(); rest = rest.slice(0, src.index).trim(); }
+
+    // පාලි නිරුක්ති වාක්‍යය සහ වරහන් තුළ ඇති සිංහල විවරණය වෙන් කිරීම
+    let pali = rest, sinhala = '';
+    const cut = rest.match(/\s+[—–-]\s*(?=[({])|\.\s*(?=\()|\s*(?=\{[^{}]+\}\s*$)/);
+    if (cut) {
+        pali = rest.slice(0, cut.index).trim();
+        sinhala = stripOuterBrackets(rest.slice(cut.index + cut[0].length).trim());
+    }
+    return { pali: pali.replace(/[\s.]+$/, ''), sinhala, source };
+}
+
+// සම්පූර්ණ කොටසම වට කර ඇති පිටත ( ) හෝ { } යුගලය ඉවත් කරයි
+function stripOuterBrackets(s) {
+    const open = s[0], close = open === '(' ? ')' : open === '{' ? '}' : '';
+    if (!close || !s.endsWith(close)) return s;
+    let depth = 0;
+    for (let i = 0; i < s.length; i++) {
+        if (s[i] === open) depth++;
+        else if (s[i] === close) depth--;
+        if (depth === 0 && i < s.length - 1) return s;
+    }
+    return s.slice(1, -1).trim();
+}
+
+// නිරුක්තිය: "1. ...\n2. ..." ලෙස ඇති නිරුක්ති අංක ඉවත් කර වෙන වෙනම කොටස් ලෙස වෙන් කරයි.
+// එක් එක් නිරුක්තියක් → { pali, sinhala, source }
+function parseEtymology(text) {
+    // { text, start } — start: අංකයකින් ආරම්භ වූ (නව නිරුක්තියක්) පේළියක්ද යන්න
+    const lines = [];
+    let pendingStart = false;
+    String(text).split(/\r?\n/).forEach(raw => {
+        const t = raw.trim();
+        if (!t) return;
+        const m = t.match(/^\d+\s*[\.\)]\s*/);
+        const body = m ? t.slice(m[0].length).trim() : t;
+        if (!body) { pendingStart = true; return; }   // අංකය පමණක් ඇති පේළිය
+        lines.push({ text: body, start: !!m || pendingStart });
+        pendingStart = false;
+    });
+
+    const out = [], seen = new Set();
+    for (let i = 0; i < lines.length; i++) {
+        const e = parseEtymLine(lines[i].text);
+        // සිංහල විවරණය ඊළඟ පේළියේ ඇත්නම් (පාලි පේළිය / සිංහල පේළිය ලෙස)
+        const next = lines[i + 1];
+        if (!e.sinhala && next && !next.start && !parseEtymLine(next.text).sinhala) {
+            const n = parseEtymLine(next.text);
+            e.sinhala = stripOuterBrackets(n.pali.replace(/[\s.]+$/, ''));
+            if (!e.source) e.source = n.source;
+            i++;
+        }
+        const key = e.pali + '|' + e.sinhala + '|' + e.source;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(e);
+    }
+    return out;
+}
+
+// පාලි කොටසේ අවසාන පදය (නිරුක්තියෙන් සිද්ධ වන පදය) උද්දීපනය කරයි
+function formatEtymPali(pali) {
+    const m = pali.match(/^([\s\S]*?)(\s*[–—-]\s*|\s+)?([^\s–—-]+)$/);
+    if (!m || !m[1]) return escapeHtml(pali);
+    const sep = m[2] ? (/[–—-]/.test(m[2]) ? ' <span class="et-dash">–</span> ' : ' ') : '';
+    return `${escapeHtml(m[1])}${sep}<b class="et-word">${escapeHtml(m[3])}</b>`;
+}
+
+function formatEtymology(entries) {
+    return `<ul class="et-list">` + entries.map(e =>
+        `<li class="et-item">` +
+            `<div class="et-pali">${formatEtymPali(e.pali)}</div>` +
+            (e.sinhala ? `<div class="et-sinhala">${escapeHtml(e.sinhala)}</div>` : '') +
+            (e.source ? `<div class="et-source"><span>${escapeHtml(e.source)}</span></div>` : '') +
+        `</li>`
+    ).join('') + `</ul>`;
+}
+
 function buildWcBlock(kind, label, bodyHtml, extraHead) {
     return `<div class="wc-block wc-block--${kind}">` +
         `<div class="wc-label"><span>${label}</span>${extraHead || ''}</div>` +
@@ -2012,7 +2125,12 @@ function buildSenseHTML(item, idx, total, isPali, mainWord) {
     }
     if (item.grammarDesc) body += buildWcBlock('grammar', 'ව්‍යාකරණ විස්තරය', formatGrammarDesc(item.grammarDesc));
     if (item.properNoun)  body += buildWcBlock('proper', 'සංඥා නාම විස්තරය', escapeHtml(item.properNoun));
-    if (item.etymology)   body += buildWcBlock('etym', 'නිරුක්තිය', escapeHtml(item.etymology));
+    if (item.etymology) {
+        const etyms = parseEtymology(item.etymology);
+        if (etyms.length) {
+            body += buildWcBlock('etym', etyms.length > 1 ? 'නිරුක්ති' : 'නිරුක්තිය', formatEtymology(etyms));
+        }
+    }
 
     return `<div class="wc-sense" style="--i:${Math.min(idx, 8)}">${head}<div class="wc-sense-body">${body}</div></div>`;
 }
@@ -2163,7 +2281,9 @@ function switchTab(tabId, titleText, fromPopState = false) {
     const activeNav = document.getElementById(`nav-${tabId}`);
     if(activeNav) activeNav.classList.add('active');
 
-    document.getElementById('pageTitle').innerText = titleText;
+    // #pageTitle element එක index.html හි නැත — නැතිවිට දෝෂයක් නොවී ඉදිරියට යයි
+    const pageTitleEl = document.getElementById('pageTitle');
+    if (pageTitleEl) pageTitleEl.innerText = titleText;
 
     if (!fromPopState) {
         const currentTab = (history.state && history.state.tab) ? history.state.tab : 'home';

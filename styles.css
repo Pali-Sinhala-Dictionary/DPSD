@@ -3506,3 +3506,106 @@ body.dark-theme .lp-fill {
     background: linear-gradient(90deg, #1e88e5, #42a5f5 60%, #90caf9);
     box-shadow: 0 0 12px rgba(66, 165, 245, 0.55);
 }
+
+
+/* =========================================================
+   v20 — නිරුක්ති (අංක රහිතව, එකක් යට එකක්, සලකුණක් සමඟ)
+   ========================================================= */
+
+.et-list {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+}
+.et-item {
+    position: relative;
+    padding: 7px 0 8px 26px;
+}
+.et-item + .et-item {
+    border-top: 1px dashed rgba(106, 27, 154, 0.22);
+}
+
+/* නිරුක්තියට ඉදිරියෙන් දියමන්ති සලකුණ */
+.et-item::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: calc(7px + 0.62em);
+    width: 8px;
+    height: 8px;
+    transform: rotate(45deg);
+    background: var(--accent);
+    box-shadow: 0 0 0 3px rgba(106, 27, 154, 0.14);
+    border-radius: 1.5px;
+}
+/* සලකුණේ සිට සිංහල විවරණය දක්වා සිහින් රේඛාව */
+.et-item::after {
+    content: '';
+    position: absolute;
+    left: 9.5px;
+    top: calc(7px + 0.62em + 12px);
+    bottom: 12px;
+    width: 1px;
+    background: linear-gradient(var(--accent), transparent);
+    opacity: 0.4;
+}
+
+.et-pali {
+    color: var(--text-color);
+    line-height: 1.6;
+}
+.et-word {
+    color: var(--accent);
+    font-weight: bold;
+}
+.et-dash {
+    color: var(--text-secondary);
+    opacity: 0.8;
+}
+.et-sinhala {
+    margin-top: 3px;
+    font-size: 0.93em;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+.et-source {
+    margin-top: 5px;
+    display: flex;
+    justify-content: flex-end;
+}
+.et-source span {
+    font-size: 12.5px;
+    line-height: 1.4;
+    padding: 2px 10px;
+    border-radius: 999px;
+    color: var(--accent);
+    background: rgba(106, 27, 154, 0.07);
+    border: 1px solid rgba(106, 27, 154, 0.20);
+}
+
+body.dark-theme .et-item + .et-item { border-top-color: rgba(234, 128, 252, 0.20); }
+body.dark-theme .et-item::before   { box-shadow: 0 0 0 3px rgba(234, 128, 252, 0.16); }
+body.dark-theme .et-source span {
+    background: rgba(234, 128, 252, 0.08);
+    border-color: rgba(234, 128, 252, 0.28);
+}
+
+
+/* =========================================================
+   v20 — කොටුවේ ඉහළ දකුණේ පද බෙදීම විශාල කිරීම
+   ========================================================= */
+
+.wc-head-div {
+    font-size: 18.5px;
+}
+.wc-head-div .wc-division-label {
+    font-size: 15px;
+}
+
+@media (max-width: 480px) {
+    .wc-head-div { font-size: 17px; }
+    .wc-head-div .wc-division-label { font-size: 14px; }
+    .et-item { padding-left: 22px; }
+    .et-item::before { left: 4px; }
+    .et-item::after { left: 7.5px; }
+}
