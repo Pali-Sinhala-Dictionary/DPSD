@@ -1134,15 +1134,25 @@ function dictWordCandidates(hw) {
     return out;
 }
 
+// සියලු ගැළපෙන මූල වචනවල පේළි එකතු කරයි (උදා: මනස = විශේෂණ පේළි "මනස" + නාම පේළි "මනස්")
 function lazyInflectionLookup(state, headword) {
-    let ranges = null;
+    const out = [];
+    const seen = new Set();
     const cands = inflectionKeyCandidates(headword);
-    for (let i = 0; i < cands.length && !ranges; i++) ranges = state.index.get(cands[i]) || null;
-    if (!ranges) return [];
-    return ranges.map(([s, e]) => {
-        const cols = state.text.slice(s, e).split(',');
-        return { inflected: cols[0], pos: cols[1], category: cols[2], subcase: cols[3], number: cols[4] };
-    });
+    for (let i = 0; i < cands.length; i++) {
+        const ranges = state.index.get(cands[i]);
+        if (!ranges) continue;
+        for (let j = 0; j < ranges.length; j++) {
+            const [s, e] = ranges[j];
+            const line = state.text.slice(s, e);
+            const cols = line.split(',');
+            const key = cols.slice(0, 5).join(',');
+            if (seen.has(key)) continue;
+            seen.add(key);
+            out.push({ inflected: cols[0], pos: cols[1], category: cols[2], subcase: cols[3], number: cols[4] });
+        }
+    }
+    return out;
 }
 
 let inflectionIndexPromise = null;
