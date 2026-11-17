@@ -1102,8 +1102,42 @@ async function buildLazyInflectionIndex(text) {
     return { index, formIndex };
 }
 
+// වර නැගීම් දත්තවල මූල වචන ZWJ රහිතව සහ හල් අකුරෙන් අවසන් වන කඳ ලෙස ඇත
+// (උදා: මනස්, සත්ථර්, ගුණවන්ත්). ශබ්දකෝෂයේ ශීර්ෂය (මනස, සත්ථු, ගුණවන්තු) ඒවාට ගළපයි.
+const ZWJ_RE = /\u200d/g;
+function stripZwj(w) { return String(w || '').normalize('NFC').replace(ZWJ_RE, ''); }
+
+// ශබ්දකෝෂ ශීර්ෂය -> වර නැගීම් දත්තවල සෙවිය හැකි මූල වචන (අනුපිළිවෙළට)
+function inflectionKeyCandidates(word) {
+    const w = stripZwj(word).trim();
+    const out = [w];
+    if (/\u0dd4$/.test(w)) {                         // ...උ  (සත්ථු, ගුණවන්තු)
+        const base = w.slice(0, -1);
+        out.push(base + '\u0dca');                   // ගුණවන්තු -> ගුණවන්ත්
+        out.push(base + '\u0dbb\u0dca');            // සත්ථු -> සත්ථර්
+    } else if (/[\u0d9a-\u0dc6]$/.test(w)) {        // අ-කාරාන්ත (මනස, අරහන්ත)
+        out.push(w + '\u0dca');                      // මනස -> මනස්, අරහන්ත -> අරහන්ත්
+    }
+    return out;
+}
+
+// වර නැගීම් දත්තවල මූල වචනය (hw) -> ශබ්දකෝෂයේ ශීර්ෂයට ගැළපිය හැකි රූප
+function dictWordCandidates(hw) {
+    const w = stripZwj(hw);
+    const out = [w];
+    if (/\u0dca$/.test(w)) {
+        const base = w.slice(0, -1);                 // මනස්->මනස, ගුණවන්ත්->ගුණවන්ත
+        if (/\u0dbb\u0dca$/.test(w)) out.push(w.slice(0, -2) + '\u0dd4');   // සත්ථර් -> සත්ථු
+        if (/\u0db1\u0dca\u0dad\u0dca$/.test(w)) out.push(base + '\u0dd4'); // ගුණවන්ත් -> ගුණවන්තු
+        out.push(base);
+    }
+    return out;
+}
+
 function lazyInflectionLookup(state, headword) {
-    const ranges = state.index.get(headword);
+    let ranges = null;
+    const cands = inflectionKeyCandidates(headword);
+    for (let i = 0; i < cands.length && !ranges; i++) ranges = state.index.get(cands[i]) || null;
     if (!ranges) return [];
     return ranges.map(([s, e]) => {
         const cols = state.text.slice(s, e).split(',');
@@ -1192,7 +1226,7 @@ function joinSi(list) {
 
 // inflections.csv හි පේළි -> object (headword = අවසාන තීරුව)
 function lazyInflectionFormLookup(state, form) {
-    const entry = state.formIndex.get(form);
+    const entry = state.formIndex.get(stripZwj(form));
     if (entry === undefined) return [];
     const starts = (typeof entry === 'number') ? [entry] : entry;
     const out = [];
@@ -1217,10 +1251,14 @@ function getPaliHeadwordSet(dict) {
     if (paliHeadSetCache.dict === dict && paliHeadSetCache.size === dict.data.length) {
         return paliHeadSetCache.set;
     }
-    const set = new Set();
+    // ZWJ රහිත යතුර -> ශබ්දකෝෂයේ පෙන්වන ශීර්ෂය
+    const set = new Map();
     for (let i = 0; i < dict.data.length; i++) {
         const it = dict.data[i];
-        if (it && it.word) set.add(it.word);
+        if (it && it.word) {
+            const k = stripZwj(it.word);
+            if (!set.has(k)) set.set(k, it.word);
+        }
     }
     paliHeadSetCache = { dict, size: dict.data.length, set };
     return set;
@@ -1301,9 +1339,12 @@ function findInflectionRefs(query, possibleMatches) {
         if (!rows.length) continue;
 
         const byHead = new Map();
+        const candKey = stripZwj(cand);
         rows.forEach(r => {
-            const hw = r.headword.normalize('NFC');
-            if (hw === cand || !headSet.has(hw)) return;   // තමාටම යොමු නොකරයි
+            let hw = null;
+            const hc = dictWordCandidates(r.headword);
+            for (let j = 0; j < hc.length && !hw; j++) hw = headSet.get(hc[j]) || null;
+            if (!hw || stripZwj(hw) === candKey) return;   // තමාටම යොමු නොකරයි
             if (!byHead.has(hw)) byHead.set(hw, []);
             byHead.get(hw).push(r);
         });
