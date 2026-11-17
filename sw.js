@@ -11,7 +11,7 @@
 const APP_VERSION = '4.35';
 
 const DATA_FILES = {
-  'dictionary.zip': 1,
+  'dictionary.zip': 2,
   'sinhala_english.zip': 4,
   'inflections.zip': 1
 };
