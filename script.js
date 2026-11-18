@@ -351,7 +351,7 @@ function startDictLoad(dict) {
     const finishOne = () => {
         if (!isCurrent()) return;
         dict._loaded = true;
-        if (dict.id === 'pali') setTimeout(() => { try { updateDictStats(); } catch (e) { console.warn('stats:', e); } }, 0);
+        if (dict.id === 'pali' || dict.id === 'sien') setTimeout(() => { try { updateDictStats(); } catch (e) { console.warn('stats:', e); } }, 0);
         dictLoadState.done++;
         updateDictLoadUI();
         if (dictLoadState.done === dictLoadState.total) onAllDictsLoaded();
@@ -2907,14 +2907,31 @@ function computeDictStats(items) {
     return s;
 }
 
+function computeSienStats(items) {
+    const sin = /[඀-෿]/, lat = /[A-Za-z]/;
+    const s = { total: 0, sinWords: 0, engWords: 0, multi: 0 };
+    for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        s.total++;
+        const w = it.word || '';
+        if (sin.test(w)) s.sinWords++;
+        else if (lat.test(w)) s.engWords++;
+        if ((it.meaning || '').indexOf('|') !== -1) s.multi++;
+    }
+    return s;
+}
+
 function updateDictStats() {
-    const dict = availableDicts.find(d => d.id === 'pali');
-    if (!dict || !dict._loaded || !dict.data || !dict.data.length) return;
-    const stats = computeDictStats(dict.data);
-    document.querySelectorAll('#dictStatsCard [data-stat]').forEach(el => {
-        const v = stats[el.getAttribute('data-stat')];
-        if (typeof v === 'number') el.textContent = v.toLocaleString('en-US');
-    });
+    const fill = (selector, stats, prefix) => {
+        document.querySelectorAll(selector + ' [data-stat]').forEach(el => {
+            const v = stats[el.getAttribute('data-stat').slice(prefix.length)];
+            if (typeof v === 'number') el.textContent = v.toLocaleString('en-US');
+        });
+    };
+    const pali = availableDicts.find(d => d.id === 'pali');
+    if (pali && pali._loaded && pali.data && pali.data.length) fill('#dictStatsCard', computeDictStats(pali.data), '');
+    const sien = availableDicts.find(d => d.id === 'sien');
+    if (sien && sien._loaded && sien.data && sien.data.length) fill('#sienStatsCard', computeSienStats(sien.data), 'sien-');
 }
 
 // ================================================================
