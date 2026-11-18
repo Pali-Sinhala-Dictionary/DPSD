@@ -52,6 +52,11 @@ if (!g.includes('signingConfigs')) {
 }
 writeFileSync(gf, g);
 
+// 4) ස්ථාපිත අනුවාදය ඇප් එක ඇතුළේ (script.js → යාවත්කාලීන දැනුම්දීම සඳහා)
+const pub = join(appDir, 'src', 'main', 'assets', 'public');
+must(existsSync(pub), 'assets/public not found — run `npx cap sync android` first');
+writeFileSync(join(pub, 'app-build.json'), JSON.stringify({ platform: 'android', versionCode: vCode, versionName: vName }) + '\n');
+
 console.log(`patched: versionCode=${vCode} versionName=${vName}, signing=${process.env.KS_FILE ? 'release keystore' : 'none (debug build)'}`);
 const vg = resolve(here, '..', 'android', 'variables.gradle');
 if (existsSync(vg)) console.log(readFileSync(vg, 'utf8').split('\n').filter(l => /SdkVersion/.test(l)).join('\n'));

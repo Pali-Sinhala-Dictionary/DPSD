@@ -8,7 +8,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..', '..');
 const out = process.argv[2] ? resolve(process.argv[2]) : resolve(here, '..', 'www');   // Windows ඇප් එක: node … prepare-www.mjs www
 const SKIP = new Set(['.git', '.github', 'android-app', 'desktop-app', 'node_modules', '.well-known', 'README.md',
-  '.nojekyll', '.gitignore', 'sw.js', 'CLAUDE.md', 'build.log']);
+  '.nojekyll', '.gitignore', 'sw.js', 'CLAUDE.md', 'build.log', 'app-version.json']);
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });

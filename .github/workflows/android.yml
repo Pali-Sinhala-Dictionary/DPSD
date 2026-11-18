@@ -24,9 +24,13 @@ on:
         description: 'Version name (උදා: 2.0.0)'
         required: true
         default: '2.0.0'
+      notes:
+        description: 'අලුත් දේ (ඇප් එකේ යාවත්කාලීන දැනුම්දීමේ පෙන්වයි; නව පේළියකට \n). හිස්ව තැබිය හැක'
+        required: false
+        default: ''
 
 permissions:
-  contents: write   # build log එක ci-logs branch එකට යැවීමට පමණි
+  contents: write   # build log එක ci-logs branch එකට, app-version.json main එකට
 
 concurrency:
   group: android-${{ github.ref }}
@@ -130,9 +134,37 @@ jobs:
             පාලි-සිංහල ශබ්දකෝෂය — Android ${{ inputs.version_name }} (version code ${{ inputs.version_code }})
             Offline — ශබ්දකෝෂ ගොනු සියල්ල ඇප් එක ඇතුළේම ඇත.
             📥 Pali-Sinhala-Dictionary.apk බාගෙන install කරන්න (පැරණි version එක ඇත්නම් update වේ).
+
+            ${{ inputs.notes }}
           files: release/Pali-Sinhala-Dictionary.apk
           make_latest: true
           overwrite_files: true
+
+      # ඇප් එකේ යාවත්කාලීන දැනුම්දීම: main හි app-version.json යාවත්කාලීන කරයි (පරණ ඇප් වලට අලුත් අනුවාදය පෙනේ)
+      - name: Update app-version.json
+        if: github.event_name == 'workflow_dispatch' && env.KS_FILE != ''
+        env:
+          VERSION: ${{ inputs.version_name }}
+          VERSION_CODE: ${{ inputs.version_code }}
+          NOTES: ${{ inputs.notes }}
+          URL: https://github.com/${{ github.repository }}/releases/download/android-v${{ inputs.version_name }}/Pali-Sinhala-Dictionary.apk
+          PAGE: https://github.com/${{ github.repository }}/releases/tag/android-v${{ inputs.version_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export SIZE=$(stat -c%s release/Pali-Sinhala-Dictionary.apk)
+          SITE="$RUNNER_TEMP/site"
+          for i in 1 2 3; do
+            rm -rf "$SITE"
+            git clone -q --depth 1 --branch main "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "$SITE"
+            node .github/scripts/update-app-version.mjs "$SITE/app-version.json" android
+            cd "$SITE"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app-version.json
+            git commit -q -m "app-version.json: Android ${VERSION} (version code ${VERSION_CODE})" || { echo "no change"; break; }
+            if git push -q origin HEAD:main; then echo "app-version.json updated"; break; fi
+            cd - >/dev/null; sleep 5
+          done
 
       # ගැටලු විසඳීම සඳහා: build log එකේ අග කොටස ci-logs branch එකට (මුරපද ඉවත් කර)
       - name: Save build log

@@ -15,11 +15,15 @@ on:
         description: 'Version (උදා: 1.0.0  — උපරිම 255.255.65535)'
         required: true
         default: '1.0.0'
+      notes:
+        description: 'අලුත් දේ (ඇප් එකේ යාවත්කාලීන දැනුම්දීමේ පෙන්වයි; නව පේළියකට \n). හිස්ව තැබිය හැක'
+        required: false
+        default: ''
   push:
     branches: [apps]   # සංවර්ධනය සඳහා පමණි
 
 permissions:
-  contents: write   # build log එක ci-logs-desktop branch එකට යැවීමට පමණි
+  contents: write   # build log එක ci-logs-desktop branch එකට, app-version.json main එකට
 
 concurrency:
   group: windows-${{ github.ref }}
@@ -102,11 +106,38 @@ jobs:
             • Pali-Sinhala-Dictionary-Setup.exe — install කිරීමේදී "මට පමණක්" (Administrator අවශ්‍ය නැත) හෝ "සියලු පරිශීලකයින්ට" තෝරන්න.
             • Pali-Sinhala-Dictionary.msi — Administrator ලවා සියලු පරිශීලකයින්ට.
             "Windows protected your PC" පෙන්වුවහොත්: More info → Run anyway.
+
+            ${{ inputs.notes }}
           files: |
             C:/rel/Pali-Sinhala-Dictionary-Setup.exe
             C:/rel/Pali-Sinhala-Dictionary.msi
           make_latest: false
           overwrite_files: true
+
+      # ඇප් එකේ යාවත්කාලීන දැනුම්දීම: main හි app-version.json යාවත්කාලීන කරයි
+      - name: Update app-version.json
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          VERSION: ${{ env.APP_VERSION }}
+          NOTES: ${{ inputs.notes }}
+          URL: https://github.com/${{ github.repository }}/releases/download/windows-v${{ env.APP_VERSION }}/Pali-Sinhala-Dictionary-Setup.exe
+          PAGE: https://github.com/${{ github.repository }}/releases/tag/windows-v${{ env.APP_VERSION }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export SIZE=$(stat -c%s /c/rel/Pali-Sinhala-Dictionary-Setup.exe)
+          SITE=/c/site
+          for i in 1 2 3; do
+            rm -rf "$SITE"
+            git clone -q --depth 1 --branch main "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "$SITE"
+            node /c/bc/.github/scripts/update-app-version.mjs "$SITE/app-version.json" windows
+            cd "$SITE"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app-version.json
+            git commit -q -m "app-version.json: Windows ${VERSION}" || { echo "no change"; break; }
+            if git push -q origin HEAD:main; then echo "app-version.json updated"; break; fi
+            cd /c; sleep 5
+          done
 
       - name: Save build log
         if: always()

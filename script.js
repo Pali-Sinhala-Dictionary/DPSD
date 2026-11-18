@@ -10,6 +10,42 @@ const suggestionsBox = document.getElementById('suggestionsBox');
 const resultsContainer = document.getElementById('resultsContainer');
 const initialMessage = document.getElementById('initialMessage');
 
+// --- Android (Capacitor) / Windows (Tauri) ඇප් එක ඇතුළේ පමණක් — වෙබ් අඩවියට කිසිදු බලපෑමක් නැත ---
+function isNativeApp() {
+    try { return !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()); } catch (e) { return false; }
+}
+function isDesktopApp() { return !!(window.__TAURI__ && window.__TAURI__.core); }
+// Android ඇප් එක: ඉහළ තීරුව ශීර්ෂයේ වර්ණයට, පහළ තීරුව පහළ මෙනුවේ වර්ණයට (ආලෝක / අඳුරු තේමාව අනුව)
+function syncAppBars() {
+    if (!isNativeApp()) return;
+    const AB = Capacitor.Plugins && Capacitor.Plugins.AppBars; if (!AB) return;
+    const dark = document.body.classList.contains('dark-theme');
+    const c = dark ? { top: '#211B40', bottom: '#141725', page: '#090909', lightTopIcons: true, lightBottomIcons: true }
+                   : { top: '#861410', bottom: '#F9EFDB', page: '#F5F1EA', lightTopIcons: true, lightBottomIcons: false };
+    try { AB.setColors(c).catch(function () {}); } catch (e) {}
+}
+// බාහිර සබැඳියක් විවෘත කරයි: Windows → පරිගණකයේ browser එක; Android / වෙබ් → සාමාන්‍ය ලෙස
+function openExternalUrl(url) {
+    if (isDesktopApp()) {
+        window.__TAURI__.core.invoke('open_url', { url: url }).catch(function (err) { console.error('open_url:', err); });
+    } else if (isNativeApp()) {
+        window.location.href = url;          // Capacitor බාහිර සබැඳි පද්ධතියේ browser එකේ විවෘත කරයි
+    } else {
+        window.open(url, '_blank', 'noopener');
+    }
+}
+// Windows ඇප් එක: බාහිර සබැඳි (වෙබ් අඩවි, mailto) පරිගණකයේ browser එකේ විවෘත කරයි
+if (isDesktopApp()) {
+    document.addEventListener('click', function (e) {
+        const a = e.target.closest ? e.target.closest('a[href]') : null; if (!a) return;
+        const href = a.href || '';
+        if (/^(https?:|mailto:)/i.test(href) && !href.startsWith(location.origin)) {
+            e.preventDefault(); e.stopImmediatePropagation();
+            openExternalUrl(href);
+        }
+    }, true);
+}
+
 // --- Restore saved theme preference (runs immediately, before first paint settles) ---
 (function restoreTheme() {
     if (localStorage.getItem('theme') === 'dark') {
@@ -17,6 +53,7 @@ const initialMessage = document.getElementById('initialMessage');
         const icon = document.getElementById('themeIcon');
         if (icon) icon.setAttribute('href', '#icon-sun');
     }
+    syncAppBars();
 })();
 
 // --- Container zoom = (පරිශීලකයාගේ අකුරු ප්‍රමාණ සැකසුම) × (තිරයට ස්වයංක්‍රීය ගැළපීම) ---
@@ -2364,6 +2401,7 @@ function toggleTheme() {
     const isDark = document.body.classList.contains('dark-theme');
     document.getElementById('themeIcon').setAttribute('href', isDark ? '#icon-sun' : '#icon-moon');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    syncAppBars();
 }
 
 // --- Zoom / Text Size Functions ---
@@ -2657,8 +2695,8 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Service Worker Registration
-if ('serviceWorker' in navigator) {
+// Service Worker Registration — Android / Windows ඇප් එකේ ගොනු ඇප් එක ඇතුළේම ඇති නිසා අවශ්‍ය නැත
+if ('serviceWorker' in navigator && !isNativeApp() && !isDesktopApp()) {
     // ✅ පළමු වරට install වන විට (කලින් controller නැති විට) page එක reload නොකරන්න.
     //    එසේ නොකළොත් reload වීමෙන් beforeinstallprompt event එක සහ banner එක නැති වී යයි.
     const hadController = !!navigator.serviceWorker.controller;
@@ -2679,4 +2717,147 @@ if ('serviceWorker' in navigator) {
         refreshing = true;
         window.location.reload();
     });
+}
+
+// ================================================================
+// ඇප් යාවත්කාලීන දැනුම්දීම — Android (Capacitor) / Windows (Tauri) ඇප් එකේ පමණි
+// ----------------------------------------------------------------
+// • ඇප් එක ඇතුළේ ඇති app-build.json  → ස්ථාපිත අනුවාදය (build වන විට workflow මගින් ලියයි)
+// • repo එකේ app-version.json         → නවතම අනුවාදය (release එකක් publish කළ විට workflow මගින් යාවත්කාලීන වේ)
+// online විටදී ඇප් එක විවෘත කළ විට නවතම අනුවාදය වැඩි නම් දැනුම්දීම පෙන්වයි. වෙබ් අඩවියට (PWA) බලපෑමක් නැත.
+// ================================================================
+const APP_VERSION_URL = 'https://raw.githubusercontent.com/Pali-Sinhala-Dictionary/DPSD/main/app-version.json';
+
+function compareVersions(a, b) {
+    const pa = String(a || '0').split('.').map(n => parseInt(n, 10) || 0);
+    const pb = String(b || '0').split('.').map(n => parseInt(n, 10) || 0);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const d = (pa[i] || 0) - (pb[i] || 0);
+        if (d) return d > 0 ? 1 : -1;
+    }
+    return 0;
+}
+
+function fetchJsonWithTimeout(url, ms) {
+    const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, ms);
+    return fetch(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .finally(() => clearTimeout(timer));
+}
+
+function formatUpdateSize(bytes) {
+    const n = Number(bytes);
+    if (!n) return '';
+    return n >= 1048576 ? (n / 1048576).toFixed(n >= 10485760 ? 0 : 1) + ' MB' : Math.round(n / 1024) + ' KB';
+}
+
+function formatUpdateDate(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+    if (!m) return '';
+    const months = ['ජනවාරි', 'පෙබරවාරි', 'මාර්තු', 'අප්‍රේල්', 'මැයි', 'ජූනි', 'ජූලි', 'අගෝස්තු', 'සැප්තැම්බර්', 'ඔක්තෝබර්', 'නොවැම්බර්', 'දෙසැම්බර්'];
+    return m[1] + ' ' + months[parseInt(m[2], 10) - 1] + ' ' + parseInt(m[3], 10);
+}
+
+function showAppUpdateDialog(platform, info, installed) {
+    if (document.getElementById('appUpdateOverlay')) return;
+    const isWin = platform === 'windows';
+    const newVer = isWin ? info.version : info.versionName;
+    const meta = ['v' + escapeHtml(newVer || ''), formatUpdateSize(info.size), isWin ? 'Windows' : 'Android']
+        .filter(Boolean).join(' · ');
+    const date = formatUpdateDate(info.date);
+    const notes = String(info.notes || '').trim();
+    const howTo = isWin
+        ? 'යාවත්කාලීන කරන්න එබූ විට Setup ගොනුව බාගත වේ. බාගත වූ පසු එය විවෘත කර ස්ථාපනය කරන්න — පවතින ඇප් එක ඉවත් කිරීම අවශ්‍ය නැත.'
+        : 'යාවත්කාලීන කරන්න එබූ විට APK ගොනුව බාගත වේ. බාගත වූ පසු එය විවෘත කර ස්ථාපනය කරන්න — පවතින ඇප් එක ඉවත් කිරීම අවශ්‍ය නැත.';
+
+    const ov = document.createElement('div');
+    ov.id = 'appUpdateOverlay';
+    ov.className = 'app-update-overlay';
+    ov.setAttribute('role', 'dialog');
+    ov.setAttribute('aria-modal', 'true');
+    ov.setAttribute('aria-labelledby', 'appUpdateTitle');
+    ov.innerHTML =
+        '<div class="app-update-sheet">' +
+            '<div class="app-update-top">' +
+                '<div class="app-update-brand"><img src="icon-192x192.png" alt=""><span>පාලි-සිංහල ශබ්දකෝෂය</span></div>' +
+                '<button type="button" class="app-update-close" aria-label="වසන්න">' +
+                    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
+            '</div>' +
+            '<div class="app-update-body">' +
+                '<h2 id="appUpdateTitle" class="app-update-title">නව යාවත්කාලීනයක් ලැබී ඇත</h2>' +
+                '<p class="app-update-text">ශබ්දකෝෂයේ නවතම අනුවාදය දැන් ලබා ගත හැකියි. නව වචන, නිවැරදි කිරීම් හා වැඩිදියුණු කිරීම් ලබා ගැනීමට යාවත්කාලීන කරන්න.</p>' +
+                '<p class="app-update-text">' + howTo + '</p>' +
+                '<div class="app-update-app">' +
+                    '<img class="app-update-icon" src="icon-192x192.png" alt="">' +
+                    '<div class="app-update-app-info">' +
+                        '<div class="app-update-app-name">පාලි-සිංහල ශබ්දකෝෂය</div>' +
+                        '<div class="app-update-app-meta">' + meta + '</div>' +
+                        (installed ? '<div class="app-update-app-meta">දැනට ඇති අනුවාදය: v' + escapeHtml(installed) + '</div>' : '') +
+                    '</div>' +
+                '</div>' +
+                (notes || date ?
+                '<button type="button" class="app-update-news" aria-expanded="false">' +
+                    '<span class="app-update-news-text"><span class="app-update-news-title">අලුත් දේ</span>' +
+                    (date ? '<span class="app-update-news-date">අවසන් වරට යාවත්කාලීන කළේ ' + escapeHtml(date) + '</span>' : '') + '</span>' +
+                    '<svg class="app-update-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
+                '</button>' +
+                (notes ? '<div class="app-update-notes" hidden>' + escapeHtml(notes) + '</div>' : '') : '') +
+                '<div class="app-update-actions">' +
+                    '<button type="button" class="app-update-btn app-update-more">වැඩි විස්තර</button>' +
+                    '<button type="button" class="app-update-btn app-update-go">යාවත්කාලීන කරන්න</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    document.body.appendChild(ov);
+    document.body.classList.add('app-update-open');
+
+    const close = () => {
+        ov.remove();
+        document.body.classList.remove('app-update-open');
+        document.removeEventListener('keydown', onKey);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', onKey);
+
+    ov.querySelector('.app-update-close').addEventListener('click', close);
+    ov.querySelector('.app-update-more').addEventListener('click', () => openExternalUrl(info.page || info.url));
+    ov.querySelector('.app-update-go').addEventListener('click', () => { openExternalUrl(info.url); close(); });
+    const news = ov.querySelector('.app-update-news');
+    const notesEl = ov.querySelector('.app-update-notes');
+    if (news && notesEl) {
+        news.addEventListener('click', () => {
+            const open = notesEl.hidden;
+            notesEl.hidden = !open;
+            news.setAttribute('aria-expanded', open ? 'true' : 'false');
+            news.classList.toggle('is-open', open);
+        });
+    } else if (news) {
+        news.classList.add('no-notes');
+    }
+}
+
+function checkForAppUpdate() {
+    const platform = isNativeApp() ? 'android' : (isDesktopApp() ? 'windows' : null);
+    if (!platform || navigator.onLine === false) return;
+    fetchJsonWithTimeout('app-build.json', 4000)
+        .then(local => fetchJsonWithTimeout(APP_VERSION_URL + '?t=' + Date.now(), 8000).then(remote => [local, remote]))
+        .then(([local, remote]) => {
+            const info = remote && remote[platform];
+            if (!info || !info.url) return;
+            let newer, installed;
+            if (platform === 'android') {
+                newer = (parseInt(info.versionCode, 10) || 0) > (parseInt(local.versionCode, 10) || 0);
+                installed = local.versionName;
+            } else {
+                newer = compareVersions(info.version, local.version) > 0;
+                installed = local.version;
+            }
+            if (newer) showAppUpdateDialog(platform, info, installed);
+        })
+        .catch(err => console.warn('App update check skipped:', err && err.message ? err.message : err));
+}
+
+if (isNativeApp() || isDesktopApp()) {
+    window.addEventListener('load', () => setTimeout(checkForAppUpdate, 1500));
 }
