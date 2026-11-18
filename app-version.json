@@ -1,4 +1,11 @@
 {
   "android": null,
-  "windows": null
+  "windows": {
+    "version": "1.0.1",
+    "url": "https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/download/windows-v1.0.1/Pali-Sinhala-Dictionary-Setup.exe",
+    "page": "https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/tag/windows-v1.0.1",
+    "size": 14438242,
+    "date": "2026-11-18",
+    "notes": ""
+  }
 }
