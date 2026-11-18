@@ -1,10 +1,10 @@
 {
   "android": {
-    "versionCode": 2,
-    "versionName": "1.0.0.2",
-    "url": "https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/download/android-v1.0.0.2/PSU.apk",
-    "page": "https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/tag/android-v1.0.0.2",
-    "size": 14874407,
+    "versionCode": 3,
+    "versionName": "1.0.0.3",
+    "url": "https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/download/android-v1.0.0.3/PSU.apk",
+    "page": "https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/tag/android-v1.0.0.3",
+    "size": 14874299,
     "date": "2026-11-18",
     "notes": ""
   },
