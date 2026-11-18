@@ -351,6 +351,7 @@ function startDictLoad(dict) {
     const finishOne = () => {
         if (!isCurrent()) return;
         dict._loaded = true;
+        if (dict.id === 'pali') setTimeout(() => { try { updateDictStats(); } catch (e) { console.warn('stats:', e); } }, 0);
         dictLoadState.done++;
         updateDictLoadUI();
         if (dictLoadState.done === dictLoadState.total) onAllDictsLoaded();
@@ -2366,6 +2367,7 @@ function switchTab(tabId, titleText, fromPopState = false) {
     });
 
     document.getElementById(`tab-${tabId}`).classList.add('active');
+    if (tabId === 'info') updateDictStats();
     const activeNav = document.getElementById(`nav-${tabId}`);
     if(activeNav) activeNav.classList.add('active');
 
@@ -2861,3 +2863,89 @@ function checkForAppUpdate() {
 if (isNativeApp() || isDesktopApp()) {
     window.addEventListener('load', () => setTimeout(checkForAppUpdate, 1500));
 }
+
+// ================================================================
+// ශබ්දකෝෂයේ අන්තර්ගතය — තොරතුරු පිටුවේ සංඛ්‍යා (ශබ්දකෝෂ දත්ත වලින් ස්වයංක්‍රීයව ගණනය වේ)
+// ================================================================
+function computeDictStats(items) {
+    const s = {
+        total: 0, unique: 0, samasa: 0, sandhi: 0, nirukti: 0, properNoun: 0,
+        wordDivision: 0, grammarDesc: 0, akhyata: 0, kridanta: 0, taddhita: 0,
+        'sam-karma': 0, 'sam-tatpurusha': 0, 'sam-bahubbihi': 0, 'sam-dvanda': 0,
+        'sam-digu': 0, 'sam-avyayibhava': 0
+    };
+    const words = new Set();
+    for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        s.total++;
+        words.add(it.word);
+        if (it.type === 'සන්ධි') s.sandhi++;
+        if (it.etymology) s.nirukti++;
+        if (it.properNoun) s.properNoun++;
+        if (it.wordDivision) s.wordDivision++;
+        const gd = it.grammarDesc || '';
+        if (!gd) continue;
+        s.grammarDesc++;
+        const nl = gd.indexOf('\n');
+        const first = (nl === -1 ? gd : gd.slice(0, nl)).trim();
+        const m = /^(.*?)\s*සමාසයකි/.exec(first);
+        if (m) {
+            s.samasa++;
+            const label = m[1];
+            if (label.indexOf('කම්මධාරය') !== -1) s['sam-karma']++;
+            else if (label.indexOf('තප්පුරිස') !== -1) s['sam-tatpurusha']++;
+            else if (label.indexOf('බහුබ්බීහි') !== -1) s['sam-bahubbihi']++;
+            else if (label.indexOf('ද්වන්ද') !== -1) s['sam-dvanda']++;
+            else if (label === 'දිගු') s['sam-digu']++;
+            else if (label.indexOf('යයීභාව') !== -1) s['sam-avyayibhava']++;
+        }
+        if (first.indexOf('ආඛ්‍යාත පදයකි') === 0) s.akhyata++;
+        if (first.indexOf('කෘදන්ත') !== -1) s.kridanta++;
+        if (first.indexOf('තද්ධිතයකි') !== -1) s.taddhita++;
+    }
+    s.unique = words.size;
+    return s;
+}
+
+function updateDictStats() {
+    const dict = availableDicts.find(d => d.id === 'pali');
+    if (!dict || !dict._loaded || !dict.data || !dict.data.length) return;
+    const stats = computeDictStats(dict.data);
+    document.querySelectorAll('#dictStatsCard [data-stat]').forEach(el => {
+        const v = stats[el.getAttribute('data-stat')];
+        if (typeof v === 'number') el.textContent = v.toLocaleString('en-US');
+    });
+}
+
+// ================================================================
+// බාගත කිරීමේ සබැඳි — app-version.json (නවතම release) අනුව Android / Windows බොත්තම් යාවත්කාලීන කරයි.
+// ජාල දෝෂයක් වුවත් HTML හි ඇති පෙරනිමි සබැඳි ක්‍රියාත්මක වේ.
+// ================================================================
+function initDownloadLinks() {
+    const apkBtn = document.getElementById('apkDownloadBtn');
+    const exeBtn = document.getElementById('exeDownloadBtn');
+    [apkBtn, exeBtn].forEach(btn => {
+        if (!btn) return;
+        btn.addEventListener('click', (e) => {
+            if (isNativeApp() || isDesktopApp()) { e.preventDefault(); openExternalUrl(btn.href); }
+        });
+    });
+    if (navigator.onLine === false) return;
+    fetchJsonWithTimeout(APP_VERSION_URL + '?t=' + Date.now(), 8000).then(remote => {
+        const setMeta = (id, parts) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = parts.filter(Boolean).join(' · ');
+        };
+        const a = remote && remote.android;
+        if (a && a.url && apkBtn) {
+            apkBtn.href = a.url;
+            setMeta('apkMeta', ['Android ' + (a.versionName || ''), formatUpdateSize(a.size), formatUpdateDate(a.date)]);
+        }
+        const w = remote && remote.windows;
+        if (w && w.url && exeBtn) {
+            exeBtn.href = w.url;
+            setMeta('exeMeta', ['Windows ' + (w.version || ''), formatUpdateSize(w.size), formatUpdateDate(w.date)]);
+        }
+    }).catch(err => console.warn('Download links: using defaults:', err && err.message ? err.message : err));
+}
+window.addEventListener('load', () => setTimeout(initDownloadLinks, 800));

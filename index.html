@@ -360,7 +360,8 @@
         <div class="download-card">
             <h3><svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg> Android Application</h3>
             <p>Android දුරකථන සඳහා සකස් කළ APK ගොනුව බාගත කරන්න.</p>
-            <a href="https://apkpure.com/%E0%B7%81%E0%B6%B6%E0%B7%8A%E0%B6%AF%E0%B6%9A%E0%B7%9D%E0%B7%82%E0%B6%BA/com.pali_sinhala_dictionary.twa/download" class="download-link-btn" target="_blank">Android APK බාගත කරන්න</a>
+            <a href="https://apkpure.com/%E0%B7%81%E0%B6%B6%E0%B7%8A%E0%B6%AF%E0%B6%9A%E0%B7%9D%E0%B7%82%E0%B6%BA/com.pali_sinhala_dictionary.twa/download" id="apkDownloadBtn" class="download-link-btn" target="_blank" rel="noopener">Android APK බාගත කරන්න</a>
+            <div class="download-meta" id="apkMeta"></div>
         </div>
         <div class="download-card">
             <h3><svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-iphone"></use></svg> iOS Application</h3>
@@ -370,9 +371,10 @@
         </div>
         <div class="download-card">
             <h3><svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-laptop"></use></svg> Windows Application</h3>
-            <p>පරිගණක සඳහා පහත ලිපිනය ක්‍රෝම් browser එකින් ඕපන් කර install කරන්න.</p>
-            https://pali-sinhala-dictionary.github.io/DPSD/
-            
+            <p>Windows පරිගණක සඳහා Setup (.exe) ගොනුව බාගත කර ස්ථාපනය කරන්න. Offline භාවිතයට හැකිය.</p>
+            <a href="https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/download/windows-v1.0.1/Pali-Sinhala-Dictionary-Setup.exe" id="exeDownloadBtn" class="download-link-btn" target="_blank" rel="noopener">Windows (.exe) බාගත කරන්න</a>
+            <div class="download-meta" id="exeMeta">Windows 1.0.1 · 13.8 MB</div>
+            <p style="margin-top:12px;font-size:13px;">අවශ්‍ය නම් Chrome browser එකෙන් පහත ලිපිනය විවෘත කර install කිරීමද කළ හැක:<br>https://pali-sinhala-dictionary.github.io/DPSD/</p>
         </div>
     </div>
 
@@ -385,6 +387,36 @@
             පාලි සිංහල ශබ්දකෝෂය තවමත් සංස්කරණය කරමින් පවතී. අඩුපාඩු ඇතොත් දන්වන්න. 
             පරිපූර්ණ පාලි සිංහල ශබ්දකෝෂයක් සකස් කිරීම අපගේ අරමුණයි.</p>
             සිංහල වචනයකට අදාළ පාළි වචනය සෙවීම සඳහා සම්පූර්ණ සිංහල වචනය ඇතුලත් කර සෙවුම් බොත්තම ඔබන්න
+        </div>
+        <div class="download-card dict-stats-card" id="dictStatsCard">
+            <h3><svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-book"></use></svg> ශබ්දකෝෂයේ අන්තර්ගතය</h3>
+            <p>පාලි-සිංහල ශබ්දකෝෂයේ ඇති පද හා විස්තර පිළිබඳ සාරාංශයකි. ශබ්දකෝෂය යාවත්කාලීන වන සෑම විටම මෙම සංඛ්‍යා ස්වයංක්‍රීයව නැවත ගණනය වේ.</p>
+            <div class="dict-stats-grid">
+                <div class="dict-stat"><span class="dict-stat-num" data-stat="total">86,226</span><span class="dict-stat-label">මුළු පද සංඛ්‍යාව</span></div>
+                <div class="dict-stat"><span class="dict-stat-num" data-stat="unique">83,358</span><span class="dict-stat-label">වෙනස් පාලි වචන</span></div>
+                <div class="dict-stat"><span class="dict-stat-num" data-stat="samasa">40,134</span><span class="dict-stat-label">සමාස පද</span></div>
+                <div class="dict-stat"><span class="dict-stat-num" data-stat="sandhi">8,529</span><span class="dict-stat-label">සන්ධි පද</span></div>
+                <div class="dict-stat"><span class="dict-stat-num" data-stat="nirukti">6,280</span><span class="dict-stat-label">නිරුක්ති විස්තර</span></div>
+                <div class="dict-stat"><span class="dict-stat-num" data-stat="properNoun">2,022</span><span class="dict-stat-label">සංඥා නාම විස්තර</span></div>
+            </div>
+            <ul class="dict-stats-list">
+                <li><b>මුළු පද / වෙනස් වචන</b> — එකම වචනයට අර්ථ කිහිපයක් ඇති විට (උදා: අක්ඛර 1, අක්ඛර 2) ඒ සෑම අර්ථයක්ම වෙන වෙනම පදයක් ලෙස ගණන් ගනී. වෙනස් පාලි වචන ගණනින් එම පුනරාවර්තන ඉවත් කර ඇත.</li>
+                <li><b>සමාස පද</b> — පද කිහිපයක් එක් වී සැදුණු සමාස පද; විග්‍රහය (අර්ථ විවරණය) හා සන්ධි සහිතව දක්වා ඇත.
+                    <div class="dict-chips">
+                        <span class="dict-chip">කර්මධාරය <b data-stat="sam-karma">16,913</b></span>
+                        <span class="dict-chip">තත්පුරුෂ <b data-stat="sam-tatpurusha">15,979</b></span>
+                        <span class="dict-chip">බහුව්‍රීහි <b data-stat="sam-bahubbihi">4,656</b></span>
+                        <span class="dict-chip">ද්වන්ද්ව <b data-stat="sam-dvanda">1,298</b></span>
+                        <span class="dict-chip">ද්විගු <b data-stat="sam-digu">733</b></span>
+                        <span class="dict-chip">අව්‍යයීභාව <b data-stat="sam-avyayibhava">555</b></span>
+                    </div>
+                </li>
+                <li><b>සන්ධි පද</b> — සන්ධි වීමෙන් එක් වී සැදුණු පද (ස්වර සන්ධි, නිග්ගහීත සන්ධි ආදි). සන්ධි වර්ගය, පද බෙදීම හා සන්ධි සූත්‍රය විස්තර කර ඇත.</li>
+                <li><b>නිරුක්ති</b> — වචනයේ නිරුක්තිය (ව්‍යුත්පත්තිය) දක්වන විස්තරය; ක්‍රමයෙන් එකතු කරමින් පවතී.</li>
+                <li><b>සංඥා නාම</b> — පුද්ගල, ස්ථාන, සූත්‍ර ආදි සංඥා නාම සඳහා කෙටි විස්තර.</li>
+                <li><b>පද බෙදීම / ව්‍යාකරණ විස්තර</b> — බොහෝ පද සඳහා පද බෙදීම (<span data-stat="wordDivision">81,279</span>) සහ ව්‍යාකරණ විස්තරය (<span data-stat="grammarDesc">81,305</span>) ඇතුළත් වේ.</li>
+                <li><b>ආඛ්‍යාත, කෘදන්ත, තද්ධිත</b> — ආඛ්‍යාත (ක්‍රියා) පද <span data-stat="akhyata">6,859</span>ක්, කෘදන්ත (කිතක) පද <span data-stat="kridanta">4,962</span>ක්, තද්ධිත පද <span data-stat="taddhita">4,394</span>ක් ව්‍යාකරණ විස්තරයෙන් හඳුන්වා ඇත.</li>
+            </ul>
         </div>
         <div class="download-card">
             <h3><svg class="icon-inline" viewBox="0 0 24 24"><use href="#icon-info"></use></svg> වැරදි නිවැරදි කිරීම් සහ යෝජනා</h3>
