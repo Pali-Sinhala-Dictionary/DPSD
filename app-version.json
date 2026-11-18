@@ -1,5 +1,13 @@
 {
-  "android": null,
+  "android": {
+    "versionCode": 1,
+    "versionName": "1.0.1",
+    "url": "https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/download/android-v1.0.1/Pali-Sinhala-Dictionary.apk",
+    "page": "https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/tag/android-v1.0.1",
+    "size": 14874287,
+    "date": "2026-11-18",
+    "notes": ""
+  },
   "windows": {
     "version": "1.0.1",
     "url": "https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/download/windows-v1.0.1/Pali-Sinhala-Dictionary-Setup.exe",
