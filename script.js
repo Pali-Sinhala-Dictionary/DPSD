@@ -2393,7 +2393,7 @@ function switchTab(tabId, titleText, fromPopState = false) {
 // --- Back Button Control ---
 window.addEventListener('popstate', function(e) {
     const tab = (e.state && e.state.tab) ? e.state.tab : 'home';
-    const title = (e.state && e.state.title) ? e.state.title : 'පාලි සිංහල ශබ්දකෝෂය';
+    const title = (e.state && e.state.title) ? e.state.title : 'Pāli Sinhala Ultimate (PSU)';
     switchTab(tab, title, true);
 });
 
@@ -2683,7 +2683,7 @@ window.toggleDetails = (id) => {
 window.addEventListener('DOMContentLoaded', () => {
     renderDictSelector();
     loadAllActiveDicts();
-    history.replaceState({ tab: 'home', title: 'පාලි සිංහල ශබ්දකෝෂය' }, '');
+    history.replaceState({ tab: 'home', title: 'Pāli Sinhala Ultimate (PSU)' }, '');
 
     const zoomSlider = document.getElementById('zoomSlider');
     const zoomValueLabel = document.getElementById('zoomValueLabel');
@@ -2782,7 +2782,7 @@ function showAppUpdateDialog(platform, info, installed) {
     ov.innerHTML =
         '<div class="app-update-sheet">' +
             '<div class="app-update-top">' +
-                '<div class="app-update-brand"><img src="icon-192x192.png" alt=""><span>පාලි-සිංහල ශබ්දකෝෂය</span></div>' +
+                '<div class="app-update-brand"><img src="icon-192x192.png" alt=""><span>Pāli Sinhala Ultimate (PSU)</span></div>' +
                 '<button type="button" class="app-update-close" aria-label="වසන්න">' +
                     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
             '</div>' +
@@ -2793,7 +2793,7 @@ function showAppUpdateDialog(platform, info, installed) {
                 '<div class="app-update-app">' +
                     '<img class="app-update-icon" src="icon-192x192.png" alt="">' +
                     '<div class="app-update-app-info">' +
-                        '<div class="app-update-app-name">පාලි-සිංහල ශබ්දකෝෂය</div>' +
+                        '<div class="app-update-app-name">Pāli Sinhala Ultimate (PSU)</div>' +
                         '<div class="app-update-app-meta">' + meta + '</div>' +
                         (installed ? '<div class="app-update-app-meta">දැනට ඇති අනුවාදය: v' + escapeHtml(installed) + '</div>' : '') +
                     '</div>' +

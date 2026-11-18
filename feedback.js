@@ -69,7 +69,7 @@ body.dark-theme #fbError{background:#3A1E1A;color:#F3B4A8;}\
   var HTML = '\
 <div id="fbCard" role="dialog" aria-modal="true" aria-labelledby="fbTitle">\
   <button type="button" id="fbClose" aria-label="වසන්න">&times;</button>\
-  <div class="fb-eyebrow"><i></i><span>පාලි–සිංහල ශබ්දකෝෂය</span><i></i></div>\
+  <div class="fb-eyebrow"><i></i><span>Pāli Sinhala Ultimate (PSU)</span><i></i></div>\
   <h2 class="fb-title" id="fbTitle">වැරදි නිවැරදි කිරීම් සහ යෝජනා</h2>\
   <p class="fb-sub">ශබ්දකෝෂය කියවනවිට හමුවූ වැරදි, අඩුපාඩු, හෝ එකතු කළ යුතු වචන අප වෙත දන්වන්න.</p>\
   <form id="fbForm" novalidate>\

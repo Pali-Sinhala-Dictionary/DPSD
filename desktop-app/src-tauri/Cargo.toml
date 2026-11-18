@@ -1,7 +1,7 @@
 [package]
 name = "pali-sinhala-dictionary"
 version = "1.0.0"
-description = "පාලි-සිංහල ශබ්දකෝෂය — Pali-Sinhala Dictionary"
+description = "Pāli Sinhala Ultimate (PSU) — විස්තරාර්ථ සහිත පාලි සිංහල ශබ්දකෝෂය"
 edition = "2021"
 
 [build-dependencies]

@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Pali Sinhala Dictionary",
+  "productName": "PSU",
   "version": "1.0.0",
   "identifier": "io.github.pali-sinhala-dictionary.dpsd",
   "build": {
@@ -11,7 +11,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "පාලි-සිංහල ශබ්දකෝෂය | Pali-Sinhala Dictionary",
+        "title": "Pāli Sinhala Ultimate (PSU) | විස්තරාර්ථ සහිත පාලි සිංහල ශබ්දකෝෂය",
         "width": 900,
         "height": 900,
         "minWidth": 360,
@@ -27,11 +27,11 @@
   "bundle": {
     "active": true,
     "targets": ["nsis", "msi"],
-    "publisher": "Pali-Sinhala Dictionary",
-    "copyright": "Pali-Sinhala Dictionary — pali-sinhala-dictionary.github.io/DPSD",
+    "publisher": "Pali Sinhala Ultimate",
+    "copyright": "Pali Sinhala Ultimate (PSU) — pali-sinhala-dictionary.github.io/DPSD",
     "category": "Education",
-    "shortDescription": "Pali-Sinhala Dictionary — පාලි-සිංහල ශබ්දකෝෂය",
-    "longDescription": "Offline Pali-Sinhala and Sinhala-English dictionary with inflection tables.",
+    "shortDescription": "Pāli Sinhala Ultimate (PSU) — විස්තරාර්ථ සහිත පාලි සිංහල ශබ්දකෝෂය",
+    "longDescription": "Pali Sinhala Ultimate (PSU): offline descriptive Pali-Sinhala and Sinhala-English dictionary with inflection tables.",
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
     "windows": {
       "webviewInstallMode": { "type": "embedBootstrapper" },

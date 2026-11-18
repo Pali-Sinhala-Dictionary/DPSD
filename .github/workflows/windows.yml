@@ -1,10 +1,10 @@
 # =====================================================================
-#  Pali-Sinhala Dictionary (ශබ්දකෝෂය) — offline Windows app (Tauri) build
+#  Pāli Sinhala Ultimate (PSU) — offline Windows app (Tauri) build
 #  අවශ්‍ය විට පමණක්:  GitHub → Actions → "Windows build" → Run workflow → version (උදා: 1.0.0) → Run workflow
 #  ප්‍රතිඵලය: එම run එකේ "Artifacts" යටතේ  dpsd-windows-…
-#    • Pali Sinhala Dictionary_x.y.z_x64-setup.exe  — install කිරීමේදී තෝරාගත හැක:
+#    • PSU_x.y.z_x64-setup.exe  — install කිරීමේදී තෝරාගත හැක:
 #        "මට පමණක්" (Administrator අවසර අවශ්‍ය නැත)  හෝ  "සියලු පරිශීලකයින්ට" (Administrator)
-#    • Pali Sinhala Dictionary_x.y.z_x64_en-US.msi   — සියලු පරිශීලකයින්ට (Administrator / IT deployment)
+#    • PSU_x.y.z_x64_en-US.msi   — සියලු පරිශීලකයින්ට (Administrator / IT deployment)
 # =====================================================================
 name: Windows build
 
@@ -91,8 +91,8 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           mkdir -p /c/rel
-          cp /c/bc/desktop-app/src-tauri/target/release/bundle/nsis/*.exe "/c/rel/Pali-Sinhala-Dictionary-Setup.exe"
-          cp /c/bc/desktop-app/src-tauri/target/release/bundle/msi/*.msi "/c/rel/Pali-Sinhala-Dictionary.msi"
+          cp /c/bc/desktop-app/src-tauri/target/release/bundle/nsis/*.exe "/c/rel/PSU-Setup.exe"
+          cp /c/bc/desktop-app/src-tauri/target/release/bundle/msi/*.msi "/c/rel/PSU.msi"
 
       - name: Publish GitHub Release
         if: github.event_name == 'workflow_dispatch'
@@ -100,17 +100,17 @@ jobs:
         with:
           tag_name: windows-v${{ env.APP_VERSION }}
           target_commitish: ${{ github.sha }}
-          name: Windows ${{ env.APP_VERSION }}
+          name: PSU Windows ${{ env.APP_VERSION }}
           body: |
-            පාලි-සිංහල ශබ්දකෝෂය — Windows ${{ env.APP_VERSION }} (offline)
-            • Pali-Sinhala-Dictionary-Setup.exe — install කිරීමේදී "මට පමණක්" (Administrator අවශ්‍ය නැත) හෝ "සියලු පරිශීලකයින්ට" තෝරන්න.
-            • Pali-Sinhala-Dictionary.msi — Administrator ලවා සියලු පරිශීලකයින්ට.
+            Pāli Sinhala Ultimate (PSU) — Windows ${{ env.APP_VERSION }} (offline)
+            • PSU-Setup.exe — install කිරීමේදී "මට පමණක්" (Administrator අවශ්‍ය නැත) හෝ "සියලු පරිශීලකයින්ට" තෝරන්න.
+            • PSU.msi — Administrator ලවා සියලු පරිශීලකයින්ට.
             "Windows protected your PC" පෙන්වුවහොත්: More info → Run anyway.
 
             ${{ inputs.notes }}
           files: |
-            C:/rel/Pali-Sinhala-Dictionary-Setup.exe
-            C:/rel/Pali-Sinhala-Dictionary.msi
+            C:/rel/PSU-Setup.exe
+            C:/rel/PSU.msi
           make_latest: false
           overwrite_files: true
 
@@ -120,11 +120,11 @@ jobs:
         env:
           VERSION: ${{ env.APP_VERSION }}
           NOTES: ${{ inputs.notes }}
-          URL: https://github.com/${{ github.repository }}/releases/download/windows-v${{ env.APP_VERSION }}/Pali-Sinhala-Dictionary-Setup.exe
+          URL: https://github.com/${{ github.repository }}/releases/download/windows-v${{ env.APP_VERSION }}/PSU-Setup.exe
           PAGE: https://github.com/${{ github.repository }}/releases/tag/windows-v${{ env.APP_VERSION }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          export SIZE=$(stat -c%s /c/rel/Pali-Sinhala-Dictionary-Setup.exe)
+          export SIZE=$(stat -c%s /c/rel/PSU-Setup.exe)
           SITE=/c/site
           for i in 1 2 3; do
             rm -rf "$SITE"

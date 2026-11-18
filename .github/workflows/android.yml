@@ -1,11 +1,11 @@
 # =====================================================================
-#  Pali-Sinhala Dictionary (ශබ්දකෝෂය) — offline Android app (Capacitor) build
+#  Pāli Sinhala Ultimate (PSU) — offline Android app (Capacitor) build
 #  ස්වයංක්‍රීයව ධාවනය නොවේ — අවශ්‍ය විට පමණක්:
 #    GitHub → Actions → "Android build" → Run workflow → version code / name ඇතුළත් කර → Run workflow
 #  • version code: දැනට ඇති ඇප් එකේ අවසාන අගයට වඩා වැඩි පූර්ණ සංඛ්‍යාවක් (උදා: 6, 7, 8 …)
 #  • version name: පරිශීලකයින්ට පෙනෙන අනුවාදය (උදා: 2.0.0)
 #  • ප්‍රතිඵලය: එම run එකේ "Artifacts" යටතේ  dpsd-android-…  (APK + AAB)
-#    + GitHub Releases හි zip නොකළ APK එක: …/releases/latest/download/Pali-Sinhala-Dictionary.apk
+#    + GitHub Releases හි zip නොකළ APK එක: …/releases/latest/download/PSU.apk
 #  • Repo Settings → Secrets and variables → Actions හි පහත 4 ඇත්නම් Play Store එකට යැවිය හැකි
 #    release (signed) build එකක්; නැත්නම් පරීක්ෂණ සඳහා debug APK එකක් පමණි:
 #      ANDROID_KEYSTORE_BASE64   ANDROID_KEYSTORE_PASSWORD   ANDROID_KEY_ALIAS   ANDROID_KEY_PASSWORD
@@ -116,12 +116,12 @@ jobs:
           if-no-files-found: error
 
       # GitHub Releases: zip නොකළ APK එක (සෘජු බාගත කිරීම). සෑම නව version එකක්ම "Latest" ලෙස සලකුණු වේ:
-      #   https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/latest/download/Pali-Sinhala-Dictionary.apk
+      #   https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/latest/download/PSU.apk
       - name: Prepare release file
         if: github.event_name == 'workflow_dispatch' && env.KS_FILE != ''
         run: |
           mkdir -p release
-          cp android-app/android/app/build/outputs/apk/release/app-release.apk release/Pali-Sinhala-Dictionary.apk
+          cp android-app/android/app/build/outputs/apk/release/app-release.apk release/PSU.apk
 
       - name: Publish GitHub Release
         if: github.event_name == 'workflow_dispatch' && env.KS_FILE != ''
@@ -129,14 +129,14 @@ jobs:
         with:
           tag_name: android-v${{ inputs.version_name }}
           target_commitish: ${{ github.sha }}
-          name: Android ${{ inputs.version_name }} (version code ${{ inputs.version_code }})
+          name: PSU Android ${{ inputs.version_name }} (version code ${{ inputs.version_code }})
           body: |
-            පාලි-සිංහල ශබ්දකෝෂය — Android ${{ inputs.version_name }} (version code ${{ inputs.version_code }})
+            Pāli Sinhala Ultimate (PSU) — Android ${{ inputs.version_name }} (version code ${{ inputs.version_code }})
             Offline — ශබ්දකෝෂ ගොනු සියල්ල ඇප් එක ඇතුළේම ඇත.
-            📥 Pali-Sinhala-Dictionary.apk බාගෙන install කරන්න (පැරණි version එක ඇත්නම් update වේ).
+            📥 PSU.apk බාගෙන install කරන්න (පැරණි version එක ඇත්නම් update වේ).
 
             ${{ inputs.notes }}
-          files: release/Pali-Sinhala-Dictionary.apk
+          files: release/PSU.apk
           make_latest: true
           overwrite_files: true
 
@@ -147,11 +147,11 @@ jobs:
           VERSION: ${{ inputs.version_name }}
           VERSION_CODE: ${{ inputs.version_code }}
           NOTES: ${{ inputs.notes }}
-          URL: https://github.com/${{ github.repository }}/releases/download/android-v${{ inputs.version_name }}/Pali-Sinhala-Dictionary.apk
+          URL: https://github.com/${{ github.repository }}/releases/download/android-v${{ inputs.version_name }}/PSU.apk
           PAGE: https://github.com/${{ github.repository }}/releases/tag/android-v${{ inputs.version_name }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          export SIZE=$(stat -c%s release/Pali-Sinhala-Dictionary.apk)
+          export SIZE=$(stat -c%s release/PSU.apk)
           SITE="$RUNNER_TEMP/site"
           for i in 1 2 3; do
             rm -rf "$SITE"

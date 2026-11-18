@@ -1,8 +1,8 @@
 {
   "id": "pali-sinhala-dictionary-pwa",
-  "name": "පාලි-සිංහල ශබ්දකෝෂය",
-  "short_name": "ශබ්දකෝෂය",
-  "description": "Offline පරිශීලනය කළ හැකි පාලි-සිංහල සහ සිංහල-ඉංග්‍රීසි ශබ්දකෝෂය",
+  "name": "Pāli Sinhala Ultimate (PSU)",
+  "short_name": "PSU",
+  "description": "විස්තරාර්ථ සහිත පාලි සිංහල ශබ්දකෝෂය — Offline පරිශීලනය කළ හැකි පාලි-සිංහල සහ සිංහල-ඉංග්‍රීසි ශබ්දකෝෂය",
   "lang": "si",
   "dir": "ltr",
   "start_url": "./index.html",

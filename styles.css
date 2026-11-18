@@ -3780,3 +3780,29 @@ body.dark-theme .dict-stat-num {
 @media (min-width: 560px) {
     .dict-stats-grid { grid-template-columns: repeat(3, 1fr); }
 }
+
+
+/* =========================================================
+   PSU NAME CARD (තොරතුරු පිටුවේ ඉහළ)
+   ========================================================= */
+
+.psu-hero {
+    text-align: center;
+}
+
+.psu-name {
+    font-size: 24px;
+    font-weight: bold;
+    line-height: 1.3;
+    color: #8B0000;
+}
+
+.psu-name-si {
+    margin-top: 4px;
+    font-size: 17px;
+    font-weight: bold;
+}
+
+body.dark-theme .psu-name {
+    color: #d1b3ff;
+}
