@@ -9,10 +9,10 @@
     "notes": ""
   },
   "windows": {
-    "version": "1.0.1",
-    "url": "https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/download/windows-v1.0.1/Pali-Sinhala-Dictionary-Setup.exe",
-    "page": "https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/tag/windows-v1.0.1",
-    "size": 14438242,
+    "version": "1.0.2",
+    "url": "https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/download/windows-v1.0.2/PSU-Setup.exe",
+    "page": "https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/tag/windows-v1.0.2",
+    "size": 14442251,
     "date": "2026-11-18",
     "notes": ""
   }
