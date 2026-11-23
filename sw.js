@@ -8,10 +8,10 @@
       අංකය පමණක් වැඩි කරන්න. (අනෙක් zip ගොනු නැවත බාගත නොවේ;
       ශබ්දකෝෂ දත්ත script.js විසින් ස්වයංක්‍රීයව නැවත පූරණය කරයි.)
    ===================================================================== */
-const APP_VERSION = '4.44';
+const APP_VERSION = '4.45';
 
 const DATA_FILES = {
-  'dictionary.zip': 3,
+  'dictionary.zip': 4,
   'sinhala_english.zip': 4,
   'inflections.zip': 1
 };
