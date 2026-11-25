@@ -19,7 +19,7 @@ for (const d of readdirSync(resDir)) {
 cpSync(resolve(here, '..', 'resources', 'res'), resDir, { recursive: true });
 
 // 1b) ස්වදේශීය (Java) කේතය: MainActivity + AppBars plugin (තීරු වර්ණය)
-const javaDir = join(appDir, 'src', 'main', 'java', 'com', 'pali_sinhala_dictionary', 'twa');
+const javaDir = join(appDir, 'src', 'main', 'java', 'com', 'yogasrama', 'psu');
 must(existsSync(join(javaDir, 'MainActivity.java')), 'MainActivity.java not found in ' + javaDir);
 for (const f of ['MainActivity.java', 'AppBarsPlugin.java']) cpSync(resolve(here, '..', 'native', f), join(javaDir, f));
 
@@ -47,7 +47,7 @@ if (!g.includes('signingConfigs')) {
     }$1buildTypes {`);
   must(/buildTypes\s*\{\s*release\s*\{/.test(g), 'buildTypes.release not found');
   g = g.replace(/(buildTypes\s*\{\s*release\s*\{)/, `$1\n            if (System.getenv("KS_FILE")) { signingConfig = signingConfigs.release }`);
-  // පරීක්ෂණ (debug) ඇප් එක දැනට ඇති ඇප් එක ඉවත් නොකර වෙනම install කළ හැකි වීමට: com.pali_sinhala_dictionary.twa.debug
+  // පරීක්ෂණ (debug) ඇප් එක දැනට ඇති ඇප් එක ඉවත් නොකර වෙනම install කළ හැකි වීමට: com.yogasrama.psu.debug
   if (!/\bdebug\s*\{/.test(g)) g = g.replace(/(buildTypes\s*\{)/, `$1\n        debug {\n            applicationIdSuffix = ".debug"\n            versionNameSuffix = "-test"\n        }`);
 }
 writeFileSync(gf, g);

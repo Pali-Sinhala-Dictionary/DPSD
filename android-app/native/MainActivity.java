@@ -1,4 +1,4 @@
-package com.pali_sinhala_dictionary.twa;
+package com.yogasrama.psu;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;

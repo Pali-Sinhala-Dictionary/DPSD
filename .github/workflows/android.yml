@@ -1,9 +1,10 @@
 # =====================================================================
 #  Pāli Sinhala Ultimate (PSU) — offline Android app (Capacitor) build
 #  ස්වයංක්‍රීයව ධාවනය නොවේ — අවශ්‍ය විට පමණක්:
-#    GitHub → Actions → "Android build" → Run workflow → version code / name ඇතුළත් කර → Run workflow
-#  • version code: දැනට ඇති ඇප් එකේ අවසාන අගයට වඩා වැඩි පූර්ණ සංඛ්‍යාවක් (උදා: 6, 7, 8 …)
-#  • version name: පරිශීලකයින්ට පෙනෙන අනුවාදය (උදා: 2.0.0)
+#    GitHub → Actions → "Android build" → Run workflow → Run workflow
+#  • ඇප් id: com.yogasrama.psu
+#  • version: ස්වයංක්‍රීයයි — app-version.json හි අවසාන version code + 1, නම 1.0.<code>
+#    (උදා: 4 → 1.0.4, ඊළඟට 5 → 1.0.5). අවශ්‍ය නම් පමණක් අතින් දිය හැක.
 #  • ප්‍රතිඵලය: එම run එකේ "Artifacts" යටතේ  dpsd-android-…  (APK + AAB)
 #    + GitHub Releases හි zip නොකළ APK එක: …/releases/latest/download/PSU.apk
 #  • Repo Settings → Secrets and variables → Actions හි පහත 4 ඇත්නම් Play Store එකට යැවිය හැකි
@@ -18,12 +19,13 @@ on:
   workflow_dispatch:
     inputs:
       version_code:
-        description: 'Version code (දැනට ඇති ඇප් එකේ අවසාන අගයට වඩා වැඩි අංකයක්, උදා: 6)'
-        required: true
+        description: 'Version code — හිස්ව තබන්න (ස්වයංක්‍රීයව අවසාන අගය + 1)'
+        required: false
+        default: ''
       version_name:
-        description: 'Version name (උදා: 2.0.0)'
-        required: true
-        default: '2.0.0'
+        description: 'Version name — හිස්ව තබන්න (ස්වයංක්‍රීයව 1.0.<code>)'
+        required: false
+        default: ''
       notes:
         description: 'අලුත් දේ (ඇප් එකේ යාවත්කාලීන දැනුම්දීමේ පෙන්වයි; නව පේළියකට \n). හිස්ව තැබිය හැක'
         required: false
@@ -50,6 +52,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Version
+        env:
+          IN_CODE: ${{ inputs.version_code }}
+          IN_NAME: ${{ inputs.version_name }}
+        run: |
+          LAST=$(node -e "try{const a=require('./app-version.json').android;console.log(a&&a.versionCode||0)}catch(e){console.log(0)}")
+          CODE="${IN_CODE:-$((LAST + 1))}"
+          if ! [[ "$CODE" =~ ^[0-9]+$ ]] || [ "$CODE" -lt 1 ]; then
+            echo "Version code must be a whole number (got: '$CODE')" | tee -a build.log; exit 1
+          fi
+          NAME="${IN_NAME:-1.0.$CODE}"
+          echo "VERSION_CODE=$CODE" >> "$GITHUB_ENV"
+          echo "VERSION_NAME=$NAME" >> "$GITHUB_ENV"
+          echo "Version: $NAME (code $CODE; previous code $LAST)" | tee -a build.log
 
       - uses: actions/setup-java@v4
         with:
@@ -87,13 +104,7 @@ jobs:
 
       - name: Apply app settings (icons, permissions, version, signing)
         working-directory: android-app
-        env:
-          VERSION_CODE: ${{ inputs.version_code || '1' }}
-          VERSION_NAME: ${{ inputs.version_name || '2.0.0-dev' }}
         run: |
-          if ! [[ "$VERSION_CODE" =~ ^[0-9]+$ ]] || [ "$VERSION_CODE" -lt 1 ]; then
-            echo "Version code must be a whole number, e.g. 6 (got: '$VERSION_CODE')" | tee -a ../build.log; exit 1
-          fi
           npm run patch-android 2>&1 | tee -a ../build.log
 
       - name: Build
@@ -109,7 +120,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: dpsd-android-v${{ inputs.version_name || 'dev' }}-code${{ inputs.version_code || github.run_number }}
+          name: dpsd-android-v${{ env.VERSION_NAME }}-code${{ env.VERSION_CODE }}
           path: |
             android-app/android/app/build/outputs/apk/**/*.apk
             android-app/android/app/build/outputs/bundle/**/*.aab
@@ -127,11 +138,11 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && env.KS_FILE != ''
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: android-v${{ inputs.version_name }}
+          tag_name: android-v${{ env.VERSION_NAME }}
           target_commitish: ${{ github.sha }}
-          name: PSU Android ${{ inputs.version_name }} (version code ${{ inputs.version_code }})
+          name: PSU Android ${{ env.VERSION_NAME }} (version code ${{ env.VERSION_CODE }})
           body: |
-            Pāli Sinhala Ultimate (PSU) — Android ${{ inputs.version_name }} (version code ${{ inputs.version_code }})
+            Pāli Sinhala Ultimate (PSU) — Android ${{ env.VERSION_NAME }} (version code ${{ env.VERSION_CODE }})
             Offline — ශබ්දකෝෂ ගොනු සියල්ල ඇප් එක ඇතුළේම ඇත.
             📥 PSU.apk බාගෙන install කරන්න (පැරණි version එක ඇත්නම් update වේ).
 
@@ -144,11 +155,10 @@ jobs:
       - name: Update app-version.json
         if: github.event_name == 'workflow_dispatch' && env.KS_FILE != ''
         env:
-          VERSION: ${{ inputs.version_name }}
-          VERSION_CODE: ${{ inputs.version_code }}
+          VERSION: ${{ env.VERSION_NAME }}
           NOTES: ${{ inputs.notes }}
-          URL: https://github.com/${{ github.repository }}/releases/download/android-v${{ inputs.version_name }}/PSU.apk
-          PAGE: https://github.com/${{ github.repository }}/releases/tag/android-v${{ inputs.version_name }}
+          URL: https://github.com/${{ github.repository }}/releases/download/android-v${{ env.VERSION_NAME }}/PSU.apk
+          PAGE: https://github.com/${{ github.repository }}/releases/tag/android-v${{ env.VERSION_NAME }}
           GH_TOKEN: ${{ github.token }}
         run: |
           export SIZE=$(stat -c%s release/PSU.apk)
@@ -179,7 +189,7 @@ jobs:
           done
           tail -c 120000 build.log > "$RUNNER_TEMP/ci/build-tail.log"
           find android-app/android/app/build/outputs/apk -name '*.apk' -exec cp {} "$RUNNER_TEMP/ci/" \; 2>/dev/null || true
-          echo "run=${{ github.run_number }} version=${{ inputs.version_name }}(${{ inputs.version_code }}) status=$STATUS sha=${{ github.sha }} ref=${{ github.ref_name }}" > "$RUNNER_TEMP/ci/status.txt"
+          echo "run=${{ github.run_number }} version=${{ env.VERSION_NAME }}(${{ env.VERSION_CODE }}) status=$STATUS sha=${{ github.sha }} ref=${{ github.ref_name }}" > "$RUNNER_TEMP/ci/status.txt"
           cd "$RUNNER_TEMP/ci"
           git init -q && git checkout -q -b ci-logs
           git -c user.name=github-actions -c user.email=actions@github.com add -A
