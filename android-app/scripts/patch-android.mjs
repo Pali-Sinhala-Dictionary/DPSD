@@ -18,7 +18,7 @@ for (const d of readdirSync(resDir)) {
 }
 cpSync(resolve(here, '..', 'resources', 'res'), resDir, { recursive: true });
 
-// 1b) ස්වදේශීය (Java) කේතය: MainActivity + AppBars plugin (තීරු වර්ණය)
+// 1b) ස්වදේශීය (Java) කේතය: MainActivity (Play In-App Update) + AppBars plugin (තීරු වර්ණය, installer())
 const javaDir = join(appDir, 'src', 'main', 'java', 'com', 'yogasrama', 'psu');
 must(existsSync(join(javaDir, 'MainActivity.java')), 'MainActivity.java not found in ' + javaDir);
 for (const f of ['MainActivity.java', 'AppBarsPlugin.java']) cpSync(resolve(here, '..', 'native', f), join(javaDir, f));
@@ -49,6 +49,11 @@ if (!g.includes('signingConfigs')) {
   g = g.replace(/(buildTypes\s*\{\s*release\s*\{)/, `$1\n            if (System.getenv("KS_FILE")) { signingConfig = signingConfigs.release }`);
   // පරීක්ෂණ (debug) ඇප් එක දැනට ඇති ඇප් එක ඉවත් නොකර වෙනම install කළ හැකි වීමට: com.yogasrama.psu.debug
   if (!/\bdebug\s*\{/.test(g)) g = g.replace(/(buildTypes\s*\{)/, `$1\n        debug {\n            applicationIdSuffix = ".debug"\n            versionNameSuffix = "-test"\n        }`);
+}
+// Google Play In-App Updates (MainActivity → Play හි නව version එකක් ඇත්නම් "Update available" තිරය)
+if (!g.includes('com.google.android.play:app-update')) {
+  must(/dependencies\s*\{/.test(g), 'dependencies block not found');
+  g = g.replace(/dependencies\s*\{/, `dependencies {\n    implementation "com.google.android.play:app-update:2.1.0"`);
 }
 writeFileSync(gf, g);
 

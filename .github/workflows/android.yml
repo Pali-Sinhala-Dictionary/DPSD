@@ -58,7 +58,7 @@ jobs:
           IN_CODE: ${{ inputs.version_code }}
           IN_NAME: ${{ inputs.version_name }}
         run: |
-          LAST=$(node -e "try{const a=require('./app-version.json').android;console.log(a&&a.versionCode||0)}catch(e){console.log(0)}")
+          LAST=$(node -e "try{const j=require('./app-version.json');console.log(Math.max((j.android&&j.android.versionCode)||0,(j.android_apk&&j.android_apk.versionCode)||0))}catch(e){console.log(0)}")
           CODE="${IN_CODE:-$((LAST + 1))}"
           if ! [[ "$CODE" =~ ^[0-9]+$ ]] || [ "$CODE" -lt 1 ]; then
             echo "Version code must be a whole number (got: '$CODE')" | tee -a build.log; exit 1
@@ -151,7 +151,8 @@ jobs:
           make_latest: true
           overwrite_files: true
 
-      # ඇප් එකේ යාවත්කාලීන දැනුම්දීම: main හි app-version.json යාවත්කාලීන කරයි (පරණ ඇප් වලට අලුත් අනුවාදය පෙනේ)
+      # ඇප් එකේ යාවත්කාලීන දැනුම්දීම: main හි app-version.json හි "android_apk" කොටස යාවත්කාලීන කරයි
+      # (GitHub APK ඇප් වලට පමණි — "android" කොටස 1.0.4 හි ස්ථිරව නවතා ඇත; Play Store ඇප් එක Play හරහා පමණක් යාවත්කාලීන වේ)
       - name: Update app-version.json
         if: github.event_name == 'workflow_dispatch' && env.KS_FILE != ''
         env:
@@ -166,7 +167,7 @@ jobs:
           for i in 1 2 3; do
             rm -rf "$SITE"
             git clone -q --depth 1 --branch main "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "$SITE"
-            node .github/scripts/update-app-version.mjs "$SITE/app-version.json" android
+            node .github/scripts/update-app-version.mjs "$SITE/app-version.json" android_apk
             cd "$SITE"
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
