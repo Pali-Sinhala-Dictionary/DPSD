@@ -2727,6 +2727,10 @@ if ('serviceWorker' in navigator && !isNativeApp() && !isDesktopApp()) {
 // • ඇප් එක ඇතුළේ ඇති app-build.json  → ස්ථාපිත අනුවාදය (build වන විට workflow මගින් ලියයි)
 // • repo එකේ app-version.json         → නවතම අනුවාදය (release එකක් publish කළ විට workflow මගින් යාවත්කාලීන වේ)
 // online විටදී ඇප් එක විවෘත කළ විට නවතම අනුවාදය වැඩි නම් දැනුම්දීම පෙන්වයි. වෙබ් අඩවියට (PWA) බලපෑමක් නැත.
+// • Android: GitHub APK තොරතුරු app-version.json හි "android_apk" කොටසේ. "android" කොටස 1.0.4 හි ස්ථිරව නවතා ඇත —
+//   එය කියවන්නේ පරණ (1.0.4 හෝ ඊට පෙර) ඇප් පමණි; එය වෙනස් නොකරන නිසා Play Store හි ඇති 1.0.4 ඇප් එකට GitHub දැනුම්දීම කිසිදා නොඑයි.
+// • Play Store එකෙන් ස්ථාපනය කළ ඇප් එකට GitHub දැනුම්දීම නොපෙන්වයි (Play ඇප් එක යාවත්කාලීන වන්නේ Play හරහා පමණි —
+//   MainActivity.java හි Play In-App Update). GitHub APK එකෙන් ස්ථාපනය කළ ඇප් එකට පමණක් පෙන්වයි.
 // ================================================================
 const APP_VERSION_URL = 'https://raw.githubusercontent.com/Pali-Sinhala-Dictionary/DPSD/main/app-version.json';
 
@@ -2839,13 +2843,31 @@ function showAppUpdateDialog(platform, info, installed) {
     }
 }
 
+// Android: ඇප් එක ස්ථාපනය කළ ස්ථානය (AppBars plugin → installer()). Play Store = 'com.android.vending'.
+// plugin එක නැත්නම් / දෝෂයක් නම් ආරක්ෂාව සඳහා Play ලෙසම සලකයි (GitHub දැනුම්දීම නොපෙන්වයි).
+function androidInstaller() {
+    try {
+        const AB = Capacitor.Plugins && Capacitor.Plugins.AppBars;
+        if (!AB || typeof AB.installer !== 'function') return Promise.resolve('com.android.vending');
+        return AB.installer().then(r => (r && r.installer) || '').catch(() => 'com.android.vending');
+    } catch (e) { return Promise.resolve('com.android.vending'); }
+}
+
 function checkForAppUpdate() {
     const platform = isNativeApp() ? 'android' : (isDesktopApp() ? 'windows' : null);
     if (!platform || navigator.onLine === false) return;
+    if (platform === 'android') {
+        androidInstaller().then(src => { if (src !== 'com.android.vending') checkForGithubUpdate(platform); });
+        return;
+    }
+    checkForGithubUpdate(platform);
+}
+
+function checkForGithubUpdate(platform) {
     fetchJsonWithTimeout('app-build.json', 4000)
         .then(local => fetchJsonWithTimeout(APP_VERSION_URL + '?t=' + Date.now(), 8000).then(remote => [local, remote]))
         .then(([local, remote]) => {
-            const info = remote && remote[platform];
+            const info = remote && remote[platform === 'android' ? 'android_apk' : platform];
             if (!info || !info.url) return;
             let newer, installed;
             if (platform === 'android') {
@@ -2953,7 +2975,7 @@ function initDownloadLinks() {
             const el = document.getElementById(id);
             if (el) el.textContent = parts.filter(Boolean).join(' · ');
         };
-        const a = remote && remote.android;
+        const a = remote && (remote.android_apk || remote.android);     // GitHub APK — නවතම
         if (a && a.url && apkBtn) {
             apkBtn.href = a.url;
             setMeta('apkMeta', ['Android ' + (a.versionName || ''), formatUpdateSize(a.size), formatUpdateDate(a.date)]);

@@ -14,6 +14,7 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import com.getcapacitor.Bridge;
+import com.getcapacitor.JSObject;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -85,5 +86,29 @@ public class AppBarsPlugin extends Plugin {
         } catch (Exception e) {
             call.reject("Invalid color");
         }
+    }
+
+    /**
+     * ඇප් එක ස්ථාපනය කළේ කොහෙන්ද: Play Store → "com.android.vending"; GitHub APK (බාගත කර ස්ථාපනය) → හිස් / වෙනත්.
+     * script.js → checkForAppUpdate(): Play Store ඇප් එකට GitHub යාවත්කාලීන දැනුම්දීම නොපෙන්වීමට
+     * (Play ඇප් එක යාවත්කාලීන වන්නේ Play හරහා පමණි — MainActivity හි Play In-App Update).
+     */
+    static String installerOf(Activity a) {
+        try {
+            android.content.pm.PackageManager pm = a.getPackageManager();
+            String pkg = a.getPackageName(), r;
+            if (Build.VERSION.SDK_INT >= 30) r = pm.getInstallSourceInfo(pkg).getInstallingPackageName();
+            else r = pm.getInstallerPackageName(pkg);
+            return r == null ? "" : r;
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    @PluginMethod
+    public void installer(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("installer", installerOf(getActivity()));
+        call.resolve(r);
     }
 }
