@@ -9,13 +9,13 @@
     "notes": "අලුත් ඇප් එක install කළ පසු පැරණි ඇප් එක ඉවත් කරන්න"
   },
   "android_apk": {
-    "versionCode": 4,
-    "versionName": "1.0.4",
-    "url": "https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/download/android-v1.0.4/PSU.apk",
-    "page": "https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/tag/android-v1.0.4",
-    "size": 14912191,
-    "date": "2026-11-25",
-    "notes": "අලුත් ඇප් එක install කළ පසු පැරණි ඇප් එක ඉවත් කරන්න"
+    "versionCode": 5,
+    "versionName": "1.0.5",
+    "url": "https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/download/android-v1.0.5/PSU.apk",
+    "page": "https://github.com/Pali-Sinhala-Dictionary/DPSD/releases/tag/android-v1.0.5",
+    "size": 15232424,
+    "date": "2026-11-27",
+    "notes": ""
   },
   "windows": {
     "version": "1.0.2",
