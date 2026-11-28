@@ -1,0 +1,52 @@
+# =====================================================================
+#  දත්ත ගොනු (zip) වෙනස් වූ විට sw.js හි DATA_FILES ස්වයංක්‍රීයව යාවත්කාලීන කිරීම
+#  • zip ගොනුවක් (හෝ sw.js) main වෙත push කළ සෑම විටම ධාවනය වේ.
+#  • එක් එක් zip ගොනුවේ අන්තර්ගතයේ hash එක sw.js හි ලියා commit කරයි.
+#    sw.js වෙනස් වන නිසා PWA එකට අලුත් service worker එක ලැබී, වෙනස් වූ zip එක
+#    පමණක් නැවත බාගනී. ඉතින් DATA_FILES අංක අතින් වැඩි කිරීමට අවශ්‍ය නැත.
+# =====================================================================
+name: Data version
+
+on:
+  push:
+    branches: [main]
+    paths: ['*.zip', 'sw.js']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-version
+  cancel-in-progress: false
+
+jobs:
+  stamp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Stamp zip hashes into sw.js
+        run: python3 .github/scripts/stamp-data-version.py
+
+      - name: Commit
+        run: |
+          if git diff --quiet -- sw.js; then
+            echo "DATA_FILES already up to date"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "sw.js: data file versions (auto)" -- sw.js
+          for i in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            # මේ අතරතුර වෙනත් push එකක් ආවොත් — එය මත නැවත ගණනය කරයි
+            git fetch origin main
+            git reset --hard origin/main
+            python3 .github/scripts/stamp-data-version.py
+            if git diff --quiet -- sw.js; then exit 0; fi
+            git commit -m "sw.js: data file versions (auto)" -- sw.js
+          done
+          exit 1

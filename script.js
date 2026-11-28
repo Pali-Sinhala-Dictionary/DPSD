@@ -520,8 +520,28 @@ function renderLoadProgress(el, pct) {
     }
 }
 
+// අලුත් අනුවාදයක් ලැබී page එක reload වන විට, එම මොහොතේ පෙන්වමින් තිබූ සෙවුම නැවත පෙන්වීමට
+let lastSearch = null;
+const RESTORE_SEARCH_KEY = 'psuRestoreSearch';
+function rememberSearchForReload() {
+    try {
+        if (lastSearch && lastSearch.query) sessionStorage.setItem(RESTORE_SEARCH_KEY, JSON.stringify(lastSearch));
+    } catch (e) {}
+}
+function restoreSearchAfterReload() {
+    let saved = null;
+    try {
+        saved = JSON.parse(sessionStorage.getItem(RESTORE_SEARCH_KEY) || 'null');
+        sessionStorage.removeItem(RESTORE_SEARCH_KEY);
+    } catch (e) {}
+    if (!saved || !saved.query || searchInput.value.trim()) return;
+    searchInput.value = saved.query;
+    performSearch(saved.query, !!saved.exactOnly);
+}
+
 function onAllDictsLoaded() {
     updateDictLoadUI();
+    restoreSearchAfterReload();
 
     // Inflections index එක පසුබිමින් warm up කරන්න
     const warmUpInflections = () => { getInflectionIndex().catch(() => {}); };
@@ -1448,6 +1468,201 @@ resultsContainer.addEventListener('click', function (e) {
 });
 
 // ================================================================
+// තේරූ වචනය බැලීම — ප්‍රතිඵල කාඩ් එකේ වචනයක් select කළ විට, එම වචනය ශබ්දකෝෂයේ ඇත්නම්
+// (හෝ එය වර නැගුණු රූපයක් නම් එහි මූල වචනය) තේරීමට යටින් කුඩා කවුළුවක පෙන්වයි.
+// "සම්පූර්ණයෙන් බලන්න" මඟින් එම වචනය සොයයි. වචනයක් නැත්නම් කිසිවක් නොපෙන්වයි.
+// ================================================================
+(function setupSelectionLookup() {
+    const SEL_STRIP_RE = /^[\s.,;:!?()[\]{}"'‘’“”«»\/\\|—–\-−_…=+→←√*#•·0-9]+|[\s.,;:!?()[\]{}"'‘’“”«»\/\\|—–\-−_…=+→←√*#•·0-9]+$/g;
+    const indexes = new Map();   // dict.id -> { data, size, map: ZWJ රහිත කුඩා අකුරු -> items[] }
+    let popup = null;
+    let timer = null;
+    let shownKey = '';
+    let waitingInfl = false;
+
+    function dictIndex(dict) {
+        let ix = indexes.get(dict.id);
+        if (ix && ix.data === dict.data && ix.size === dict.data.length) return ix.map;
+        const map = new Map();
+        for (let i = 0; i < dict.data.length; i++) {
+            const it = dict.data[i];
+            if (!it || !it.word) continue;
+            const k = stripZwj(it.word.toLowerCase()).trim();
+            const arr = map.get(k);
+            if (arr) arr.push(it); else map.set(k, [it]);
+        }
+        indexes.set(dict.id, { data: dict.data, size: dict.data.length, map });
+        return map;
+    }
+
+    function itemsFor(word) {
+        const key = stripZwj(String(word).toLowerCase()).trim();
+        const out = [];
+        availableDicts.filter(d => d.enabled && d.data && d.data.length).forEach(dict => {
+            let list = dictIndex(dict).get(key);
+            if (!list && dict.id === 'pali') {
+                const cands = dictWordCandidates(key);
+                for (let i = 1; i < cands.length && !list; i++) list = dictIndex(dict).get(cands[i]);
+            }
+            if (list) out.push({ dict, items: list });
+        });
+        return out;
+    }
+
+    // { word, note, groups } හෝ null
+    function lookup(text) {
+        const direct = itemsFor(text);
+        if (direct.length) return { word: direct[0].items[0].word, note: '', groups: direct };
+        if (!inflectionState) {
+            if (!waitingInfl && /[\u0D80-\u0DFF]/.test(text)) {
+                waitingInfl = true;
+                getInflectionIndex().then(() => { waitingInfl = false; scheduleCheck(0); }).catch(() => { waitingInfl = false; });
+            }
+            return null;
+        }
+        const refs = findInflectionRefs(String(text).toLowerCase().normalize('NFC'), []);
+        if (!refs.length || !refs[0].entries.length) return null;
+        const entry = refs[0].entries[0];
+        const groups = itemsFor(entry.headword);
+        if (!groups.length) return null;
+        const more = refs[0].entries.length > 1 ? ' (තවත් ' + (refs[0].entries.length - 1) + ')' : '';
+        return {
+            word: entry.headword,
+            note: refs[0].form + ' — ' + entry.headword + ' ' + entry.kind + ' ' + entry.desc + ' ස්වරූපය' + more,
+            groups
+        };
+    }
+
+    function hide() {
+        if (popup) popup.classList.remove('show');
+        shownKey = '';
+    }
+
+    function clip(str, n) {
+        const t = String(str || '').replace(/\s+/g, ' ').trim();
+        return t.length > n ? t.slice(0, n).replace(/\s+\S*$/, '') + '…' : t;
+    }
+
+    function ensurePopup() {
+        if (popup) return popup;
+        popup = document.createElement('div');
+        popup.className = 'sel-lookup';
+        popup.setAttribute('role', 'dialog');
+        popup.addEventListener('mousedown', e => e.preventDefault());   // තේරීම නොමැකීමට
+        document.body.appendChild(popup);
+        return popup;
+    }
+
+    function show(res, rect) {
+        const el = ensurePopup();
+        el.innerHTML = '';
+
+        const head = document.createElement('div');
+        head.className = 'sel-lookup-head';
+        const w = document.createElement('span');
+        w.className = 'sel-lookup-word';
+        w.textContent = res.word;
+        head.appendChild(w);
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'sel-lookup-close';
+        close.setAttribute('aria-label', 'වසන්න');
+        close.innerHTML = '&times;';
+        close.onclick = (e) => { e.stopPropagation(); hide(); };
+        head.appendChild(close);
+        el.appendChild(head);
+
+        if (res.note) {
+            const note = document.createElement('div');
+            note.className = 'sel-lookup-note';
+            note.textContent = res.note;
+            el.appendChild(note);
+        }
+
+        let shown = 0;
+        res.groups.forEach(g => {
+            g.items.forEach(it => {
+                if (shown >= 3 || !it.meaning) return;
+                const row = document.createElement('div');
+                row.className = 'sel-lookup-meaning';
+                if (it.type) {
+                    const t = document.createElement('span');
+                    t.className = 'sel-lookup-type';
+                    t.textContent = it.type;
+                    row.appendChild(t);
+                }
+                row.appendChild(document.createTextNode(clip(it.meaning, 150)));
+                el.appendChild(row);
+                shown++;
+            });
+        });
+
+        const go = document.createElement('button');
+        go.type = 'button';
+        go.className = 'sel-lookup-go';
+        go.textContent = 'සම්පූර්ණයෙන් බලන්න →';
+        go.onclick = (e) => {
+            e.stopPropagation();
+            hide();
+            try { window.getSelection().removeAllRanges(); } catch (err) {}
+            searchInput.value = res.word;
+            suggestionsBox.style.display = 'none';
+            addToSearchHistory(res.word);
+            performSearch(res.word, true);
+            try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (err) { window.scrollTo(0, 0); }
+        };
+        el.appendChild(go);
+
+        // ස්ථානය: තේරීමට යටින් (Android හි copy මෙනුව ඉහළින් එන නිසා); ඉඩ නැත්නම් ඉහළින්
+        el.style.left = '0px';
+        el.style.top = '0px';
+        el.classList.add('show');
+        const pw = el.offsetWidth, ph = el.offsetHeight;
+        const vw = window.innerWidth, vh = window.innerHeight;
+        const nav = document.querySelector('.bottom-nav');
+        const bottomLimit = vh - (nav ? nav.getBoundingClientRect().height : 70) - 8;
+        let top = rect.bottom + 12;
+        if (top + ph > bottomLimit) top = Math.max(8, rect.top - ph - 12);
+        let left = rect.left + rect.width / 2 - pw / 2;
+        left = Math.max(8, Math.min(left, vw - pw - 8));
+        el.style.left = Math.round(left) + 'px';
+        el.style.top = Math.round(top) + 'px';
+    }
+
+    function check() {
+        const sel = window.getSelection ? window.getSelection() : null;
+        if (!sel || sel.isCollapsed || !sel.rangeCount) { hide(); return; }
+        const range = sel.getRangeAt(0);
+        const node = range.commonAncestorContainer;
+        const host = node.nodeType === 1 ? node : node.parentElement;
+        if (!host || !resultsContainer.contains(host) || (popup && popup.contains(host))) { hide(); return; }
+
+        const text = sel.toString().normalize('NFC').replace(SEL_STRIP_RE, '').trim();
+        if (!text || text.length > 40 || text.split(/\s+/).length > 3) { hide(); return; }
+        const key = stripZwj(text.toLowerCase());
+        if (key === shownKey && popup && popup.classList.contains('show')) return;
+
+        const res = lookup(text);
+        if (!res) { hide(); return; }
+        const rect = range.getBoundingClientRect();
+        if (!rect || (!rect.width && !rect.height)) { hide(); return; }
+        show(res, rect);
+        shownKey = key;
+    }
+
+    function scheduleCheck(ms) {
+        clearTimeout(timer);
+        timer = setTimeout(check, ms);
+    }
+
+    document.addEventListener('selectionchange', () => scheduleCheck(400));
+    window.addEventListener('scroll', hide, { passive: true });
+    window.addEventListener('resize', hide);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') hide(); });
+    document.addEventListener('click', e => { if (popup && !popup.contains(e.target)) scheduleCheck(50); });
+})();
+
+// ================================================================
 // Regular-declension fallback generator
 // ================================================================
 const VOWEL_SIGN_AA = '\u0DCF';
@@ -1967,6 +2182,7 @@ function updateSuggestions() {
     const possibleMatches = isSinglishQuery(rawQuery) ? getPossibleMatches(rawQuery) : [];
 
     suggestionsBox.innerHTML = "";
+    suggestionsBox.classList.remove('is-history');
     if (rawQuery.length < 1) {
         suggestionsBox.style.display = "none";
         return;
@@ -2033,6 +2249,7 @@ function updateSuggestions() {
                 div.onclick = () => {
                     searchInput.value = sug.word;
                     suggestionsBox.style.display = "none";
+                    addToSearchHistory(sug.word);
                     performSearch(sug.word, true);
                 };
                 suggestionsBox.appendChild(div);
@@ -2046,18 +2263,152 @@ function updateSuggestions() {
 
 searchInput.addEventListener('input', updateSuggestions);
 
+const historyBtn = document.getElementById('historyBtn');
+
 document.addEventListener('click', function(e) {
-    if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+    if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target) &&
+        !(historyBtn && historyBtn.contains(e.target))) {
         suggestionsBox.style.display = "none";
     }
 });
 
-searchBtn.addEventListener('click', () => performSearch(searchInput.value.trim(), false));
+searchBtn.addEventListener('click', () => {
+    clearTimeout(searchTimeout);          // ටයිප් කළ විගස සෙවූ විට පසුව suggestions මතු නොවීමට
+    suggestionsBox.style.display = "none";
+    addToSearchHistory(searchInput.value);
+    performSearch(searchInput.value.trim(), false);
+});
 searchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
+        clearTimeout(searchTimeout);
         suggestionsBox.style.display = "none";
+        addToSearchHistory(searchInput.value);
         performSearch(searchInput.value.trim(), false);
     }
+});
+
+// ================================================================
+// සෙවුම් ඉතිහාසය — සෙවුම් තීරුවේ ඔරලෝසු සලකුණ
+// අවසානයට සෙවූ වචන 20 ක් දක්වා (අලුත්ම ඒවා මුලින්) මෙම උපාංගයේ පමණක් සුරැකේ.
+// ලැයිස්තුවේ වචනයක් තට්ටු කළ විට එය නැවත සොයයි; × මඟින් එක් වචනයක් ද,
+// "සියල්ල මකන්න" මඟින් සම්පූර්ණ ලැයිස්තුව ද ඉවත් කළ හැක.
+// ================================================================
+const SEARCH_HISTORY_KEY = 'searchHistory';
+const SEARCH_HISTORY_MAX = 20;
+
+function loadSearchHistory() {
+    try {
+        const a = JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || '[]');
+        return Array.isArray(a) ? a.filter(x => typeof x === 'string' && x.trim()).slice(0, SEARCH_HISTORY_MAX) : [];
+    } catch (e) { return []; }
+}
+
+function saveSearchHistory(list) {
+    try { localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(list.slice(0, SEARCH_HISTORY_MAX))); } catch (e) {}
+}
+
+function addToSearchHistory(word) {
+    const w = String(word || '').trim().normalize('NFC');
+    if (!w) return;
+    const key = w.toLowerCase();
+    const list = loadSearchHistory().filter(x => x.toLowerCase() !== key);
+    list.unshift(w);
+    saveSearchHistory(list);
+}
+
+function removeFromSearchHistory(word) {
+    const key = String(word).toLowerCase();
+    saveSearchHistory(loadSearchHistory().filter(x => x.toLowerCase() !== key));
+}
+
+function showSearchHistory() {
+    clearTimeout(searchTimeout);
+    const list = loadSearchHistory();
+    suggestionsBox.innerHTML = '';
+    suggestionsBox.classList.add('is-history');
+
+    const head = document.createElement('div');
+    head.className = 'history-head';
+    const title = document.createElement('span');
+    title.textContent = 'කලින් සෙවූ වචන';
+    head.appendChild(title);
+    if (list.length) {
+        const clear = document.createElement('button');
+        clear.type = 'button';
+        clear.className = 'history-clear';
+        clear.textContent = 'සියල්ල මකන්න';
+        clear.onclick = (e) => {
+            e.stopPropagation();
+            saveSearchHistory([]);
+            showSearchHistory();
+        };
+        head.appendChild(clear);
+    }
+    suggestionsBox.appendChild(head);
+
+    if (!list.length) {
+        const empty = document.createElement('div');
+        empty.className = 'history-empty';
+        empty.textContent = 'තවම වචන සොයා නැත.';
+        suggestionsBox.appendChild(empty);
+    }
+
+    list.forEach(word => {
+        const div = document.createElement('div');
+        div.className = 'suggestion-item history-item';
+
+        const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        icon.setAttribute('viewBox', '0 0 24 24');
+        icon.setAttribute('class', 'history-item-icon');
+        icon.setAttribute('aria-hidden', 'true');
+        const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+        use.setAttribute('href', '#icon-history');
+        icon.appendChild(use);
+        div.appendChild(icon);
+
+        const main = document.createElement('span');
+        main.className = 'history-word';
+        main.textContent = word;
+        div.appendChild(main);
+
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'history-del';
+        del.title = 'ඉවත් කරන්න';
+        del.setAttribute('aria-label', 'ඉවත් කරන්න');
+        del.innerHTML = '&times;';
+        del.onclick = (e) => {
+            e.stopPropagation();
+            removeFromSearchHistory(word);
+            showSearchHistory();
+        };
+        div.appendChild(del);
+
+        div.onclick = () => {
+            searchInput.value = word;
+            suggestionsBox.style.display = 'none';
+            addToSearchHistory(word);
+            performSearch(word, false);
+        };
+        suggestionsBox.appendChild(div);
+    });
+    suggestionsBox.style.display = 'block';
+    suggestionsBox.scrollTop = 0;
+}
+
+if (historyBtn) {
+    historyBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const open = suggestionsBox.style.display === 'block' && suggestionsBox.classList.contains('is-history');
+        if (open) {
+            suggestionsBox.style.display = 'none';
+        } else {
+            showSearchHistory();
+        }
+    });
+}
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && suggestionsBox.classList.contains('is-history')) suggestionsBox.style.display = 'none';
 });
 
 // ================================================================
@@ -2279,6 +2630,7 @@ let searchToken = 0;
 
 function performSearch(query, exactOnly = false) {
     if (!query) return;
+    lastSearch = { query, exactOnly };
     const myToken = ++searchToken;
     const lowerQuery = query.toLowerCase().replace(/[0-9]/g, '').trim().normalize('NFC');
     const possibleMatches = isSinglishQuery(lowerQuery) ? getPossibleMatches(lowerQuery) : [];
@@ -2712,14 +3064,85 @@ if ('serviceWorker' in navigator && !isNativeApp() && !isDesktopApp()) {
             console.error('Service Worker Registration Failed:', err);
         });
 
-    let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!hadController) return;   // පළමු install එක — reload අවශ්‍ය නැත
-        if (refreshing) return;
-        refreshing = true;
+        if (swRefreshing) return;
+        swRefreshing = true;
+        rememberSearchForReload();
         window.location.reload();
     });
+
+    // ස්ථාපිත ඇප් එක (PWA) වසා නොදමා පසුබිමේ තබා නැවත විවෘත කළ විට page එක reload නොවන නිසා
+    // අලුත් අනුවාදයක් තිබේදැයි browser එක පරීක්ෂා නොකරයි. එබැවින් ඇප් එක නැවත පෙරබිමට
+    // ආ විට (විනාඩි 5 කට වරක් උපරිම) පරීක්ෂා කරයි. අලුත් අනුවාදයක් ඇත්නම් ඉහත
+    // controllerchange මඟින් reload වී, පෙන්වමින් තිබූ සෙවුම නැවත පෙන්වයි.
+    let lastSwCheck = Date.now();
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') return;
+        if (Date.now() - lastSwCheck < 5 * 60 * 1000) return;
+        lastSwCheck = Date.now();
+        navigator.serviceWorker.getRegistration()
+            .then(reg => reg && reg.update())
+            .catch(() => {});
+    });
 }
+
+// ================================================================
+// විශාලන කොටුවේ "නැවුම් කරන්න" බටනය
+// 1) අලුත් අනුවාදයක් (sw.js) තිබේදැයි වහාම පරීක්ෂා කරයි — ඇත්නම් එය ස්ථාපනය වී reload වේ.
+// 2) නැත්නම් app shell ගොනු (index.html, script.js, styles.css ...) server එකෙන්ම අලුතින්
+//    ගෙන (offline නම් පරණ ඒවා එලෙසම තබා) page එක reload කරයි.
+// ශබ්දකෝෂ දත්ත නැවත බාගත නොකරයි — ඒවා වෙනස් වී ඇත්නම් පමණක් ස්වයංක්‍රීයව යාවත්කාලීන වේ.
+// Android / Windows ඇප් එකේ: page එක reload කිරීම පමණි.
+// ================================================================
+let swRefreshing = false;
+
+function withTimeout(promise, ms) {
+    return Promise.race([promise, new Promise(resolve => setTimeout(resolve, ms))]);
+}
+
+function askSwToRefreshShell() {
+    return new Promise(resolve => {
+        const ctl = navigator.serviceWorker && navigator.serviceWorker.controller;
+        if (!ctl || typeof MessageChannel === 'undefined') return resolve(null);
+        const ch = new MessageChannel();
+        const timer = setTimeout(() => resolve(null), 20000);
+        ch.port1.onmessage = (e) => { clearTimeout(timer); resolve(e.data); };
+        try { ctl.postMessage({ type: 'REFRESH_SHELL' }, [ch.port2]); } catch (e) { clearTimeout(timer); resolve(null); }
+    });
+}
+
+window.forceAppRefresh = async function () {
+    const btn = document.getElementById('zoomRefreshBtn');
+    if (btn) {
+        if (btn.classList.contains('is-busy')) return;
+        btn.classList.add('is-busy');
+        btn.disabled = true;
+    }
+    rememberSearchForReload();
+    const reload = () => { swRefreshing = true; window.location.reload(); };
+
+    if (!('serviceWorker' in navigator) || isNativeApp() || isDesktopApp()) return reload();
+    try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) {
+            await withTimeout(reg.update().catch(() => {}), 8000);
+            const incoming = reg.installing || reg.waiting;
+            if (incoming) {
+                // අලුත් අනුවාදය සක්‍රීය වූ විට controllerchange මඟින් reload වේ
+                await withTimeout(new Promise(resolve => {
+                    navigator.serviceWorker.addEventListener('controllerchange', resolve, { once: true });
+                }), 20000);
+                if (!swRefreshing) reload();
+                return;
+            }
+        }
+        await askSwToRefreshShell();
+    } catch (e) {
+        console.warn('refresh:', e);
+    }
+    if (!swRefreshing) reload();
+};
 
 // ================================================================
 // ඇප් යාවත්කාලීන දැනුම්දීම — Android (Capacitor) / Windows (Tauri) ඇප් එකේ පමණි

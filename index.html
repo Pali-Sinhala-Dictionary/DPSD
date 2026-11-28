@@ -290,6 +290,17 @@
     <path d="M15 21h4.5A1.5 1.5 0 0 0 21 19.5V15" fill="none" stroke="url(#iconGrad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
   </symbol>
 
+  <symbol id="icon-history" viewBox="0 0 24 24">
+    <path d="M3.6 12a8.4 8.4 0 1 0 2.5-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M2.9 3.6v4.6h4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M12 7.4V12l3.2 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+
+  <symbol id="icon-refresh" viewBox="0 0 24 24">
+    <path d="M20 12a8 8 0 1 1-2.4-5.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <path d="M20.2 3.6v4.8h-4.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+
   <symbol id="icon-edit" viewBox="0 0 24 24">
     <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="url(#iconGrad)"/>
   </symbol>
@@ -313,7 +324,12 @@
     <div id="tab-home" class="tab-view active">
         <div style="position: relative; margin-top: 2rem;">
             <div class="search-box-container">
-                <input type="text" id="searchInput" class="search-input" placeholder="වචනයක් ඇතුළත් කරන්න..." autocomplete="off" disabled>
+                <div class="search-input-wrap">
+                    <input type="text" id="searchInput" class="search-input" placeholder="වචනයක් ඇතුළත් කරන්න..." autocomplete="off" disabled>
+                    <button type="button" id="historyBtn" class="search-history-btn" title="කලින් සෙවූ වචන" aria-label="කලින් සෙවූ වචන" aria-haspopup="listbox">
+                        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><use href="#icon-history"></use></svg>
+                    </button>
+                </div>
                 <button id="searchBtn" class="search-btn" title="සොයන්න" disabled>
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
                         <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
@@ -469,7 +485,12 @@
             <h3>විශාලන ප්‍රමාණය</h3>
             <button type="button" class="zoom-close-btn" onclick="closeZoomPanel()" aria-label="close">&times;</button>
         </div>
-        <div class="zoom-current-value" id="zoomValueLabel">100%</div>
+        <div class="zoom-value-row">
+            <div class="zoom-current-value" id="zoomValueLabel">100%</div>
+            <button type="button" id="zoomRefreshBtn" class="zoom-refresh-btn" onclick="forceAppRefresh()" title="Refresh" aria-label="Refresh">
+                <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+            </button>
+        </div>
         <div class="zoom-slider-row">
             <span class="zoom-edge-label">50%</span>
             <input type="range" id="zoomSlider" class="zoom-slider" min="50" max="200" step="5" value="100">

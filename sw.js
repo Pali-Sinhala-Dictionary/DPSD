@@ -4,18 +4,29 @@
 
    ① index.html / script.js / styles.css / feedback.js වැනි ඕනෑම ගොනුවක්
       වෙනස් කළ සෑම වාරයකම  →  APP_VERSION එක පමණක් වැඩි කරන්න.
-   ② විශාල දත්ත ගොනුවක් (zip) වෙනස් කළ විට  →  DATA_FILES හි එම ගොනුවේ
-      අංකය පමණක් වැඩි කරන්න. (අනෙක් zip ගොනු නැවත බාගත නොවේ;
-      ශබ්දකෝෂ දත්ත script.js විසින් ස්වයංක්‍රීයව නැවත පූරණය කරයි.)
+   ② විශාල දත්ත ගොනු (zip)  →  කිසිවක් කිරීමට අවශ්‍ය නැත.
+      DATA_FILES හි අගයන් එක් එක් zip ගොනුවේ අන්තර්ගතයේ hash එකයි. zip එකක් main
+      වෙත push කළ විට GitHub Action එක (.github/workflows/data-version.yml) එය
+      ගණනය කර මෙහි ලියයි — අතින් වෙනස් නොකරන්න. (වෙනස් වූ zip එක පමණක් නැවත
+      බාගත වේ; ශබ්දකෝෂ දත්ත script.js විසින් ස්වයංක්‍රීයව නැවත පූරණය කරයි.)
+      zip එකක් push කළ පසු එම Action එක sw.js commit එකක් යවන නිසා, ඊළඟ push
+      එකට පෙර  git pull --rebase  කරන්න.
    ===================================================================== */
-const APP_VERSION = '4.64';
+const APP_VERSION = '4.65';
 
 const DATA_FILES = {
-  'dictionary.zip': 12,
-  'sinhala_english.zip': 4,
-  'inflections.zip': 1
+  'dictionary.zip': '5726365f1b',
+  'sinhala_english.zip': 'db0c04d15b',
+  'inflections.zip': 'd0d9f732d6'
 };
 /* ===================================================================== */
+
+// v4.64 දක්වා DATA_FILES හි තිබුණේ අතින් ලියූ අංක. පහත ගොනු දෙක එදා සිට වෙනස් වී නැති නිසා,
+// එම පරණ අංකයෙන් සුරැකි පිටපත (hash එක තවමත් සමාන නම් පමණක්) නැවත බාගත නොකර භාවිත කරයි.
+const LEGACY_DATA = {
+  'sinhala_english.zip': { v: '4', hash: 'db0c04d15b' },
+  'inflections.zip': { v: '1', hash: 'd0d9f732d6' }
+};
 
 const CACHE_NAME = 'pali-sin-dict-v' + APP_VERSION;   // කේතය (app shell)
 const DATA_CACHE = 'pali-sin-data';                   // විශාල zip — APP_VERSION වෙනස් වුවත් රැඳේ
@@ -33,9 +44,9 @@ const OPTIONAL_ASSETS = [
 
 const TIMEOUT_MS = 3500;
 
-function fetchWithTimeout(request) {
+function fetchWithTimeout(request, ms) {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject('timeout'), TIMEOUT_MS);
+    const timer = setTimeout(() => reject('timeout'), ms || TIMEOUT_MS);
     fetch(request).then(response => {
       clearTimeout(timer);
       if (!response.ok) return reject('not-ok');
@@ -49,6 +60,17 @@ function fetchWithTimeout(request) {
       resolve(response);
     }).catch(reject);
   });
+}
+
+// SW එකෙන් දෙන කේත ගොනු (html/js/css) — GitHub Pages හි "max-age=600" header එක නිසා browser එක
+// (එකම ටැබය / ඇප් එක තුළ) reload කළ විටත් විනාඩි 10 ක් පරණ script.js / styles.css මතකයේ
+// තබාගෙන SW එකෙන් නොඉල්ලයි. එබැවින් "no-cache" ලෙස වෙනස් කර දෙයි — සෑම reload එකකදීම
+// SW එකෙන් ඉල්ලයි (SW cache එකෙන්ම ලැබෙන නිසා offline / දත්ත වැය මත බලපෑමක් නැත).
+function noStore(res) {
+  if (!res || res.type === 'opaque' || res.type === 'opaqueredirect') return res;
+  const h = new Headers(res.headers);
+  h.set('Cache-Control', 'no-cache');
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
 }
 
 // ---------------------------------------------------------------------
@@ -76,15 +98,25 @@ async function pruneData(cache) {
   }
 }
 
-// පරණ code cache වල (v4.34 දක්වා zip තිබුණේ එහිය) එම version අංකයම ඇති පිටපතක් සොයයි
+// එම ගොනුවේ දැනට වලංගු version අගයන් (hash එක + අන්තර්ගතය සමාන පරණ අංකය)
+function validVersions(file) {
+  const vs = [String(DATA_FILES[file])];
+  const legacy = LEGACY_DATA[file];
+  if (legacy && legacy.hash === DATA_FILES[file]) vs.push(legacy.v);
+  return vs;
+}
+
+// පරණ code cache වල (v4.34 දක්වා zip තිබුණේ එහිය) සහ DATA_CACHE හි (පරණ අංකයෙන්)
+// එම අන්තර්ගතයම ඇති පිටපතක් සොයයි
 async function findOldCopy(file) {
-  const names = (await caches.keys()).filter((k) => k.startsWith('pali-sin-dict-'));
+  const ok = validVersions(file);
+  const names = (await caches.keys()).filter((k) => k.startsWith('pali-sin-dict-') || k === DATA_CACHE);
   for (const name of names) {
     const c = await caches.open(name);
     for (const req of await c.keys()) {
       if (dataFileOf(req.url) !== file) continue;
       const oldV = new URL(req.url).searchParams.get('v') || '1';
-      if (String(oldV) !== String(DATA_FILES[file])) continue;
+      if (!ok.includes(String(oldV))) continue;
       const res = await c.match(req);
       if (res && res.ok) return res;
     }
@@ -170,6 +202,26 @@ self.addEventListener('activate', (event) => {
 });
 
 // ---------------------------------------------------------------------
+// MESSAGE — විශාලන කොටුවේ "නැවුම් කරන්න" බටනය:
+// app shell ගොනු server එකෙන්ම අලුතින් ගෙන cache කරයි. ගොනුවක් ලබාගත නොහැකි නම්
+// (offline) පරණ පිටපත එලෙසම රැඳේ — එබැවින් offline විට ඇප් එක කැඩෙන්නේ නැත.
+// ---------------------------------------------------------------------
+self.addEventListener('message', (event) => {
+  const msg = event.data;
+  if (!msg || msg.type !== 'REFRESH_SHELL') return;
+  const port = event.ports && event.ports[0];
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    const results = await Promise.allSettled(CORE_ASSETS.concat(OPTIONAL_ASSETS).map(async (u) => {
+      const res = await fetchWithTimeout(new Request(u, { cache: 'reload' }), 15000);
+      await cache.put(new Request(u), res);
+    }));
+    const ok = results.filter((r) => r.status === 'fulfilled').length;
+    if (port) port.postMessage({ ok, total: results.length, version: APP_VERSION });
+  })());
+});
+
+// ---------------------------------------------------------------------
 // FETCH
 // ---------------------------------------------------------------------
 self.addEventListener('fetch', (event) => {
@@ -188,12 +240,15 @@ self.addEventListener('fetch', (event) => {
       event.respondWith(
         (async () => {
           try {
-            const net = await fetchWithTimeout(req);
+            // no-cache: browser HTTP cache එකේ (GitHub Pages — විනාඩි 10 ක්) ඇති පරණ index.html නොගෙන
+            // server එකෙන් තහවුරු කරයි (නොවෙනස් නම් 304 — bytes කිහිපයක් පමණි)
+            const net = await fetchWithTimeout(new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' }));
             const cache = await caches.open(CACHE_NAME);
             cache.put(req, net.clone());
-            return net;
+            return noStore(net);
           } catch(e) {
-            return (await caches.match('./index.html', { ignoreSearch: true })) || fetch(req);
+            const cached = await caches.match('./index.html', { ignoreSearch: true });
+            return cached ? noStore(cached) : fetch(req);
           }
         })()
       );
@@ -241,10 +296,10 @@ self.addEventListener('fetch', (event) => {
           .then((res) => cache.put(reqUrl.origin + reqUrl.pathname, res.clone()).then(() => res));
         if (cached) {
           event.waitUntil(network.catch(() => {}));
-          return cached;
+          return noStore(cached);
         }
         try {
-          return await network;
+          return noStore(await network);
         } catch (e) {
           return new Response('Offline', { status: 503, statusText: 'Offline' });
         }
