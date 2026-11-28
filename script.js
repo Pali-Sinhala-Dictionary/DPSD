@@ -2780,6 +2780,14 @@ window.openZoomPanel = function () {
     overlay.classList.add('active');
 };
 
+// විශාලන කොටුවේ දකුණු පැත්තේ බටනය — විශාලනය 100% ට නැවත සකසයි
+window.resetZoom = function () {
+    const zoomSlider = document.getElementById('zoomSlider');
+    if (zoomSlider) zoomSlider.value = '100';
+    applyZoomPreview(100);
+    saveZoom(100);
+};
+
 window.closeZoomPanel = function (e) {
     const overlay = document.getElementById('zoomOverlay');
     if (overlay) overlay.classList.remove('active');
@@ -3087,62 +3095,7 @@ if ('serviceWorker' in navigator && !isNativeApp() && !isDesktopApp()) {
     });
 }
 
-// ================================================================
-// විශාලන කොටුවේ "නැවුම් කරන්න" බටනය
-// 1) අලුත් අනුවාදයක් (sw.js) තිබේදැයි වහාම පරීක්ෂා කරයි — ඇත්නම් එය ස්ථාපනය වී reload වේ.
-// 2) නැත්නම් app shell ගොනු (index.html, script.js, styles.css ...) server එකෙන්ම අලුතින්
-//    ගෙන (offline නම් පරණ ඒවා එලෙසම තබා) page එක reload කරයි.
-// ශබ්දකෝෂ දත්ත නැවත බාගත නොකරයි — ඒවා වෙනස් වී ඇත්නම් පමණක් ස්වයංක්‍රීයව යාවත්කාලීන වේ.
-// Android / Windows ඇප් එකේ: page එක reload කිරීම පමණි.
-// ================================================================
 let swRefreshing = false;
-
-function withTimeout(promise, ms) {
-    return Promise.race([promise, new Promise(resolve => setTimeout(resolve, ms))]);
-}
-
-function askSwToRefreshShell() {
-    return new Promise(resolve => {
-        const ctl = navigator.serviceWorker && navigator.serviceWorker.controller;
-        if (!ctl || typeof MessageChannel === 'undefined') return resolve(null);
-        const ch = new MessageChannel();
-        const timer = setTimeout(() => resolve(null), 20000);
-        ch.port1.onmessage = (e) => { clearTimeout(timer); resolve(e.data); };
-        try { ctl.postMessage({ type: 'REFRESH_SHELL' }, [ch.port2]); } catch (e) { clearTimeout(timer); resolve(null); }
-    });
-}
-
-window.forceAppRefresh = async function () {
-    const btn = document.getElementById('zoomRefreshBtn');
-    if (btn) {
-        if (btn.classList.contains('is-busy')) return;
-        btn.classList.add('is-busy');
-        btn.disabled = true;
-    }
-    rememberSearchForReload();
-    const reload = () => { swRefreshing = true; window.location.reload(); };
-
-    if (!('serviceWorker' in navigator) || isNativeApp() || isDesktopApp()) return reload();
-    try {
-        const reg = await navigator.serviceWorker.getRegistration();
-        if (reg) {
-            await withTimeout(reg.update().catch(() => {}), 8000);
-            const incoming = reg.installing || reg.waiting;
-            if (incoming) {
-                // අලුත් අනුවාදය සක්‍රීය වූ විට controllerchange මඟින් reload වේ
-                await withTimeout(new Promise(resolve => {
-                    navigator.serviceWorker.addEventListener('controllerchange', resolve, { once: true });
-                }), 20000);
-                if (!swRefreshing) reload();
-                return;
-            }
-        }
-        await askSwToRefreshShell();
-    } catch (e) {
-        console.warn('refresh:', e);
-    }
-    if (!swRefreshing) reload();
-};
 
 // ================================================================
 // ඇප් යාවත්කාලීන දැනුම්දීම — Android (Capacitor) / Windows (Tauri) ඇප් එකේ පමණි

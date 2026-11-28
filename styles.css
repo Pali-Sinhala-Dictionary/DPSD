@@ -3948,7 +3948,7 @@ body.dark-theme .history-del:hover {
 
 
 /* =========================================================
-   විශාලන කොටුව — දකුණු පැත්තේ "නැවුම් කරන්න" බටනය
+   විශාලන කොටුව — දකුණු පැත්තේ 100% ට නැවත සකසන බටනය
    ========================================================= */
 
 .zoom-value-row {
@@ -3987,12 +3987,6 @@ body.dark-theme .history-del:hover {
 .zoom-refresh-btn:disabled {
     cursor: default;
     opacity: 0.8;
-}
-.zoom-refresh-btn.is-busy svg {
-    animation: zoom-refresh-spin 0.8s linear infinite;
-}
-@keyframes zoom-refresh-spin {
-    to { transform: rotate(360deg); }
 }
 body.dark-theme .zoom-refresh-btn {
     color: #c9b0ff;

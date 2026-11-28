@@ -12,7 +12,7 @@
       zip එකක් push කළ පසු එම Action එක sw.js commit එකක් යවන නිසා, ඊළඟ push
       එකට පෙර  git pull --rebase  කරන්න.
    ===================================================================== */
-const APP_VERSION = '4.65';
+const APP_VERSION = '4.66';
 
 const DATA_FILES = {
   'dictionary.zip': '5726365f1b',
@@ -198,26 +198,6 @@ self.addEventListener('activate', (event) => {
     await Promise.all(old.map((k) => { console.log('[SW] Deleting old:', k); return caches.delete(k); }));
     await self.clients.claim();
     warmData(); // await නොකරයි - prompt එක ප්‍රමාද නොවීමට
-  })());
-});
-
-// ---------------------------------------------------------------------
-// MESSAGE — විශාලන කොටුවේ "නැවුම් කරන්න" බටනය:
-// app shell ගොනු server එකෙන්ම අලුතින් ගෙන cache කරයි. ගොනුවක් ලබාගත නොහැකි නම්
-// (offline) පරණ පිටපත එලෙසම රැඳේ — එබැවින් offline විට ඇප් එක කැඩෙන්නේ නැත.
-// ---------------------------------------------------------------------
-self.addEventListener('message', (event) => {
-  const msg = event.data;
-  if (!msg || msg.type !== 'REFRESH_SHELL') return;
-  const port = event.ports && event.ports[0];
-  event.waitUntil((async () => {
-    const cache = await caches.open(CACHE_NAME);
-    const results = await Promise.allSettled(CORE_ASSETS.concat(OPTIONAL_ASSETS).map(async (u) => {
-      const res = await fetchWithTimeout(new Request(u, { cache: 'reload' }), 15000);
-      await cache.put(new Request(u), res);
-    }));
-    const ok = results.filter((r) => r.status === 'fulfilled').length;
-    if (port) port.postMessage({ ok, total: results.length, version: APP_VERSION });
   })());
 });
 
