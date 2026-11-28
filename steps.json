@@ -1,0 +1,53 @@
+{
+  "co": {
+    "outputs": {},
+    "outcome": "success",
+    "conclusion": "success"
+  },
+  "node": {
+    "outputs": {
+      "node-version": "v22.23.5"
+    },
+    "outcome": "success",
+    "conclusion": "success"
+  },
+  "rust": {
+    "outputs": {
+      "cachekey": "2026112520dd",
+      "name": "stable"
+    },
+    "outcome": "success",
+    "conclusion": "success"
+  },
+  "cache": {
+    "outputs": {
+      "cache-hit": "false"
+    },
+    "outcome": "success",
+    "conclusion": "success"
+  },
+  "npm": {
+    "outputs": {},
+    "outcome": "success",
+    "conclusion": "success"
+  },
+  "www": {
+    "outputs": {},
+    "outcome": "success",
+    "conclusion": "success"
+  },
+  "tauri": {
+    "outputs": {},
+    "outcome": "success",
+    "conclusion": "success"
+  },
+  "art": {
+    "outputs": {
+      "artifact-id": "15246546609",
+      "artifact-digest": "b2ba999c2271739ce0fb2fd7cbfe8d64e523d0bf21a2cbdd6f9924554d366344",
+      "artifact-url": "https://github.com/Pali-Sinhala-Dictionary/DPSD/actions/runs/46102268329/artifacts/15246546609"
+    },
+    "outcome": "success",
+    "conclusion": "success"
+  }
+}
